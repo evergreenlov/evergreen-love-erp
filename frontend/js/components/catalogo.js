@@ -6,6 +6,8 @@
  */
 const CatalogoComponent = {
     productos: [],
+    currentFilter: 'all',
+
     async render(containerId) {
         const container = document.getElementById(containerId);
         container.innerHTML = `
@@ -23,9 +25,21 @@ const CatalogoComponent = {
                         </button>
                     </div>
                 </div>
+
+                <!-- Sub-pestañas / Filtros -->
+                <div style="display: flex; gap: 16px; margin-bottom: 20px; border-bottom: 1.5px solid #eae5dc; padding-bottom: 8px;">
+                    <button class="sub-tab-btn" id="btn-filter-all" style="padding: 6px 12px; border: none; background: none; font-weight: ${this.currentFilter === 'all' ? '600' : '500'}; font-size: 13.5px; color: ${this.currentFilter === 'all' ? 'var(--color-moss-green)' : '#8c8270'}; border-bottom: ${this.currentFilter === 'all' ? '2.5px solid var(--color-moss-green)' : 'none'}; cursor: pointer; outline:none; transition: all 0.2s;" onclick="CatalogoComponent.setFilter('all')">
+                        Todos los Productos
+                    </button>
+                    <button class="sub-tab-btn" id="btn-filter-custom" style="padding: 6px 12px; border: none; background: none; font-weight: ${this.currentFilter === 'custom' ? '600' : '500'}; font-size: 13.5px; color: ${this.currentFilter === 'custom' ? 'var(--color-moss-green)' : '#8c8270'}; border-bottom: ${this.currentFilter === 'custom' ? '2.5px solid var(--color-moss-green)' : 'none'}; cursor: pointer; outline:none; transition: all 0.2s;" onclick="CatalogoComponent.setFilter('custom')">
+                        Productos Actualizables / Personalizables
+                    </button>
+                </div>
+
                 <div id="catalogo-cards" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 260px)); gap: 24px;"></div>
             </div>
             <div id="product-edit-modal" style="display: none;"></div>
+            <div id="simulador-modal" class="modal-overlay" style="display: none;"></div>
 
             <!-- MODAL: ENLACE CATÁLOGO PÚBLICO -->
             <div id="catalogo-pub-share-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.45); backdrop-filter:blur(4px); z-index:3000; align-items:center; justify-content:center;">
@@ -65,16 +79,55 @@ const CatalogoComponent = {
             cardsDiv.innerHTML = `<p style="color: var(--color-danger);">No se pudieron cargar los productos.</p>`;
         }
     },
+    setFilter(filter) {
+        this.currentFilter = filter;
+        const btnAll = document.getElementById('btn-filter-all');
+        const btnCustom = document.getElementById('btn-filter-custom');
+        
+        if (filter === 'all') {
+            btnAll.style.fontWeight = '600';
+            btnAll.style.color = 'var(--color-moss-green)';
+            btnAll.style.borderBottom = '2.5px solid var(--color-moss-green)';
+            
+            btnCustom.style.fontWeight = '500';
+            btnCustom.style.color = '#8c8270';
+            btnCustom.style.borderBottom = 'none';
+        } else {
+            btnCustom.style.fontWeight = '600';
+            btnCustom.style.color = 'var(--color-moss-green)';
+            btnCustom.style.borderBottom = '2.5px solid var(--color-moss-green)';
+            
+            btnAll.style.fontWeight = '500';
+            btnAll.style.color = '#8c8270';
+            btnAll.style.borderBottom = 'none';
+        }
+        
+        this.renderCards();
+    },
+    personalizarProducto(productoId) {
+        const prod = this.productos.find(p => p.id === productoId);
+        if (prod && typeof PersonalizadosComponent !== 'undefined') {
+            PersonalizadosComponent.openSimuladorModal(prod);
+        } else {
+            alert("El configurador no está disponible en este momento.");
+        }
+    },
     renderCards() {
         const cardsDiv = document.getElementById('catalogo-cards');
-        if (!this.productos.length) {
-            cardsDiv.innerHTML = `<p style="color:#8c8c8c;">No hay productos disponibles.</p>`;
+        let filteredProds = this.productos;
+        
+        if (this.currentFilter === 'custom') {
+            filteredProds = this.productos.filter(p => Number(p.personalizado) === 1);
+        }
+
+        if (!filteredProds.length) {
+            cardsDiv.innerHTML = `<p style="color:#8c8c8c; grid-column: 1 / -1; text-align: center; padding: 40px;">No hay productos disponibles en esta sección.</p>`;
             return;
         }
 
         const isPublic = window.location.pathname.includes('catalogo_publico.html');
 
-        const cardHtml = this.productos.map(p => {
+        const cardHtml = filteredProds.map(p => {
             const adminOverlayHtml = !isPublic ? `
                 <div style="position: absolute; top: 8px; right: 8px; display: flex; gap: 6px; z-index: 10;">
                     <button onclick="event.stopPropagation(); CatalogoComponent.openEditModal(${p.id})" style="background: rgba(255,255,255,0.95); border: 1px solid var(--color-gray-border); width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--color-soft-black); box-shadow: var(--shadow-sm); transition: transform 0.2s; padding:0; outline: none;" onmouseover="this.style.transform='scale(1.15)'" onmouseout="this.style.transform='scale(1)'" title="Editar Producto">
@@ -110,6 +163,14 @@ const CatalogoComponent = {
                 ? `<p style="margin:0 0 12px 0; color: #736b5c; font-size: 12.5px; font-style: italic; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; text-overflow: ellipsis; height: 35px;">${p.shopify_descripcion}</p>` 
                 : '<div style="height:35px;"></div>';
 
+            const actionBtn = Number(p.personalizado) === 1 
+                ? `<button onclick="CatalogoComponent.personalizarProducto(${p.id})" style="width:100%; background: var(--color-terracotta); color: white; border:none; padding:10px; border-radius:8px; cursor:pointer; font-family: var(--font-primary); font-weight: 600; font-size: 13px; display:flex; align-items:center; justify-content:center; gap: 8px; transition: all 0.2s; box-shadow: 0 2px 8px rgba(198, 95, 47, 0.15);">
+                        <i data-lucide="sparkles" style="width:14px; height:14px;"></i> Personalizar & Pedir
+                   </button>`
+                : `<button onclick="Carrito.agregar(${p.id})" style="width:100%; background: var(--color-moss-green); color: white; border:none; padding:10px; border-radius:8px; cursor:pointer; font-family: var(--font-primary); font-weight: 600; font-size: 13px; display:flex; align-items:center; justify-content:center; gap: 8px; transition: all 0.2s; box-shadow: 0 2px 8px rgba(95, 120, 48, 0.15);">
+                        <i data-lucide="shopping-cart" style="width:14px; height:14px;"></i> Añadir al pedido
+                   </button>`;
+
             return `
                 <div class="card catalog-card" style="display: flex; flex-direction: column; width: 100%; padding: 0; background: #ffffff; border-radius: var(--radius-lg); overflow:hidden; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); box-shadow: 0 4px 16px rgba(0,0,0,0.04); border: 1px solid rgba(237, 230, 216, 0.6); position: relative; height: 345px;">
                     ${fotoImg}
@@ -121,9 +182,7 @@ const CatalogoComponent = {
                         </div>
                         <div>
                             <p style="margin:0 0 8px 0; font-weight:700; color: var(--color-moss-green); font-size: 17px;">${price}</p>
-                            <button onclick="Carrito.agregar(${p.id})" style="width:100%; background: var(--color-moss-green); color: white; border:none; padding:10px; border-radius:8px; cursor:pointer; font-family: var(--font-primary); font-weight: 600; font-size: 13px; display:flex; align-items:center; justify-content:center; gap: 8px; transition: all 0.2s; box-shadow: 0 2px 8px rgba(95, 120, 48, 0.15);">
-                                <i data-lucide="shopping-cart" style="width:14px; height:14px;"></i> Añadir al pedido
-                            </button>
+                            ${actionBtn}
                             ${adminActionsHtml}
                         </div>
                     </div>

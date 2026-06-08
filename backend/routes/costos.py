@@ -227,6 +227,9 @@ def update_producto(producto_id: int, item: ProductoUpdateSchema):
         costo_total = item.costo_total if item.costo_total is not None else existing.get('costo_total', 0.0)
         margen_ganancia = item.margen_ganancia if item.margen_ganancia is not None else existing.get('margen_ganancia', 0.5)
         precio_sugerido = item.precio_sugerido if item.precio_sugerido is not None else existing.get('precio_sugerido', 0.0)
+        shopify_descripcion = item.shopify_descripcion if item.shopify_descripcion is not None else existing.get('shopify_descripcion')
+        shopify_titulo = item.shopify_titulo if item.shopify_titulo is not None else existing.get('shopify_titulo')
+        shopify_tags = item.shopify_tags if item.shopify_tags is not None else existing.get('shopify_tags')
         shopify_alt_text = item.shopify_alt_text if item.shopify_alt_text is not None else existing.get('shopify_alt_text')
             
         cursor.execute(
@@ -239,8 +242,8 @@ def update_producto(producto_id: int, item: ProductoUpdateSchema):
                 margen_ganancia = ?, precio_sugerido = ?
             WHERE id = ?
             """,
-            (item.nombre, item.sku, item.precio_final, item.shopify_descripcion,
-             item.personalizado, item.shopify_titulo, item.shopify_tags, shopify_alt_text,
+            (item.nombre, item.sku, item.precio_final, shopify_descripcion,
+             item.personalizado, shopify_titulo, shopify_tags, shopify_alt_text,
              ancho, alto, tiempo_corte, tiempo_grabado,
              costo_maquina, costo_mano_obra, costo_total,
              margen_ganancia, precio_sugerido,

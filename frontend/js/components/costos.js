@@ -815,7 +815,7 @@ const CostosComponent = {
             const personalizado = parseInt(document.getElementById('prod-personalizado').value);
             const shTitulo = document.getElementById('sh-titulo').value.trim() || nombre;
             const shTags = document.getElementById('sh-tags').value.trim() || "evergreen, artesanal";
-            const shDesc = document.getElementById('prod-descripcion').value.trim() || `Producto exclusivo de la marca Evergreen Love. Hecho artesanalmente a mano con detalles grabados y cortados en láser.`;
+            const shDesc = document.getElementById('prod-descripcion').value.trim() || (isEditing ? '' : `Producto exclusivo de la marca Evergreen Love. Hecho artesanalmente a mano con detalles grabados y cortados en láser.`);
 
             const componentesBackend = this.componentesSeleccionados.map(c => ({
                 material_id: c.materialId,

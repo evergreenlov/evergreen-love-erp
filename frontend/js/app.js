@@ -84,6 +84,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 case 'catalogo':
                     CatalogoComponent.render('catalogo-view');
                     break;
+                case 'personalizados':
+                    PersonalizadosComponent.render('personalizados-container');
+                    break;
                 case 'clientes':
                     ClientesComponent.render('clientes-container');
                     break;

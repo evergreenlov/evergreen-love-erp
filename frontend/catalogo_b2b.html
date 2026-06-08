@@ -796,6 +796,7 @@
 </div>
 
 <script src="js/api.js?v=34"></script>
+<script src="js/components/personalizados.js?v=34"></script>
 <script>
     const API = API_BASE_URL;
     let clienteId = null;
@@ -882,6 +883,19 @@
                        <i data-lucide="image" style="width:40px;height:40px;"></i>
                    </div>`;
 
+            const isPersonalizado = item.personalizado === 1;
+            const actionButton = isPersonalizado 
+                ? `<button class="btn-agregar" style="background-color: var(--color-terracotta); border-color: var(--color-terracotta);" id="btn-add-${item.producto_id}" 
+                            onclick="personalizarB2BProducto(${item.producto_id})">
+                        <i data-lucide="sparkles" style="width:14px;height:14px;"></i>
+                        Personalizar & Pedir
+                    </button>`
+                : `<button class="btn-agregar" id="btn-add-${item.producto_id}" 
+                            onclick="addToCart(${item.producto_id}, '${item.producto_nombre.replace(/'/g,"\\'")}', '${item.producto_sku}', ${item.precio_especial}, '${item.foto_ruta || ''}')">
+                        <i data-lucide="plus" style="width:14px;height:14px;"></i>
+                        Agregar al Pedido
+                    </button>`;
+
             card.innerHTML = `
                 ${imgHtml}
                 <div class="product-body">
@@ -896,17 +910,38 @@
                         <input class="qty-input" id="qty-${item.producto_id}" type="number" value="1" min="1">
                         <button class="qty-btn" onclick="changeQty(${item.producto_id}, 1)">+</button>
                     </div>
-                    <button class="btn-agregar" id="btn-add-${item.producto_id}" 
-                            onclick="addToCart(${item.producto_id}, '${item.producto_nombre.replace(/'/g,"\\'")}', '${item.producto_sku}', ${item.precio_especial}, '${item.foto_ruta || ''}')">
-                        <i data-lucide="plus" style="width:14px;height:14px;"></i>
-                        Agregar al Pedido
-                    </button>
+                    ${actionButton}
                 </div>
             `;
             grid.appendChild(card);
         });
 
         lucide.createIcons();
+    }
+
+    async function personalizarB2BProducto(productoId) {
+        try {
+            const res = await fetch(`${API_BASE_URL}/productos`);
+            const data = await res.json();
+            const prods = data.data || [];
+            const prod = prods.find(p => p.id === productoId);
+            if (prod && typeof PersonalizadosComponent !== 'undefined') {
+                let modal = document.getElementById('simulador-modal');
+                if (!modal) {
+                    modal = document.createElement('div');
+                    modal.id = 'simulador-modal';
+                    modal.className = 'modal-overlay';
+                    modal.style.display = 'none';
+                    document.body.appendChild(modal);
+                }
+                PersonalizadosComponent.openSimuladorModal(prod);
+            } else {
+                alert("El configurador no está disponible en este momento.");
+            }
+        } catch (err) {
+            console.error("Error al iniciar personalización:", err);
+            alert("No se pudo iniciar la personalización.");
+        }
     }
 
     /* ── CART LOGIC ───────────────────────────── */

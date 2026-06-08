@@ -97,7 +97,7 @@ def get_catalogo_cliente(cliente_id: int):
         # Consultar productos del catálogo de este cliente específico
         cursor.execute("""
             SELECT cc.*, p.nombre as producto_nombre, p.sku as producto_sku, 
-                   p.costo_total, p.precio_final as precio_retail,
+                   p.costo_total, p.precio_final as precio_retail, p.personalizado,
                    (SELECT f.nombre_archivo FROM fotos_asociadas f 
                     WHERE f.producto_id = p.id AND f.tipo_foto = 'referencia' 
                     ORDER BY f.id DESC LIMIT 1) as foto_nombre
