@@ -1,0 +1,272 @@
+/**
+ * Enrutador interactivo SPA (Single Page Application)
+ */
+
+document.addEventListener('DOMContentLoaded', () => {
+    // Inicializar iconos de Lucide
+    lucide.createIcons();
+
+    // Inicializar Carrito para inyectar su DOM y listeners
+    if (typeof Carrito !== 'undefined') {
+        Carrito.init();
+    }
+    
+    // Configurar menú móvil (hamburguesa)
+    const mobileToggle = document.getElementById('mobile-toggle');
+    const sidebar = document.querySelector('.sidebar');
+    if (mobileToggle && sidebar) {
+        mobileToggle.addEventListener('click', () => {
+            sidebar.classList.toggle('open');
+        });
+    }
+
+    // Manejar enrutamiento
+    const navItems = document.querySelectorAll('.nav-item');
+    const tabViews = document.querySelectorAll('.tab-view');
+    const pageTitle = document.getElementById('page-title');
+
+    function navigateToTab(tabId) {
+        // Cerrar menú móvil si está abierto
+        if (sidebar) sidebar.classList.remove('open');
+
+        // Desactivar todas las pestañas y vistas
+        navItems.forEach(item => item.classList.remove('active'));
+        tabViews.forEach(view => view.classList.remove('active'));
+
+        // Activar la seleccionada
+        const activeNavItem = document.querySelector(`.nav-item[data-tab="${tabId}"]`);
+        const activeView = document.getElementById(`view-${tabId}`);
+
+        if (activeNavItem && activeView) {
+            activeNavItem.classList.add('active');
+            activeView.classList.add('active');
+            
+            // Actualizar título superior de la página
+            const tabName = activeNavItem.querySelector('span').innerText;
+            if (pageTitle) pageTitle.innerText = tabName;
+
+            // Mostrar/ocultar el botón del carrito según la pestaña
+            const cartBtn = document.getElementById('btn-carrito-admin');
+            if (cartBtn) {
+                if (tabId === 'catalogo') {
+                    cartBtn.style.display = 'flex';
+                    if (typeof Carrito !== 'undefined' && typeof Carrito.syncBadge === 'function') {
+                        Carrito.syncBadge();
+                    }
+                } else {
+                    cartBtn.style.display = 'none';
+                }
+            }
+
+            // Renderizar el componente JS dinámico según la sección activa
+            switch (tabId) {
+                case 'dashboard':
+                    DashboardComponent.render('dashboard-container');
+                    break;
+                case 'inventario':
+                    InventarioComponent.render('inventario-container');
+                    break;
+                case 'disenos':
+                    DisenosComponent.render('disenos-container');
+                    break;
+                case 'costos':
+                    CostosComponent.render('costos-container');
+                    break;
+                case 'produccion':
+                    ProduccionComponent.render('produccion-container');
+                    break;
+                case 'evaluaciones':
+                    EvaluacionesComponent.render('evaluaciones-container');
+                    break;
+                case 'shopify':
+                    ShopifyComponent.render('shopify-container');
+                    break;
+                case 'catalogo':
+                    CatalogoComponent.render('catalogo-view');
+                    break;
+                case 'clientes':
+                    ClientesComponent.render('clientes-container');
+                    break;
+                case 'facturas':
+                    FacturasComponent.render('facturas-container');
+                    break;
+                default:
+                    console.warn(`No se encontró componente para la pestaña: ${tabId}`);
+
+            }
+        }
+    }
+
+    // Configurar escuchas de clics en navegación
+    navItems.forEach(item => {
+        item.addEventListener('click', (e) => {
+            e.preventDefault();
+            const tabId = item.getAttribute('data-tab');
+            window.location.hash = tabId;
+        });
+    });
+
+    // Escuchar cambios de Hash en la URL
+    window.addEventListener('hashchange', () => {
+        const hash = window.location.hash.substring(1) || 'dashboard';
+        navigateToTab(hash);
+    });
+
+    // Cargar pestaña inicial basada en el Hash actual
+    const initialHash = window.location.hash.substring(1) || 'dashboard';
+    navigateToTab(initialHash);
+
+    // --- SERVICIO DE ALERTAS DE PEDIDOS EN TIEMPO REAL ---
+
+    // Inyectar animaciones CSS para los toasts emergentes
+    const toastStyles = document.createElement('style');
+    toastStyles.textContent = `
+        @keyframes slideInRight {
+            from { transform: translateX(120%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        @keyframes slideOutRight {
+            from { transform: translateX(0); opacity: 1; }
+            to { transform: translateX(120%); opacity: 0; }
+        }
+    `;
+    document.head.appendChild(toastStyles);
+
+    // Generar un timbre/chime sutil usando Web Audio API (evita descargas de recursos externos)
+    function playNotificationSound() {
+        try {
+            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            
+            // Primer tono (agudo)
+            const osc1 = audioCtx.createOscillator();
+            const gain1 = audioCtx.createGain();
+            osc1.type = 'sine';
+            osc1.frequency.setValueAtTime(523.25, audioCtx.currentTime); // C5 (Do)
+            gain1.gain.setValueAtTime(0.08, audioCtx.currentTime);
+            gain1.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3);
+            osc1.connect(gain1);
+            gain1.connect(audioCtx.destination);
+            osc1.start();
+            osc1.stop(audioCtx.currentTime + 0.3);
+
+            // Segundo tono en armonía (más agudo, desfasado 100ms)
+            setTimeout(() => {
+                const osc2 = audioCtx.createOscillator();
+                const gain2 = audioCtx.createGain();
+                osc2.type = 'sine';
+                osc2.frequency.setValueAtTime(659.25, audioCtx.currentTime); // E5 (Mi)
+                gain2.gain.setValueAtTime(0.08, audioCtx.currentTime);
+                gain2.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.4);
+                osc2.connect(gain2);
+                gain2.connect(audioCtx.destination);
+                osc2.start();
+                osc2.stop(audioCtx.currentTime + 0.4);
+            }, 100);
+        } catch (e) {
+            console.error("No se pudo reproducir el sonido de notificación:", e);
+        }
+    }
+
+    // Mostrar modal emergente en la esquina inferior derecha
+    function showNotificationPopup(factura) {
+        let container = document.getElementById('admin-notif-container');
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'admin-notif-container';
+            container.style.position = 'fixed';
+            container.style.bottom = '24px';
+            container.style.right = '24px';
+            container.style.zIndex = '9999';
+            container.style.display = 'flex';
+            container.style.flexDirection = 'column';
+            container.style.gap = '12px';
+            document.body.appendChild(container);
+        }
+
+        const toast = document.createElement('div');
+        toast.style.background = '#FFFFFF';
+        toast.style.borderLeft = '6px solid var(--color-moss-green)';
+        toast.style.borderRadius = '8px';
+        toast.style.boxShadow = '0 10px 25px rgba(62,62,62,0.18)';
+        toast.style.padding = '16px 20px';
+        toast.style.width = '320px';
+        toast.style.display = 'flex';
+        toast.style.flexDirection = 'column';
+        toast.style.gap = '8px';
+        toast.style.animation = 'slideInRight 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards';
+        toast.style.fontFamily = 'var(--font-primary)';
+        
+        toast.innerHTML = `
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <strong style="color:var(--color-moss-green); font-size:14px; display:flex; align-items:center; gap:6px;">
+                    <i data-lucide="bell" style="width:16px; height:16px; display:inline;"></i> ¡Nuevo Pedido Recibido!
+                </strong>
+                <button class="toast-close-btn" style="background:none; border:none; color:#bbb; cursor:pointer; font-size:18px; padding:0; line-height:1; outline:none;">&times;</button>
+            </div>
+            <p style="margin:0; font-size:13.5px; color:#2d2d2d; line-height:1.4; text-align: left;">
+                El cliente <strong>${factura.cliente_nombre}</strong> ha realizado un pedido.
+            </p>
+            <div style="display:flex; justify-content:space-between; align-items:center; font-size:12.5px; color:#8c8270; margin-top:4px;">
+                <span>Factura: <strong>${factura.numero_factura}</strong></span>
+                <span style="font-weight:700; color:var(--color-moss-green); font-size:14px;">$${factura.total.toFixed(2)}</span>
+            </div>
+            <div style="display:flex; gap:8px; margin-top:6px; justify-content:flex-end;">
+                <button class="toast-view-btn" style="padding:6px 12px; background:var(--color-moss-green); color:white; border:none; border-radius:4px; font-size:11px; font-weight:600; cursor:pointer; outline:none;">Ver Detalles</button>
+            </div>
+        `;
+
+        container.appendChild(toast);
+        lucide.createIcons();
+
+        // Controladores de cierre y navegación
+        const closeBtn = toast.querySelector('.toast-close-btn');
+        closeBtn.onclick = () => {
+            toast.style.animation = 'slideOutRight 0.3s ease forwards';
+            setTimeout(() => toast.remove(), 300);
+        };
+
+        const viewBtn = toast.querySelector('.toast-view-btn');
+        viewBtn.onclick = () => {
+            window.location.hash = 'facturas';
+            toast.remove();
+        };
+
+        // Autodestruir después de 10 segundos
+        setTimeout(() => {
+            if (toast.parentElement) {
+                toast.style.animation = 'slideOutRight 0.3s ease forwards';
+                setTimeout(() => toast.remove(), 300);
+            }
+        }, 10000);
+    }
+
+    // Loop de verificación
+    let isCheckingOrders = false;
+    async function checkNewOrders() {
+        if (isCheckingOrders) return;
+        isCheckingOrders = true;
+        try {
+            if (typeof EvergreenAPI !== 'undefined' && typeof EvergreenAPI.getNuevasFacturas === 'function') {
+                const res = await EvergreenAPI.getNuevasFacturas();
+                const nuevas = res.data || [];
+                if (nuevas.length > 0) {
+                    playNotificationSound();
+                    nuevas.forEach(f => showNotificationPopup(f));
+                    
+                    // Marcar como leídas/alertadas en lote
+                    const ids = nuevas.map(f => f.id);
+                    await EvergreenAPI.marcarFacturasLeidas(ids);
+                }
+            }
+        } catch (err) {
+            console.error("Error al buscar nuevos pedidos:", err);
+        } finally {
+            isCheckingOrders = false;
+        }
+    }
+
+    // Iniciar el polling (cada 30 segundos)
+    setInterval(checkNewOrders, 30000);
+    // Ejecutar chequeo inicial a los 4 segundos
+    setTimeout(checkNewOrders, 4000);
+});

@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Evergreen Love - Taller de Gestión Láser</title>
+    
+    <!-- Google Fonts: Outfit (moderna y limpia) & Playfair Display (toque artesanal elegante) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+    
+    <!-- Iconos Lucide (CDN) -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <!-- Estilos CSS -->
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="app-container">
+        
+        <!-- Barra de Navegación Lateral (Sidebar) -->
+        <aside class="sidebar">
+            <div class="sidebar-header" style="flex-direction: column; align-items: center; gap: 12px; margin-bottom: 24px; position: relative; width: 100%;">
+                <div class="logo-wrapper" style="display: flex; flex-direction: column; align-items: center; gap: 8px; width: 100%;">
+                    <div class="logo-img-container" style="width: 160px; border-radius: var(--radius-md); overflow: hidden; border: 1px solid var(--color-gray-border); background-color: var(--color-light-beige); padding: 10px; box-shadow: var(--shadow-sm); display: flex; align-items: center; justify-content: center;">
+                        <img src="img/logo.jpg" alt="Evergreen Love Logo" style="width: 100%; height: auto; object-fit: contain; display: block;">
+                    </div>
+                    <span class="logo-subtitle" style="font-size: 10px; text-transform: uppercase; letter-spacing: 2.5px; color: var(--color-terracotta); font-weight: 600; margin-top: 4px;">Gestión Láser</span>
+                </div>
+                <button class="mobile-toggle" id="mobile-toggle" aria-label="Toggle Navigation" style="position: absolute; right: 0; top: 10px;">
+                    <i data-lucide="menu"></i>
+                </button>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <ul class="nav-list">
+                    <li>
+                        <a href="#dashboard" class="nav-item active" data-tab="dashboard">
+                            <i data-lucide="layout-dashboard"></i>
+                            <span>Dashboard</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#inventario" class="nav-item" data-tab="inventario">
+                            <i data-lucide="package"></i>
+                            <span>Inventario</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#disenos" class="nav-item" data-tab="disenos">
+                            <i data-lucide="layers"></i>
+                            <span>Biblioteca Diseños</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#costos" class="nav-item" data-tab="costos">
+                            <i data-lucide="calculator"></i>
+                            <span>Costos y Precios</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#produccion" class="nav-item" data-tab="produccion">
+                            <i data-lucide="cpu"></i>
+                            <span>Producción Láser</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#evaluaciones" class="nav-item" data-tab="evaluaciones">
+                            <i data-lucide="clipboard-check"></i>
+                            <span>Evaluación Visual</span>
+                        </a>
+                    </li>
+
+                    <li>
+                        <a href="#shopify" class="nav-item" data-tab="shopify">
+                            <i data-lucide="layout-list"></i>
+                            <span>Gestión de Productos</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#catalogo" class="nav-item" data-tab="catalogo">
+                            <i data-lucide="shopping-bag"></i>
+                            <span>Catálogo Clientes</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#clientes" class="nav-item" data-tab="clientes">
+                            <i data-lucide="users"></i>
+                            <span>Clientes B2B</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#facturas" class="nav-item" data-tab="facturas">
+                            <i data-lucide="file-text"></i>
+                            <span>Facturación y IVU</span>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+            
+            <div class="sidebar-footer">
+                <div class="api-status">
+                    <span class="status-indicator online"></span>
+                    <span class="status-text">API Conectada</span>
+                </div>
+            </div>
+        </aside>
+        
+        <!-- Contenido Principal -->
+        <main class="main-content">
+            <!-- Encabezado de la página activa -->
+            <header class="content-header">
+                <h1 id="page-title">Dashboard</h1>
+                <button class="btn btn-secondary" id="btn-carrito-admin" style="display: none; align-items: center; gap: 8px;" onclick="Carrito.open()">
+                    <i data-lucide="shopping-cart"></i>
+                    Mi Pedido
+                    <span id="cart-badge" style="display: none; background: #e74c3c; color: white; border-radius: 50%; width: 18px; height: 18px; font-size: 10px; font-weight: 700; align-items: center; justify-content: center; margin-left: 6px;">0</span>
+                </button>
+            </header>
+
+            
+            <!-- Contenedor dinámico de pantallas -->
+            <div class="content-body">
+                
+                <!-- 1. Pantalla: Dashboard -->
+                <section id="view-dashboard" class="tab-view active">
+                    <div id="dashboard-container">
+                        <!-- Se renderiza vía JS en la Fase 1 / 5 -->
+                        <div class="loading-state">
+                            <div class="spinner"></div>
+                            <p>Cargando panel de control...</p>
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- 2. Pantalla: Inventario -->
+                <section id="view-inventario" class="tab-view">
+                    <div id="inventario-container">
+                        <div class="loading-state">
+                            <div class="spinner"></div>
+                            <p>Cargando inventario de materiales...</p>
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- 3. Pantalla: Biblioteca Diseños -->
+                <section id="view-disenos" class="tab-view">
+                    <div id="disenos-container">
+                        <div class="loading-state">
+                            <div class="spinner"></div>
+                            <p>Cargando biblioteca de diseños...</p>
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- 4. Pantalla: Costos -->
+                <section id="view-costos" class="tab-view">
+                    <div id="costos-container">
+                        <div class="loading-state">
+                            <div class="spinner"></div>
+                            <p>Cargando calculadora de costos...</p>
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- 5. Pantalla: Producción -->
+                <section id="view-produccion" class="tab-view">
+                    <div id="produccion-container">
+                        <div class="loading-state">
+                            <div class="spinner"></div>
+                            <p>Cargando órdenes de producción...</p>
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- 6. Pantalla: Evaluaciones -->
+                <section id="view-evaluaciones" class="tab-view">
+                    <div id="evaluaciones-container">
+                        <div class="loading-state">
+                            <div class="spinner"></div>
+                            <p>Cargando evaluación de calidad...</p>
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- 7. Pantalla: Shopify -->
+                <section id="view-shopify" class="tab-view">
+                    <div id="shopify-container">
+                        <div class="loading-state">
+                            <div class="spinner"></div>
+                            <p>Cargando catálogo Shopify...</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 8. Pantalla: Catálogo Clientes -->
+                <section id="view-catalogo" class="tab-view">
+                    <div id="catalogo-view">
+                        <div class="loading-state">
+                            <div class="spinner"></div>
+                            <p>Cargando catálogo de productos...</p>
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- 9. Pantalla: Clientes B2B -->
+                <section id="view-clientes" class="tab-view">
+                    <div id="clientes-container">
+                        <div class="loading-state">
+                            <div class="spinner"></div>
+                            <p>Cargando clientes B2B...</p>
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- 9. Pantalla: Facturas y Contabilidad -->
+                <section id="view-facturas" class="tab-view">
+                    <div id="facturas-container">
+                        <div class="loading-state">
+                            <div class="spinner"></div>
+                            <p>Cargando facturación e informes de IVU...</p>
+                        </div>
+                    </div>
+                </section>
+                
+            </div>
+        </main>
+    </div>
+
+    <!-- Scripts JavaScript -->
+    <script src="js/api.js?v=34"></script>
+    <script src="js/components/carrito.js?v=34"></script>
+    <script src="js/components/catalogo.js?v=33"></script>
+    <script src="js/components/dashboard.js?v=30"></script>
+    <script src="js/components/inventario.js?v=30"></script>
+    <script src="js/components/disenos.js?v=30"></script>
+    <script src="js/components/costos.js?v=30"></script>
+    <script src="js/components/produccion.js?v=34"></script>
+    <script src="js/components/evaluaciones.js?v=31"></script>
+    <script src="js/components/shopify.js?v=31"></script>
+    <script src="js/components/clientes.js?v=31"></script>
+    <script src="js/components/facturas.js?v=34"></script>
+    <script src="js/app.js?v=34"></script>
+</body>
+</html>

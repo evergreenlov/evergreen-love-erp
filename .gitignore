@@ -1,0 +1,22 @@
+# Python caching
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environments
+.env
+.venv/
+venv/
+env/
+
+# Local database and uploaded attachments/images
+data/evergreen.db
+data/adjuntos/*
+data/fotos_import/*
+!data/adjuntos/.gitkeep
+!data/fotos_import/.gitkeep
+
+# OS generated files
+.DS_Store
+.DS_Store?
+Thumbs.db

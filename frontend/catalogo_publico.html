@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Catálogo - Evergreen Love</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+    
+    <!-- Iconos Lucide -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <!-- Estilos CSS -->
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        body {
+            background-color: var(--color-light-beige);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        .public-header {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            padding: 16px 40px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.05);
+            border-bottom: 1px solid rgba(237, 230, 216, 0.6);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .public-header .logo-container {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .public-header img {
+            height: 50px;
+            border-radius: var(--radius-sm);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+        .public-header h1 {
+            font-family: var(--font-secondary);
+            color: var(--color-moss-green);
+            margin: 0;
+            font-size: 24px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+        .main-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            width: 100%;
+            flex: 1;
+        }
+        .cart-icon-btn {
+            background: var(--color-moss-green);
+            border: none;
+            cursor: pointer;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-family: var(--font-primary);
+            font-weight: 600;
+            padding: 10px 20px;
+            border-radius: 50px;
+            box-shadow: 0 4px 14px rgba(95, 120, 48, 0.25);
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .cart-icon-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(95, 120, 48, 0.35);
+            background: #475a24;
+        }
+        .cart-icon-btn:active {
+            transform: translateY(0);
+        }
+    </style>
+</head>
+<body>
+
+    <header class="public-header">
+        <div class="logo-container">
+            <!-- Asumiendo logo.jpg está en img/ -->
+            <img src="img/logo.jpg" alt="Evergreen Love">
+            <h1>Catálogo de Productos</h1>
+        </div>
+        <button class="cart-icon-btn" id="btn-carrito-publico" onclick="Carrito.open()">
+            <i data-lucide="shopping-cart"></i>
+            Mi Pedido
+            <span id="cart-badge" style="display:none; background:#e74c3c; color:white; border-radius:50%; width:18px; height:18px; font-size:10px; font-weight:700; align-items:center; justify-content:center; margin-left:6px;">0</span>
+        </button>
+    </header>
+
+    <div class="main-container" id="catalogo-view">
+        <div class="loading-state">
+            <div class="spinner"></div>
+            <p>Cargando catálogo...</p>
+        </div>
+    </div>
+
+    <!-- Scripts JavaScript -->
+    <script src="js/api.js?v=34"></script>
+    <script src="js/components/carrito.js?v=34"></script>
+    <script src="js/components/catalogo.js?v=33"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+            Carrito.init();
+            CatalogoComponent.render('catalogo-view');
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,324 @@
+from fastapi import APIRouter, HTTPException, UploadFile, File, status
+from pydantic import BaseModel, Field
+from typing import Optional, List
+import sqlite3
+import csv
+import io
+import os
+
+from database import get_db_connection
+
+router = APIRouter(
+    prefix="/api",
+    tags=["materiales"]
+)
+
+# --- MODELOS PYDANTIC ---
+
+class MaterialSchema(BaseModel):
+    nombre: str
+    tipo: str  # madera, acrilico, corcho, resina, herrajes, empaques
+    espesor: float
+    tamano_ancho: float
+    tamano_alto: float
+    cantidad: int
+    cantidad_minima_alerta: int = 2
+    costo_hoja_unidad: float
+    proveedor: Optional[str] = None
+    fecha_compra: Optional[str] = None
+    lote: Optional[str] = None
+    enlace_compra: Optional[str] = None
+    foto_url: Optional[str] = None
+
+class RetazoSchema(BaseModel):
+    material_id: int
+    tamano_ancho: float
+    tamano_alto: float
+    cantidad: int
+    ubicacion: Optional[str] = None
+
+# --- ENDPOINTS MATERIALES ---
+
+@router.get("/materiales")
+def list_materiales():
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM materiales ORDER BY id DESC")
+        rows = cursor.fetchall()
+        materiales = [dict(row) for row in rows]
+        conn.close()
+        return {"status": "success", "data": materiales}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/materiales", status_code=status.HTTP_201_CREATED)
+def create_material(material: MaterialSchema):
+    # Validar tipo de material
+    tipos_validos = ['madera', 'acrilico', 'corcho', 'resina', 'herrajes', 'empaques', 'imanes', 'pegamentos', 'pinturas', 'otros']
+    if material.tipo not in tipos_validos:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Tipo de material inválido. Debe ser uno de: {', '.join(tipos_validos)}"
+        )
+        
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO materiales (nombre, tipo, espesor, tamano_ancho, tamano_alto, cantidad, cantidad_minima_alerta, costo_hoja_unidad, proveedor, fecha_compra, lote, enlace_compra, foto_url)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            material.nombre, material.tipo, material.espesor, material.tamano_ancho, material.tamano_alto, 
+            material.cantidad, material.cantidad_minima_alerta, material.costo_hoja_unidad, 
+            material.proveedor, material.fecha_compra, material.lote, material.enlace_compra, material.foto_url
+        ))
+        conn.commit()
+        material_id = cursor.lastrowid
+        conn.close()
+        return {"status": "success", "id": material_id, "message": "Material registrado con éxito"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.put("/materiales/{material_id}")
+def update_material(material_id: int, material: MaterialSchema):
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Verificar si existe
+        cursor.execute("SELECT id FROM materiales WHERE id = ?", (material_id,))
+        if not cursor.fetchone():
+            conn.close()
+            raise HTTPException(status_code=404, detail="Material no encontrado")
+            
+        cursor.execute("""
+            UPDATE materiales
+            SET nombre = ?, tipo = ?, espesor = ?, tamano_ancho = ?, tamano_alto = ?, cantidad = ?, 
+                cantidad_minima_alerta = ?, costo_hoja_unidad = ?, proveedor = ?, fecha_compra = ?, lote = ?, enlace_compra = ?, foto_url = COALESCE(?, foto_url)
+            WHERE id = ?
+        """, (
+            material.nombre, material.tipo, material.espesor, material.tamano_ancho, material.tamano_alto,
+            material.cantidad, material.cantidad_minima_alerta, material.costo_hoja_unidad,
+            material.proveedor, material.fecha_compra, material.lote, material.enlace_compra, material.foto_url, material_id
+        ))
+        conn.commit()
+        conn.close()
+        return {"status": "success", "message": "Material actualizado con éxito"}
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.delete("/materiales/{material_id}")
+def delete_material(material_id: int):
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Verificar si existe
+        cursor.execute("SELECT id FROM materiales WHERE id = ?", (material_id,))
+        if not cursor.fetchone():
+            conn.close()
+            raise HTTPException(status_code=404, detail="Material no encontrado")
+            
+        cursor.execute("DELETE FROM materiales WHERE id = ?", (material_id,))
+        conn.commit()
+        conn.close()
+        return {"status": "success", "message": "Material eliminado con éxito"}
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/materiales/{material_id}/foto")
+async def upload_material_photo(material_id: int, file: UploadFile = File(...)):
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT id FROM materiales WHERE id = ?", (material_id,))
+        if not cursor.fetchone():
+            conn.close()
+            raise HTTPException(status_code=404, detail="Material no encontrado")
+            
+        ext = os.path.splitext(file.filename)[1].lower()
+        if ext not in ['.jpg', '.jpeg', '.png']:
+            conn.close()
+            raise HTTPException(status_code=400, detail="Formato no soportado")
+            
+        filename = f"material_{material_id}{ext}"
+        fotos_dir = os.path.join("data", "fotos_import")
+        os.makedirs(fotos_dir, exist_ok=True)
+        filepath = os.path.join(fotos_dir, filename)
+        
+        content = await file.read()
+        with open(filepath, "wb") as f:
+            f.write(content)
+            
+        foto_url = f"/fotos_import/{filename}"
+        cursor.execute("UPDATE materiales SET foto_url = ? WHERE id = ?", (foto_url, material_id))
+        conn.commit()
+        conn.close()
+        
+        return {"status": "success", "foto_url": foto_url}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# --- ENDPOINTS IMPORTACIÓN MASIVA ---
+
+@router.post("/materiales/importar")
+async def import_materiales_csv(file: UploadFile = File(...)):
+    if not file.filename.endswith('.csv'):
+        raise HTTPException(status_code=400, detail="El archivo debe ser de formato CSV")
+        
+    try:
+        contents = await file.read()
+        # Decodificar el archivo de texto
+        decoded = contents.decode('utf-8-sig') # utf-8-sig maneja el BOM de Excel
+        csv_reader = csv.DictReader(io.StringIO(decoded))
+        
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        imported_count = 0
+        errors = []
+        
+        tipos_validos = ['madera', 'acrilico', 'corcho', 'resina', 'herrajes', 'empaques', 'imanes', 'pegamentos', 'pinturas', 'otros']
+        
+        for idx, row in enumerate(csv_reader):
+            # Obtener datos y validar
+            nombre = row.get('nombre', '').strip()
+            tipo = row.get('tipo', '').strip().lower()
+            
+            if not nombre or not tipo:
+                errors.append(f"Fila {idx+1}: Nombre y Tipo son campos obligatorios.")
+                continue
+                
+            if tipo not in tipos_validos:
+                errors.append(f"Fila {idx+1}: Tipo '{tipo}' inválido. Debe ser uno de {tipos_validos}")
+                continue
+                
+            try:
+                espesor = float(row.get('espesor', 0.0) or 0.0)
+                tamano_ancho = float(row.get('tamano_ancho', 0.0) or 0.0)
+                tamano_alto = float(row.get('tamano_alto', 0.0) or 0.0)
+                cantidad = float(row.get('cantidad', 0.0) or 0.0)
+                cantidad_minima = float(row.get('cantidad_minima_alerta', 2.0) or 2.0)
+                costo = float(row.get('costo_hoja_unidad', 0.0) or 0.0)
+                proveedor = row.get('proveedor', '').strip() or None
+                fecha_compra = row.get('fecha_compra', '').strip() or None
+                lote = row.get('lote', '').strip() or None
+                
+                cursor.execute("""
+                    INSERT INTO materiales (nombre, tipo, espesor, tamano_ancho, tamano_alto, cantidad, cantidad_minima_alerta, costo_hoja_unidad, proveedor, fecha_compra, lote)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (nombre, tipo, espesor, tamano_ancho, tamano_alto, cantidad, cantidad_minima, costo, proveedor, fecha_compra, lote))
+                imported_count += 1
+                
+            except ValueError as ve:
+                errors.append(f"Fila {idx+1}: Error de formato numérico en columnas: {str(ve)}")
+                continue
+                
+        conn.commit()
+        conn.close()
+        
+        return {
+            "status": "success",
+            "imported_count": imported_count,
+            "errors": errors,
+            "message": f"Se importaron {imported_count} materiales con éxito. {len(errors)} filas fallaron."
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al procesar el archivo CSV: {str(e)}")
+
+# --- ENDPOINTS RETAZOS ---
+
+@router.get("/retazos")
+def list_retazos():
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        # Traer los retazos y unir con el nombre de su material base
+        cursor.execute("""
+            SELECT r.*, m.nombre as material_nombre, m.tipo as material_tipo
+            FROM retazos r
+            LEFT JOIN materiales m ON r.material_id = m.id
+            ORDER BY r.id DESC
+        """)
+        rows = cursor.fetchall()
+        retazos = [dict(row) for row in rows]
+        conn.close()
+        return {"status": "success", "data": retazos}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/retazos", status_code=status.HTTP_201_CREATED)
+def create_retazo(retazo: RetazoSchema):
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Validar si el material existe
+        cursor.execute("SELECT id FROM materiales WHERE id = ?", (retazo.material_id,))
+        if not cursor.fetchone():
+            conn.close()
+            raise HTTPException(status_code=400, detail="El material_id especificado no existe")
+            
+        cursor.execute("""
+            INSERT INTO retazos (material_id, tamano_ancho, tamano_alto, cantidad, ubicacion)
+            VALUES (?, ?, ?, ?, ?)
+        """, (retazo.material_id, retazo.tamano_ancho, retazo.tamano_alto, retazo.cantidad, retazo.ubicacion))
+        conn.commit()
+        retazo_id = cursor.lastrowid
+        conn.close()
+        return {"status": "success", "id": retazo_id, "message": "Retazo registrado con éxito"}
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.put("/retazos/{retazo_id}")
+def update_retazo(retazo_id: int, retazo: RetazoSchema):
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Verificar si existe el retazo
+        cursor.execute("SELECT id FROM retazos WHERE id = ?", (retazo_id,))
+        if not cursor.fetchone():
+            conn.close()
+            raise HTTPException(status_code=404, detail="Retazo no encontrado")
+            
+        cursor.execute("""
+            UPDATE retazos
+            SET material_id = ?, tamano_ancho = ?, tamano_alto = ?, cantidad = ?, ubicacion = ?
+            WHERE id = ?
+        """, (retazo.material_id, retazo.tamano_ancho, retazo.tamano_alto, retazo.cantidad, retazo.ubicacion, retazo_id))
+        conn.commit()
+        conn.close()
+        return {"status": "success", "message": "Retazo actualizado con éxito"}
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.delete("/retazos/{retazo_id}")
+def delete_retazo(retazo_id: int):
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Verificar si existe
+        cursor.execute("SELECT id FROM retazos WHERE id = ?", (retazo_id,))
+        if not cursor.fetchone():
+            conn.close()
+            raise HTTPException(status_code=404, detail="Retazo no encontrado")
+            
+        cursor.execute("DELETE FROM retazos WHERE id = ?", (retazo_id,))
+        conn.commit()
+        conn.close()
+        return {"status": "success", "message": "Retazo eliminado con éxito"}
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

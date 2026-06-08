@@ -1,0 +1,1219 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Catálogo B2B — Evergreen Love</title>
+    <meta name="description" content="Portal exclusivo de pedidos B2B para clientes mayoristas de Evergreen Love.">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="css/style.css">
+
+    <style>
+        :root { --cart-count: 0; }
+
+        * { box-sizing: border-box; }
+
+        body {
+            background: linear-gradient(135deg, #f5f0e8 0%, #ebe3d5 100%);
+            min-height: 100vh;
+            margin: 0;
+            font-family: var(--font-primary);
+        }
+
+        /* ── HEADER ─────────────────────────────── */
+        .b2b-header {
+            background: rgba(255,255,255,0.88);
+            backdrop-filter: blur(14px);
+            border-bottom: 1px solid rgba(0,0,0,0.07);
+            padding: 14px 28px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+        }
+        .b2b-header .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .b2b-header img { height: 52px; border-radius: 8px; }
+        .b2b-header h1 {
+            font-family: var(--font-secondary);
+            color: var(--color-moss-green);
+            margin: 0;
+            font-size: 20px;
+            line-height: 1.2;
+        }
+        .b2b-header h1 span {
+            display: block;
+            font-family: var(--font-primary);
+            font-size: 12px;
+            font-weight: 500;
+            color: #8c8270;
+            font-style: normal;
+        }
+        .b2b-badge {
+            background: linear-gradient(135deg, #5f5a30, #8a8244);
+            color: white;
+            font-size: 10px;
+            font-weight: 700;
+            padding: 3px 10px;
+            border-radius: 20px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        /* ── CART BUTTON ─────────────────────────── */
+        #btn-carrito {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--color-moss-green);
+            color: white;
+            border: none;
+            padding: 10px 18px;
+            border-radius: 30px;
+            font-family: var(--font-primary);
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+        }
+        #btn-carrito:hover { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(95,90,48,0.3); }
+        #cart-badge {
+            background: #e74c3c;
+            color: white;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            font-size: 11px;
+            font-weight: 700;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* ── MAIN ────────────────────────────────── */
+        .b2b-main { max-width: 1100px; margin: 0 auto; padding: 36px 20px 60px; }
+
+        /* ── LOGIN SCREEN ────────────────────────── */
+        #login-screen {
+            max-width: 420px;
+            margin: 60px auto;
+            background: white;
+            border-radius: 20px;
+            padding: 40px 36px;
+            box-shadow: 0 8px 40px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        #login-screen h2 {
+            font-family: var(--font-secondary);
+            color: var(--color-moss-green);
+            margin-bottom: 8px;
+        }
+        #login-screen p { font-size: 14px; color: #8c8270; margin-bottom: 28px; }
+        #login-screen label { display: block; text-align: left; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: #444; }
+        #login-screen input, #login-screen select {
+            width: 100%;
+            padding: 12px 14px;
+            border: 1.5px solid #ddd;
+            border-radius: 10px;
+            font-family: var(--font-primary);
+            font-size: 14px;
+            margin-bottom: 16px;
+            transition: border-color 0.2s;
+        }
+        #login-screen input:focus, #login-screen select:focus {
+            outline: none;
+            border-color: var(--color-moss-green);
+        }
+        #btn-login {
+            width: 100%;
+            padding: 13px;
+            background: linear-gradient(135deg, #5f5a30, #8a8244);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-family: var(--font-primary);
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        #btn-login:hover { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(95,90,48,0.35); }
+        #login-error { color: #e74c3c; font-size: 13px; margin-top: 10px; display: none; }
+
+        /* ── CATALOG GRID ────────────────────────── */
+        #catalog-screen { display: none; }
+        .catalog-welcome {
+            background: white;
+            border-radius: 16px;
+            padding: 20px 24px;
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+        }
+        .catalog-welcome h2 {
+            font-size: 18px;
+            color: var(--color-moss-green);
+            margin: 0 0 4px;
+        }
+        .catalog-welcome p { font-size: 13px; color: #8c8270; margin: 0; }
+
+        .products-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 20px;
+        }
+
+        .product-card {
+            background: white;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+            transition: transform 0.2s, box-shadow 0.2s;
+            display: flex;
+            flex-direction: column;
+            height: 350px;
+        }
+        .product-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 28px rgba(0,0,0,0.12);
+        }
+        .product-card .product-img {
+            width: 100%;
+            height: 130px;
+            object-fit: contain;
+            background: var(--color-gray-light);
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+        }
+        .product-card .product-img-placeholder {
+            width: 100%;
+            height: 130px;
+            background: linear-gradient(135deg, #f5f0e8, #ebe3d5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #c8bba8;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+        }
+        .product-card .product-body {
+            padding: 14px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            box-sizing: border-box;
+        }
+        .product-card .product-name {
+            font-size: 14.5px;
+            font-weight: 600;
+            color: #2d2d2d;
+            margin-bottom: 3px;
+            line-height: 1.3;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .product-card .product-sku {
+            font-size: 11px;
+            color: #a89880;
+            margin-bottom: 6px;
+        }
+        .product-card .product-price-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-top: auto;
+            margin-bottom: 8px;
+        }
+        .product-card .price-b2b {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--color-moss-green);
+        }
+        .product-card .price-retail {
+            font-size: 11.5px;
+            color: #a89880;
+            text-decoration: line-through;
+        }
+        .product-card .qty-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 14px;
+        }
+        .qty-btn {
+            width: 30px;
+            height: 30px;
+            border: 1.5px solid #ddd;
+            border-radius: 8px;
+            background: white;
+            font-size: 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.15s;
+        }
+        .qty-btn:hover { border-color: var(--color-moss-green); color: var(--color-moss-green); }
+        .qty-input {
+            width: 50px;
+            text-align: center;
+            border: 1.5px solid #ddd;
+            border-radius: 8px;
+            padding: 4px;
+            font-family: var(--font-primary);
+            font-size: 14px;
+            font-weight: 600;
+        }
+        .btn-agregar {
+            width: 100%;
+            margin-top: 12px;
+            padding: 10px;
+            background: var(--color-moss-green);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-family: var(--font-primary);
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            transition: all 0.2s;
+        }
+        .btn-agregar:hover { filter: brightness(1.1); transform: translateY(-1px); }
+        .btn-agregar.added {
+            background: #27ae60;
+            animation: pulse-added 0.4s ease;
+        }
+        @keyframes pulse-added {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.04); }
+            100% { transform: scale(1); }
+        }
+
+        /* ── CART SIDEBAR ────────────────────────── */
+        #cart-overlay {
+            display: none;
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.4);
+            backdrop-filter: blur(4px);
+            z-index: 200;
+        }
+        #cart-panel {
+            position: fixed;
+            top: 0; right: -480px;
+            width: 440px;
+            max-width: 95vw;
+            height: 100vh;
+            background: white;
+            z-index: 201;
+            display: flex;
+            flex-direction: column;
+            transition: right 0.3s cubic-bezier(0.4,0,0.2,1);
+            box-shadow: -4px 0 30px rgba(0,0,0,0.15);
+        }
+        #cart-panel.open { right: 0; }
+        .cart-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid #f0ece4;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .cart-header h3 { margin: 0; font-size: 17px; color: var(--color-moss-green); }
+        #btn-close-cart {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #999;
+            padding: 4px;
+            border-radius: 6px;
+        }
+        #btn-close-cart:hover { background: #f5f5f5; }
+        #cart-items { flex: 1; overflow-y: auto; padding: 16px 24px; }
+        .cart-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 0;
+            border-bottom: 1px solid #f5f0e8;
+        }
+        .cart-item img {
+            width: 56px; height: 56px;
+            object-fit: cover;
+            border-radius: 8px;
+            border: 1px solid #eee;
+            flex-shrink: 0;
+        }
+        .cart-item-placeholder {
+            width: 56px; height: 56px;
+            border-radius: 8px;
+            background: #f5f0e8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .cart-item-info { flex: 1; }
+        .cart-item-name { font-size: 13px; font-weight: 600; color: #2d2d2d; }
+        .cart-item-sub { font-size: 12px; color: #8c8270; margin-top: 2px; }
+        .cart-item-price { font-size: 14px; font-weight: 700; color: var(--color-moss-green); }
+        .btn-remove-item {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #ccc;
+            padding: 4px;
+            border-radius: 6px;
+        }
+        .btn-remove-item:hover { color: #e74c3c; background: #fff0f0; }
+        #cart-empty {
+            text-align: center;
+            color: #c8bba8;
+            padding: 60px 20px;
+            font-style: italic;
+        }
+        .cart-footer {
+            padding: 20px 24px;
+            border-top: 1px solid #f0ece4;
+            background: #fdfaf5;
+        }
+        .cart-total-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        .cart-total-row span:first-child { font-size: 15px; font-weight: 600; color: #2d2d2d; }
+        .cart-total-row .total-amount { font-size: 22px; font-weight: 700; color: var(--color-moss-green); }
+        #btn-pedir {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #5f5a30, #8a8244);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-family: var(--font-primary);
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+        #btn-pedir:hover { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(95,90,48,0.35); }
+        #btn-pedir:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+        /* ── ORDER MODAL ─────────────────────────── */
+        #order-overlay {
+            display: none;
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(6px);
+            z-index: 300;
+            align-items: center;
+            justify-content: center;
+        }
+        #order-overlay.open { display: flex; }
+        #order-modal {
+            background: white;
+            border-radius: 20px;
+            padding: 32px;
+            width: 90%;
+            max-width: 480px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+            animation: slideUp 0.3s ease;
+        }
+        @keyframes slideUp {
+            from { transform: translateY(30px); opacity: 0; }
+            to   { transform: translateY(0);    opacity: 1; }
+        }
+        #order-modal h3 {
+            font-family: var(--font-secondary);
+            color: var(--color-moss-green);
+            margin: 0 0 6px;
+            font-size: 20px;
+        }
+        #order-modal p { font-size: 13px; color: #8c8270; margin: 0 0 24px; }
+        .form-group { margin-bottom: 14px; }
+        .form-group label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 5px; color: #444; }
+        .form-group input, .form-group textarea {
+            width: 100%;
+            padding: 11px 13px;
+            border: 1.5px solid #ddd;
+            border-radius: 10px;
+            font-family: var(--font-primary);
+            font-size: 13px;
+            transition: border-color 0.2s;
+        }
+        .form-group input:focus, .form-group textarea:focus {
+            outline: none;
+            border-color: var(--color-moss-green);
+        }
+        .form-group textarea { resize: vertical; min-height: 80px; }
+        .order-summary-box {
+            background: #fdfaf5;
+            border: 1px solid #ede6d8;
+            border-radius: 12px;
+            padding: 14px;
+            margin-bottom: 20px;
+        }
+        .order-summary-box h4 { font-size: 13px; font-weight: 600; margin: 0 0 10px; color: #5d4037; }
+        .order-summary-line {
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+            color: #555;
+            margin-bottom: 4px;
+        }
+        .order-summary-line.total {
+            font-weight: 700;
+            font-size: 15px;
+            color: var(--color-moss-green);
+            border-top: 1px solid #ede6d8;
+            padding-top: 8px;
+            margin-top: 6px;
+        }
+        .modal-btns { display: flex; gap: 12px; margin-top: 6px; }
+        .btn-cancel-order {
+            flex: 1;
+            padding: 12px;
+            background: #f5f5f5;
+            border: none;
+            border-radius: 10px;
+            font-family: var(--font-primary);
+            font-size: 14px;
+            cursor: pointer;
+        }
+        #btn-confirm-order {
+            flex: 2;
+            padding: 12px;
+            background: linear-gradient(135deg, #5f5a30, #8a8244);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-family: var(--font-primary);
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        #btn-confirm-order:hover { filter: brightness(1.1); }
+
+        /* ── SUCCESS ─────────────────────────────── */
+        #success-screen {
+            display: none;
+            max-width: 420px;
+            margin: 80px auto;
+            text-align: center;
+            background: white;
+            border-radius: 20px;
+            padding: 48px 36px;
+            box-shadow: 0 8px 40px rgba(0,0,0,0.1);
+        }
+        #success-screen .success-icon {
+            width: 72px; height: 72px;
+            background: linear-gradient(135deg, #27ae60, #2ecc71);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+            color: white;
+        }
+        #success-screen h2 { font-family: var(--font-secondary); color: var(--color-moss-green); }
+        #success-screen p { font-size: 14px; color: #8c8270; line-height: 1.6; }
+
+        /* ── RESPONSIVE DESIGN (MOBILE/COMPACT HEADER) ────────────────── */
+        @media (max-width: 768px) {
+            .b2b-header {
+                padding: 10px 18px;
+            }
+            .b2b-header h1 {
+                font-size: 17px;
+            }
+            .b2b-header h1 span {
+                font-size: 10px;
+            }
+            .b2b-header img {
+                height: 42px;
+            }
+            .b2b-badge {
+                font-size: 9px;
+                padding: 2px 8px;
+            }
+            #btn-carrito {
+                padding: 10px 14px;
+                font-size: 13px;
+                gap: 6px;
+            }
+        }
+
+        @media (max-width: 540px) {
+            .b2b-header {
+                padding: 8px 12px;
+            }
+            .b2b-header .brand {
+                gap: 8px;
+            }
+            .b2b-header img {
+                height: 36px;
+                border-radius: 6px;
+            }
+            .b2b-header h1 {
+                font-size: 14px;
+            }
+            .b2b-header h1 span {
+                font-size: 9px;
+            }
+            .b2b-badge {
+                display: none; /* Ocultar el badge en pantallas muy pequeñas para ahorrar espacio */
+            }
+            #btn-carrito {
+                width: 38px;
+                height: 38px;
+                border-radius: 50%;
+                padding: 0;
+                justify-content: center;
+                gap: 0;
+            }
+            #btn-carrito .btn-text {
+                display: none; /* Ocultar texto "Mi Pedido" */
+            }
+            #cart-badge {
+                position: absolute;
+                top: -6px;
+                right: -6px;
+                width: 18px;
+                height: 18px;
+                font-size: 9.5px;
+                border: 2px solid white;
+            }
+
+            /* ── RESPONSIVE ORDER MODAL & SUMMARY ── */
+            #order-modal {
+                padding: 16px;
+                max-width: 95vw;
+            }
+            #order-modal h3 {
+                font-size: 17px;
+                margin-bottom: 2px;
+            }
+            #order-modal p {
+                margin-bottom: 12px;
+                font-size: 11.5px;
+            }
+            .order-summary-box {
+                padding: 10px;
+                margin-bottom: 12px;
+                border-radius: 8px;
+            }
+            #b2b-summary-toggle h4 {
+                font-size: 13px !important;
+            }
+            .form-group {
+                margin-bottom: 10px;
+            }
+            .form-group label {
+                font-size: 11.5px;
+                margin-bottom: 3px;
+            }
+            .form-group input, .form-group textarea {
+                padding: 8px 10px;
+                font-size: 12px;
+                border-radius: 8px;
+            }
+            .form-group textarea {
+                min-height: 50px;
+            }
+            .modal-btns {
+                margin-top: 10px;
+            }
+            .btn-cancel-order, #btn-confirm-order {
+                padding: 9px;
+                font-size: 12.5px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<header class="b2b-header">
+    <div class="brand">
+        <img src="img/logo.jpg" alt="Evergreen Love" onerror="this.style.display='none'">
+        <h1>Evergreen Love <span>Portal de Pedidos B2B</span></h1>
+    </div>
+    <div style="display:flex; align-items:center; gap:12px;">
+        <span class="b2b-badge">MAYORISTA</span>
+        <button id="btn-carrito" onclick="openCart()" style="display:none;">
+            <i data-lucide="shopping-bag" style="width:16px;height:16px;"></i>
+            <span class="btn-text">Mi Pedido</span>
+            <span id="cart-badge">0</span>
+        </button>
+    </div>
+</header>
+
+<!-- LOGIN -->
+<div class="b2b-main">
+    <div id="login-screen">
+        <div style="width:60px;height:60px;background:linear-gradient(135deg,#f5f0e8,#ebe3d5);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;">
+            <i data-lucide="lock" style="width:28px;height:28px;color:var(--color-moss-green);"></i>
+        </div>
+        <h2>Acceso al Catálogo</h2>
+        <p>Ingresa tu código de cliente B2B para ver tu catálogo personalizado con precios especiales.</p>
+        <label for="input-cliente-id">Código de Cliente (ID)</label>
+        <input type="number" id="input-cliente-id" placeholder="Ej. 1" min="1">
+        <button id="btn-login">
+            <i data-lucide="log-in" style="width:16px;height:16px;display:inline;"></i>
+            Acceder a mi Catálogo
+        </button>
+        <p id="login-error">❌ Código de cliente no encontrado. Verifica tu número de cliente.</p>
+    </div>
+
+    <!-- CATALOG -->
+    <div id="catalog-screen">
+        <div class="catalog-welcome" id="catalog-welcome-bar">
+            <div>
+                <h2 id="welcome-name">Bienvenido</h2>
+                <p>Aquí están tus productos con precios especiales pactados. Agrega lo que necesitas y envía tu pedido.</p>
+            </div>
+            <button onclick="logout()" style="background:none;border:1px solid #ddd;border-radius:8px;padding:7px 14px;font-family:var(--font-primary);font-size:12px;cursor:pointer;color:#8c8270;display:flex;align-items:center;gap:6px;">
+                <i data-lucide="log-out" style="width:13px;height:13px;"></i> Salir
+            </button>
+        </div>
+        <div class="products-grid" id="products-grid">
+            <div style="grid-column:1/-1;text-align:center;padding:60px 0;color:#c8bba8;">
+                <div class="spinner"></div>
+                <p>Cargando catálogo...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- SUCCESS -->
+    <div id="success-screen">
+        <div class="success-icon"><i data-lucide="check" style="width:36px;height:36px;"></i></div>
+        <h2>¡Pedido Enviado!</h2>
+        <p id="success-msg">Tu pedido fue registrado correctamente. Te contactaremos pronto para coordinar la entrega.</p>
+        <div id="success-invoice-box" style="display:none; margin: 20px auto 0; max-width: 320px; background: #f5f9f0; border: 1.5px solid #b8dca8; border-radius: 12px; padding: 16px 20px; text-align: left;">
+            <p style="margin:0 0 8px; font-size:12px; color:#5d7a4d; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">✓ Factura Generada Automáticamente</p>
+            <div style="display:flex; justify-content:space-between; font-size:14px; margin-bottom:4px;">
+                <span style="color:#555;">Número de Factura:</span>
+                <strong id="success-invoice-num" style="color: #2d5a27;"></strong>
+            </div>
+            <div style="display:flex; justify-content:space-between; font-size:16px; font-weight:700; border-top:1px solid #b8dca8; padding-top:8px; margin-top:4px;">
+                <span style="color:#2d2d2d;">Total a Pagar:</span>
+                <span id="success-invoice-total" style="color: var(--color-moss-green);"></span>
+            </div>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:10px; margin-top:24px; max-width:320px; margin-left:auto; margin-right:auto;">
+            <button id="btn-send-whatsapp" style="padding:12px 28px;background:#25d366;color:white;border:none;border-radius:10px;font-family:var(--font-primary);font-size:14px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;transition:all 0.2s;">
+                <i data-lucide="message-square" style="width:16px;height:16px;"></i> Enviar por WhatsApp
+            </button>
+            <button onclick="location.reload()" style="padding:12px 28px;background:var(--color-moss-green);color:white;border:none;border-radius:10px;font-family:var(--font-primary);font-size:14px;font-weight:600;cursor:pointer;">
+                Hacer Otro Pedido
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- CART OVERLAY + PANEL -->
+<div id="cart-overlay" onclick="closeCart()"></div>
+<div id="cart-panel">
+    <div class="cart-header">
+        <h3><i data-lucide="shopping-bag" style="width:18px;height:18px;display:inline;vertical-align:-3px;margin-right:6px;"></i>Mi Pedido</h3>
+        <button id="btn-close-cart" onclick="closeCart()"><i data-lucide="x" style="width:20px;height:20px;"></i></button>
+    </div>
+    <div id="cart-items">
+        <div id="cart-empty" style="display:flex;flex-direction:column;align-items:center;gap:10px;">
+            <i data-lucide="package" style="width:40px;height:40px;color:#e0d9ce;"></i>
+            Tu pedido está vacío
+        </div>
+    </div>
+    <div class="cart-footer">
+        <div class="cart-total-row">
+            <span>Total Estimado</span>
+            <span class="total-amount" id="cart-total">$0.00</span>
+        </div>
+        <button id="btn-pedir" onclick="openOrderModal()" disabled>
+            <i data-lucide="send" style="width:16px;height:16px;"></i>
+            Enviar Pedido
+        </button>
+    </div>
+</div>
+
+<!-- ORDER MODAL -->
+<div id="order-overlay">
+    <div id="order-modal">
+        <h3>Confirmar Pedido</h3>
+        <p>Completa tus datos de contacto para finalizar el pedido.</p>
+
+        <div class="order-summary-box" id="order-summary-box"></div>
+
+        <div class="form-group">
+            <label>Nombre de Contacto *</label>
+            <input type="text" id="ord-nombre" placeholder="Tu nombre completo" required>
+        </div>
+        <div class="form-group">
+            <label>Email</label>
+            <input type="email" id="ord-email" placeholder="tu@email.com">
+        </div>
+        <div class="form-group">
+            <label>Teléfono</label>
+            <input type="tel" id="ord-telefono" placeholder="787-000-0000">
+        </div>
+        <div class="form-group">
+            <label>Notas adicionales</label>
+            <textarea id="ord-notas" placeholder="Fecha de entrega preferida, instrucciones especiales..."></textarea>
+        </div>
+
+        <div class="modal-btns">
+            <button class="btn-cancel-order" onclick="closeOrderModal()">Cancelar</button>
+            <button id="btn-confirm-order" onclick="submitOrder()">
+                <i data-lucide="check-circle" style="width:15px;height:15px;display:inline;vertical-align:-2px;margin-right:4px;"></i>
+                Confirmar Pedido
+            </button>
+        </div>
+    </div>
+</div>
+
+<script src="js/api.js?v=34"></script>
+<script>
+    const API = API_BASE_URL;
+    let clienteId = null;
+    let clienteNombre = '';
+    let cart = [];   // { producto_id, nombre, sku, precio, cantidad, foto }
+    let isB2BExempt = false;
+    let isB2BSummaryExpanded = false;
+
+    /* ── LOGIN ────────────────────────────────── */
+    document.getElementById('btn-login').addEventListener('click', async () => {
+        const id = parseInt(document.getElementById('input-cliente-id').value);
+        if (!id || id < 1) return;
+
+        const btn = document.getElementById('btn-login');
+        btn.textContent = 'Verificando...';
+        btn.disabled = true;
+
+        try {
+            const res = await fetch(`${API}/clientes/${id}/info`);
+            if (!res.ok) throw new Error('not found');
+            const data = await res.json();
+
+            clienteId = id;
+            clienteNombre = data.data.nombre;
+            document.getElementById('welcome-name').textContent = `👋 Hola, ${clienteNombre}`;
+
+            await loadCatalog();
+            document.getElementById('login-screen').style.display = 'none';
+            document.getElementById('catalog-screen').style.display = 'block';
+            document.getElementById('btn-carrito').style.display = 'flex';
+            document.getElementById('login-error').style.display = 'none';
+        } catch (e) {
+            document.getElementById('login-error').style.display = 'block';
+        } finally {
+            btn.textContent = 'Acceder a mi Catálogo';
+            btn.disabled = false;
+        }
+    });
+
+    document.getElementById('input-cliente-id').addEventListener('keydown', e => {
+        if (e.key === 'Enter') document.getElementById('btn-login').click();
+    });
+
+    function logout() {
+        clienteId = null;
+        cart = [];
+        updateCartUI();
+        document.getElementById('catalog-screen').style.display = 'none';
+        document.getElementById('login-screen').style.display = 'block';
+        document.getElementById('btn-carrito').style.display = 'none';
+        document.getElementById('input-cliente-id').value = '';
+    }
+
+    /* ── CATALOG ──────────────────────────────── */
+    async function loadCatalog() {
+        const grid = document.getElementById('products-grid');
+        grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:60px 0;color:#c8bba8;"><div class="spinner"></div><p>Cargando...</p></div>`;
+
+        const res = await fetch(`${API}/clientes/${clienteId}/catalogo`);
+        const data = await res.json();
+        const items = data.data || [];
+
+        if (items.length === 0) {
+            grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:60px;color:#c8bba8;font-style:italic;">
+                <i data-lucide="package" style="width:48px;height:48px;margin-bottom:14px;display:block;margin-left:auto;margin-right:auto;color:#e0d9ce;"></i>
+                No tienes productos asignados en tu catálogo aún.
+            </div>`;
+            lucide.createIcons();
+            return;
+        }
+
+        grid.innerHTML = '';
+        items.forEach(item => {
+            const card = document.createElement('div');
+            card.className = 'product-card';
+
+            const imgHtml = item.foto_ruta
+                ? `<img class="product-img" src="${getFullImageUrl(item.foto_ruta)}" alt="${item.producto_nombre}" 
+                        onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+                   <div class="product-img-placeholder" style="display:none;aspect-ratio:1;">
+                       <i data-lucide="image" style="width:40px;height:40px;"></i>
+                   </div>`
+                : `<div class="product-img-placeholder">
+                       <i data-lucide="image" style="width:40px;height:40px;"></i>
+                   </div>`;
+
+            card.innerHTML = `
+                ${imgHtml}
+                <div class="product-body">
+                    <div class="product-name">${item.producto_nombre}</div>
+                    <div class="product-sku">SKU: ${item.producto_sku}</div>
+                    <div class="product-price-row">
+                        <div class="price-b2b">$${item.precio_especial.toFixed(2)}</div>
+                        <div class="price-retail">Retail $${item.precio_retail.toFixed(2)}</div>
+                    </div>
+                    <div class="qty-row">
+                        <button class="qty-btn" onclick="changeQty(${item.producto_id}, -1)">−</button>
+                        <input class="qty-input" id="qty-${item.producto_id}" type="number" value="1" min="1">
+                        <button class="qty-btn" onclick="changeQty(${item.producto_id}, 1)">+</button>
+                    </div>
+                    <button class="btn-agregar" id="btn-add-${item.producto_id}" 
+                            onclick="addToCart(${item.producto_id}, '${item.producto_nombre.replace(/'/g,"\\'")}', '${item.producto_sku}', ${item.precio_especial}, '${item.foto_ruta || ''}')">
+                        <i data-lucide="plus" style="width:14px;height:14px;"></i>
+                        Agregar al Pedido
+                    </button>
+                </div>
+            `;
+            grid.appendChild(card);
+        });
+
+        lucide.createIcons();
+    }
+
+    /* ── CART LOGIC ───────────────────────────── */
+    function changeQty(productoId, delta) {
+        const input = document.getElementById(`qty-${productoId}`);
+        let val = parseInt(input.value) + delta;
+        if (val < 1) val = 1;
+        input.value = val;
+    }
+
+    function addToCart(productoId, nombre, sku, precio, foto) {
+        const qty = parseInt(document.getElementById(`qty-${productoId}`).value) || 1;
+        const existing = cart.find(c => c.producto_id === productoId);
+
+        if (existing) {
+            existing.cantidad += qty;
+        } else {
+            cart.push({ producto_id: productoId, nombre, sku, precio, cantidad: qty, foto });
+        }
+
+        // Button feedback
+        const btn = document.getElementById(`btn-add-${productoId}`);
+        btn.classList.add('added');
+        btn.innerHTML = `<i data-lucide="check" style="width:14px;height:14px;"></i> ¡Añadido!`;
+        lucide.createIcons();
+        setTimeout(() => {
+            btn.classList.remove('added');
+            btn.innerHTML = `<i data-lucide="plus" style="width:14px;height:14px;"></i> Agregar al Pedido`;
+            lucide.createIcons();
+        }, 1800);
+
+        updateCartUI();
+    }
+
+    function removeFromCart(productoId) {
+        cart = cart.filter(c => c.producto_id !== productoId);
+        updateCartUI();
+        renderCartItems();
+    }
+
+    function updateCartUI() {
+        const total = cart.reduce((s, c) => s + c.precio * c.cantidad, 0);
+        const count = cart.reduce((s, c) => s + c.cantidad, 0);
+        const badge = document.getElementById('cart-badge');
+        badge.textContent = count;
+        badge.style.display = count > 0 ? 'flex' : 'none';
+        document.getElementById('cart-total').textContent = `$${total.toFixed(2)}`;
+        document.getElementById('btn-pedir').disabled = cart.length === 0;
+    }
+
+    function renderCartItems() {
+        const container = document.getElementById('cart-items');
+        const empty = document.getElementById('cart-empty');
+
+        if (cart.length === 0) {
+            container.innerHTML = `<div id="cart-empty" style="display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;color:#c8bba8;padding:60px 20px;font-style:italic;">
+                <i data-lucide="package" style="width:40px;height:40px;color:#e0d9ce;"></i>
+                Tu pedido está vacío
+            </div>`;
+            lucide.createIcons();
+            return;
+        }
+
+        container.innerHTML = cart.map(item => `
+            <div class="cart-item">
+                ${item.foto
+                    ? `<img src="${getFullImageUrl(item.foto)}" alt="${item.nombre}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                       <div class="cart-item-placeholder" style="display:none;"><i data-lucide="package" style="width:20px;height:20px;color:#c8bba8;"></i></div>`
+                    : `<div class="cart-item-placeholder"><i data-lucide="package" style="width:20px;height:20px;color:#c8bba8;"></i></div>`}
+                <div class="cart-item-info">
+                    <div class="cart-item-name">${item.nombre}</div>
+                    <div class="cart-item-sub">Cant: ${item.cantidad} × $${item.precio.toFixed(2)}</div>
+                </div>
+                <div class="cart-item-price">$${(item.precio * item.cantidad).toFixed(2)}</div>
+                <button class="btn-remove-item" onclick="removeFromCart(${item.producto_id})">
+                    <i data-lucide="x" style="width:16px;height:16px;"></i>
+                </button>
+            </div>
+        `).join('');
+
+        lucide.createIcons();
+    }
+
+    /* ── CART OPEN/CLOSE ──────────────────────── */
+    function openCart() {
+        renderCartItems();
+        document.getElementById('cart-overlay').style.display = 'block';
+        document.getElementById('cart-panel').classList.add('open');
+    }
+
+    function closeCart() {
+        document.getElementById('cart-overlay').style.display = 'none';
+        document.getElementById('cart-panel').classList.remove('open');
+    }
+
+    /* ── ORDER SUMMARY & IVU ──────────────────── */
+    function renderOrderSummary() {
+        const subtotal = cart.reduce((s, c) => s + c.precio * c.cantidad, 0);
+        const stateTaxRate = 0.105;
+        const municipalTaxRate = 0.01;
+        const stateTax = subtotal * stateTaxRate;
+        const municipalTax = isB2BExempt ? 0.00 : subtotal * municipalTaxRate;
+        const total = subtotal + stateTax + municipalTax;
+
+        const summaryBox = document.getElementById('order-summary-box');
+        const itemCount = cart.reduce((s, c) => s + c.cantidad, 0);
+        
+        summaryBox.innerHTML = `
+            <!-- Encabezado colapsable del resumen -->
+            <div id="b2b-summary-toggle" style="display: flex; align-items: center; justify-content: space-between; cursor: pointer; padding: 6px 0; user-select: none; border-bottom: 1px solid #ede6d8; margin-bottom: 10px;">
+                <h4 style="font-size: 14px; font-weight: 700; color: var(--color-moss-green); margin: 0; display: flex; align-items: center; gap: 8px;">
+                    <i data-lucide="shopping-cart" style="width: 16px; height: 16px;"></i> 
+                    Artículos en Pedido (${itemCount})
+                </h4>
+                <div style="display: flex; align-items: center; gap: 6px; color: #8c8244; font-size: 12.5px; font-weight: 600;">
+                    <span>${isB2BSummaryExpanded ? 'Ocultar' : 'Ver detalle'}</span>
+                    <i data-lucide="${isB2BSummaryExpanded ? 'chevron-up' : 'chevron-down'}" style="width: 16px; height: 16px;"></i>
+                </div>
+            </div>
+
+            <!-- Lista de Artículos (colapsable) -->
+            <div id="b2b-summary-items-list" style="display: ${isB2BSummaryExpanded ? 'flex' : 'none'}; flex-direction: column; gap: 6px; margin-bottom: 8px; max-height: 120px; overflow-y: auto; padding-right: 4px; border-bottom: 1px solid rgba(0, 0, 0, 0.03); padding-bottom: 8px;">
+                ${cart.map(item => {
+                    const imgHtml = item.foto
+                        ? `<img src="${getFullImageUrl(item.foto)}" alt="${item.nombre}" style="width: 40px; height: 40px; object-fit: cover; border-radius: 8px; border: 1px solid #ede6d8; flex-shrink: 0;" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                           <div style="width: 40px; height: 40px; border-radius: 8px; background: #fdfaf5; border: 1px dashed #c8bba8; display: none; align-items: center; justify-content: center; flex-shrink: 0;">
+                               <i data-lucide="package" style="width:16px; height:16px; color:#c8bba8;"></i>
+                           </div>`
+                        : `<div style="width: 40px; height: 40px; border-radius: 8px; background: #fdfaf5; border: 1px dashed #c8bba8; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                               <i data-lucide="package" style="width:16px; height:16px; color:#c8bba8;"></i>
+                           </div>`;
+                    
+                    return `
+                        <div style="display: flex; align-items: center; gap: 12px; padding: 4px 0;">
+                            ${imgHtml}
+                            <div style="flex: 1; min-width: 0; text-align: left;">
+                                <div style="font-weight: 600; font-size: 13px; color: #2d2d2d; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${item.nombre}</div>
+                                <div style="font-size: 11px; color: #8c8270;">Cant: ${item.cantidad} × $${item.precio.toFixed(2)}</div>
+                            </div>
+                            <div style="font-weight: 700; font-size: 13.5px; color: var(--color-moss-green); flex-shrink: 0;">
+                                $${(item.precio * item.cantidad).toFixed(2)}
+                            </div>
+                        </div>
+                    `;
+                }).join('')}
+            </div>
+            
+            <!-- Desglose de IVU y Subtotal -->
+            <div style="padding-top: 4px; display: flex; flex-direction: column; gap: 3px; font-size: 12.5px; color: #555; text-align: left; border-top: 1px dashed #ede6d8; margin-top: 6px; padding-top: 6px;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span>Subtotal:</span>
+                    <span style="font-weight: 600; color: #2d2d2d;">$${subtotal.toFixed(2)}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin: 2px 0;">
+                    <label style="display: flex; align-items: center; gap: 5px; cursor: pointer; font-size: 11.5px; color: #5d4037; font-weight: 600; user-select: none;">
+                        <input type="checkbox" id="chk-municipal-exempt" ${isB2BExempt ? 'checked' : ''} style="cursor: pointer; width: 13px; height: 13px;">
+                        Exento IVU Municipal
+                    </label>
+                    <span style="font-size: 10px; color: #888; font-style: italic;">(Certificado)</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span>IVU Estatal (10.5%):</span>
+                    <span>$${stateTax.toFixed(2)}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; color: ${isB2BExempt ? '#a89880' : '#555'}; text-decoration: ${isB2BExempt ? 'line-through' : 'none'};">
+                    <span>IVU Municipal (1.0%):</span>
+                    <span>$${municipalTax.toFixed(2)}</span>
+                </div>
+            </div>
+
+            <div class="order-summary-line total" style="margin-top: 8px; border-top: 2px solid var(--color-moss-green); padding-top: 8px; display: flex; justify-content: space-between; align-items: center;">
+                <span style="font-weight: 700; font-size: 14px; color: #2d2d2d;">Total a Pagar:</span>
+                <span style="font-size: 18px; font-weight: 700; color: var(--color-moss-green);">$${total.toFixed(2)}</span>
+            </div>
+        `;
+
+        lucide.createIcons();
+
+        // Registrar el evento del toggle del resumen
+        const toggleBtn = document.getElementById('b2b-summary-toggle');
+        if (toggleBtn) {
+            toggleBtn.addEventListener('click', () => {
+                isB2BSummaryExpanded = !isB2BSummaryExpanded;
+                renderOrderSummary();
+            });
+        }
+
+        // Registrar el evento del checkbox de exención municipal
+        const chk = document.getElementById('chk-municipal-exempt');
+        if (chk) {
+            chk.addEventListener('change', (e) => {
+                isB2BExempt = e.target.checked;
+                renderOrderSummary();
+            });
+        }
+    }
+
+    function openOrderModal() {
+        if (cart.length === 0) return;
+
+        isB2BSummaryExpanded = false;
+        isB2BExempt = false;
+        renderOrderSummary();
+
+        closeCart();
+        document.getElementById('order-overlay').classList.add('open');
+    }
+
+    function closeOrderModal() {
+        document.getElementById('order-overlay').classList.remove('open');
+    }
+
+    /* ── SUBMIT ORDER ─────────────────────────── */
+    async function submitOrder() {
+        const nombre = document.getElementById('ord-nombre').value.trim();
+        if (!nombre) {
+            document.getElementById('ord-nombre').focus();
+            document.getElementById('ord-nombre').style.borderColor = '#e74c3c';
+            return;
+        }
+        document.getElementById('ord-nombre').style.borderColor = '#ddd';
+
+        const btn = document.getElementById('btn-confirm-order');
+        btn.textContent = 'Enviando...';
+        btn.disabled = true;
+
+        // Calcular impuestos basados en el estado del checkbox municipal
+        const isExempt = isB2BExempt;
+        
+        const subtotal = cart.reduce((s, c) => s + c.precio * c.cantidad, 0);
+        const stateTax = subtotal * 0.105;
+        const municipalTax = isExempt ? 0.00 : subtotal * 0.01;
+        const totalWithTax = subtotal + stateTax + municipalTax;
+
+        let clientNotes = document.getElementById('ord-notas').value.trim();
+        let taxNotes = `[IVU DETALLES - Subtotal: $${subtotal.toFixed(2)} | IVU Estatal (10.5%): $${stateTax.toFixed(2)} | IVU Municipal (1.0%): $${municipalTax.toFixed(2)} (${isExempt ? 'EXENTO' : 'COBRADO'}) | Total Final: $${totalWithTax.toFixed(2)}]`;
+        const finalNotes = clientNotes ? `${clientNotes}\n\n${taxNotes}` : taxNotes;
+
+        const payload = {
+            nombre_contacto: nombre,
+            email_contacto: document.getElementById('ord-email').value.trim() || null,
+            telefono_contacto: document.getElementById('ord-telefono').value.trim() || null,
+            notas: finalNotes,
+            items: cart.map(item => ({
+                producto_id: item.producto_id,
+                cantidad: item.cantidad,
+                precio_unitario: item.precio,
+                nombre_producto: item.nombre
+            }))
+        };
+
+        try {
+            const res = await fetch(`${API}/clientes/${clienteId}/pedido`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.detail || 'Error al enviar pedido');
+
+            // Show success with invoice details if returned
+            const successMsg = `Tu pedido de $${totalWithTax.toFixed(2)} (Subtotal: $${subtotal.toFixed(2)} + IVU: $${(stateTax + municipalTax).toFixed(2)}) fue registrado. ¡Gracias, ${clienteNombre}!`;
+            document.getElementById('success-msg').textContent = successMsg;
+
+            // Show invoice box if backend returned a factura number
+            const invoiceBox = document.getElementById('success-invoice-box');
+            if (data.numero_factura && invoiceBox) {
+                document.getElementById('success-invoice-num').textContent = data.numero_factura;
+                document.getElementById('success-invoice-total').textContent = `$${totalWithTax.toFixed(2)}`;
+                invoiceBox.style.display = 'block';
+            }
+
+            // Configurar botón de WhatsApp antes de vaciar el carrito
+            const btnWhatsapp = document.getElementById('btn-send-whatsapp');
+            if (btnWhatsapp) {
+                const itemsList = cart.map(i => `• ${i.nombre} (x${i.cantidad})`).join('\n');
+                const messageText = `¡Hola! Acabo de enviar mi pedido B2B desde el catálogo.\n\n*Detalles del pedido:*\n- *Cliente B2B:* ${clienteNombre}\n- *Factura:* ${data.numero_factura || 'N/A'}\n- *Total con IVU:* $${totalWithTax.toFixed(2)}\n\n*Artículos:*\n${itemsList}`;
+                btnWhatsapp.onclick = () => {
+                    window.open(`https://wa.me/17879601431?text=${encodeURIComponent(messageText)}`, '_blank');
+                };
+            }
+
+            closeOrderModal();
+            cart = [];
+            updateCartUI();
+            document.getElementById('catalog-screen').style.display = 'none';
+            document.getElementById('btn-carrito').style.display = 'none';
+            document.getElementById('success-screen').style.display = 'block';
+            lucide.createIcons();
+        } catch (err) {
+            alert('Error al enviar el pedido: ' + err.message);
+        } finally {
+            btn.textContent = 'Confirmar Pedido';
+            btn.disabled = false;
+        }
+    }
+
+    // Init — auto-login si viene ?cliente=ID en la URL
+    document.addEventListener('DOMContentLoaded', () => {
+        lucide.createIcons();
+        const params = new URLSearchParams(window.location.search);
+        const clienteParam = params.get('cliente');
+        if (clienteParam) {
+            document.getElementById('input-cliente-id').value = clienteParam;
+            document.getElementById('btn-login').click();
+        }
+    });
+</script>
+</body>
+</html>
