@@ -1515,7 +1515,20 @@ function getFullImageUrl(path) {
     // Interceptar llamadas HTTP locales
     const originalFetch = window.fetch;
     window.fetch = async function(url, options = {}) {
-        const urlStr = typeof url === 'string' ? url : url.url;
+        let urlStr = '';
+        if (typeof url === 'string') {
+            urlStr = url;
+        } else if (url instanceof URL) {
+            urlStr = url.href;
+        } else if (url && typeof url === 'object' && url.url) {
+            urlStr = url.url;
+        } else if (url && typeof url === 'object' && typeof url.toString === 'function') {
+            urlStr = url.toString();
+        }
+        
+        if (!urlStr || typeof urlStr !== 'string') {
+            return originalFetch.apply(this, arguments);
+        }
         
         // Solo interceptar peticiones destinadas al backend de Evergreen
         if (!urlStr.includes('/api/')) {
