@@ -1578,7 +1578,7 @@ function getFullImageUrl(path) {
 
             // 2. Materiales
             if (path === '/materiales' && method === 'GET') {
-                return mockResponse(getTable('materiales'));
+                return mockResponse({ status: "success", data: getTable('materiales') });
             }
             if (path === '/materiales' && method === 'POST') {
                 const data = JSON.parse(options.body);
@@ -1614,7 +1614,7 @@ function getFullImageUrl(path) {
 
             // 3. Retazos
             if (path === '/retazos' && method === 'GET') {
-                return mockResponse(getTable('retazos'));
+                return mockResponse({ status: "success", data: getTable('retazos') });
             }
             if (path === '/retazos' && method === 'POST') {
                 const data = JSON.parse(options.body);
@@ -1637,7 +1637,7 @@ function getFullImageUrl(path) {
 
             // 4. Productos
             if (path === '/productos' && method === 'GET') {
-                return mockResponse(getTable('productos'));
+                return mockResponse({ status: "success", data: getTable('productos') });
             }
             if (path === '/productos' && method === 'POST') {
                 const data = JSON.parse(options.body);
@@ -1678,7 +1678,7 @@ function getFullImageUrl(path) {
 
             // 5. Órdenes
             if (path === '/ordenes' && method === 'GET') {
-                return mockResponse(getTable('ordenes'));
+                return mockResponse({ status: "success", data: getTable('ordenes') });
             }
             if (path === '/ordenes' && method === 'POST') {
                 const data = JSON.parse(options.body);
@@ -1719,7 +1719,7 @@ function getFullImageUrl(path) {
 
             // 6. Diseños
             if (path === '/disenos' && method === 'GET') {
-                return mockResponse(getTable('disenos'));
+                return mockResponse({ status: "success", data: getTable('disenos') });
             }
             if (path === '/disenos' && method === 'POST') {
                 const table = getTable('disenos');
@@ -1736,7 +1736,7 @@ function getFullImageUrl(path) {
                 if (parts[3] === 'settings') {
                     const settings = getTable('laser_settings');
                     if (method === 'GET') {
-                        return mockResponse(settings.filter(s => s.diseno_id === id));
+                        return mockResponse({ status: "success", data: settings.filter(s => s.diseno_id === id) });
                     }
                     if (method === 'POST') {
                         const data = JSON.parse(options.body);
@@ -1759,7 +1759,7 @@ function getFullImageUrl(path) {
 
             // 7. Clientes B2B
             if (path === '/clientes' && method === 'GET') {
-                return mockResponse(getTable('clientes'));
+                return mockResponse({ status: "success", data: getTable('clientes') });
             }
             if (path === '/clientes' && method === 'POST') {
                 const data = JSON.parse(options.body);
@@ -1820,11 +1820,11 @@ function getFullImageUrl(path) {
 
             // 8. Facturas
             if (path === '/facturas' && method === 'GET') {
-                return mockResponse(getTable('facturas'));
+                return mockResponse({ status: "success", data: getTable('facturas') });
             }
             if (path === '/facturas/nuevas' && method === 'GET') {
                 const invoices = getTable('facturas');
-                return mockResponse(invoices.filter(f => f.notificado === 0));
+                return mockResponse({ status: "success", data: invoices.filter(f => f.notificado === 0) });
             }
             if (path === '/facturas/marcar-leidas' && method === 'POST') {
                 const { ids } = JSON.parse(options.body);
