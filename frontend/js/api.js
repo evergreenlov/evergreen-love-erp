@@ -23,7 +23,7 @@ function getFullImageUrl(path) {
     let offlineMode = false;
     let initialized = false;
 
-    const OFFLINE_DB_VERSION = "2026-06-08-164326";
+    const OFFLINE_DB_VERSION = "2026-06-08-v3";
     const SEED_DATA = {
         "materiales": [
                 {
