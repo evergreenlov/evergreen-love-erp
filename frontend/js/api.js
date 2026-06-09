@@ -1674,7 +1674,7 @@ function getFullImageUrl(path) {
             try {
                 // Hacer una llamada rápida con timeout
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 1000);
+                const timeoutId = setTimeout(() => controller.abort(), 45000);
                 const check = await originalFetch(`${API_BASE_URL}/health`, { signal: controller.signal });
                 clearTimeout(timeoutId);
                 if (!check.ok) throw new Error();
