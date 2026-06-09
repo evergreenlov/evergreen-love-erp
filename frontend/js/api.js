@@ -2117,7 +2117,7 @@ function getFullImageUrl(path) {
                         producto_id: item.producto_id,
                         nombre: prod.nombre,
                         precio_final: prod.precio_final,
-                        foto_ruta: ""
+                        foto_ruta: prod.foto_ruta || ""
                     };
                 });
                 return mockResponse({ status: "success", data });
