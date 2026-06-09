@@ -545,7 +545,10 @@ const FacturasComponent = {
                     <i data-lucide="plus-circle" style="width:16px; height:16px; display:inline-block; vertical-align:middle; margin-right:4px;"></i> Crear Factura
                 </div>
                 <div class="facturas-nav-tab" id="tab-reports" data-tab="reports">
-                    <i data-lucide="bar-chart-3" style="width:16px; height:16px; display:inline-block; vertical-align:middle; margin-right:4px;"></i> Contabilidad y Reporte IVU
+                    <i data-lucide="bar-chart-3" style="width:16px; height:16px; display:inline-block; vertical-align:middle; margin-right:4px;"></i> Contabilidad y Planillas
+                </div>
+                <div class="facturas-nav-tab" id="tab-expenses" data-tab="expenses">
+                    <i data-lucide="receipt" style="width:16px; height:16px; display:inline-block; vertical-align:middle; margin-right:4px;"></i> Registro de Gastos
                 </div>
             </div>
 
@@ -743,6 +746,24 @@ const FacturasComponent = {
                             <span class="kpi-value" id="rep-kpi-diez-porciento">$0.00</span>
                         </div>
                     </div>
+                    <div class="card kpi-card">
+                        <div class="kpi-icon terracotta">
+                            <i data-lucide="minus-circle"></i>
+                        </div>
+                        <div class="kpi-info">
+                            <span class="kpi-label">Gastos Totales (Deducibles)</span>
+                            <span class="kpi-value" id="rep-kpi-gastos">$0.00</span>
+                        </div>
+                    </div>
+                    <div class="card kpi-card">
+                        <div class="kpi-icon moss">
+                            <i data-lucide="dollar-sign"></i>
+                        </div>
+                        <div class="kpi-info">
+                            <span class="kpi-label">Ganancia Neta (Sujeto a Planilla)</span>
+                            <span class="kpi-value" id="rep-kpi-ganancia">$0.00</span>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="card" style="margin-bottom:24px;">
@@ -829,6 +850,95 @@ const FacturasComponent = {
                 </div>
             </div>
 
+            <!-- VISTA 4: REGISTRO DE GASTOS -->
+            <div id="view-section-expenses" class="factura-section animate-fade-in" style="display:none;">
+                <div style="display:grid; grid-template-columns: 1fr 2fr; gap:24px; align-items:start;">
+                    <!-- FORMULARIO DE GASTOS -->
+                    <div class="card">
+                        <h3 class="card-title">Registrar Gasto</h3>
+                        <p style="color: #6c757d; font-size: 13.5px; margin-bottom: 20px; margin-top:-8px;">
+                            Ingresa los gastos operativos del taller para las deducciones en planilla.
+                        </p>
+                        <form id="expense-form" style="display:flex; flex-direction:column; gap:12px;">
+                            <div class="form-group">
+                                <label for="exp-descripcion" style="font-weight:600; font-size:13px; color:var(--color-olive-brown);">Descripción / Concepto *</label>
+                                <input type="text" id="exp-descripcion" required placeholder="Ej. Madera, Luma, Renta..." style="padding:10px; border-radius:var(--radius-sm); border:1px solid var(--color-gray-border); width:100%; box-sizing:border-box;">
+                            </div>
+                            <div class="form-group">
+                                <label for="exp-categoria" style="font-weight:600; font-size:13px; color:var(--color-olive-brown);">Categoría *</label>
+                                <select id="exp-categoria" required style="padding:10px; border-radius:var(--radius-sm); border:1px solid var(--color-gray-border); width:100%; background:white;">
+                                    <option value="Materiales">Materiales y Suministros</option>
+                                    <option value="Renta">Renta del Local</option>
+                                    <option value="Utilidades">Utilidades (Luz, Agua, Internet)</option>
+                                    <option value="Equipos">Equipos y Herramientas</option>
+                                    <option value="Marketing">Marketing y Publicidad</option>
+                                    <option value="Servicios Profesionales">Servicios Profesionales</option>
+                                    <option value="Otros">Otros Gastos Ordinarios</option>
+                                </select>
+                            </div>
+                            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
+                                <div class="form-group">
+                                    <label for="exp-monto" style="font-weight:600; font-size:13px; color:var(--color-olive-brown);">Monto ($) *</label>
+                                    <input type="number" step="0.01" min="0.01" id="exp-monto" required placeholder="0.00" style="padding:10px; border-radius:var(--radius-sm); border:1px solid var(--color-gray-border); width:100%; box-sizing:border-box;">
+                                </div>
+                                <div class="form-group">
+                                    <label for="exp-fecha" style="font-weight:600; font-size:13px; color:var(--color-olive-brown);">Fecha *</label>
+                                    <input type="date" id="exp-fecha" required style="padding:10px; border-radius:var(--radius-sm); border:1px solid var(--color-gray-border); width:100%; box-sizing:border-box;">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="exp-metodo" style="font-weight:600; font-size:13px; color:var(--color-olive-brown);">Método de Pago *</label>
+                                <select id="exp-metodo" required style="padding:10px; border-radius:var(--radius-sm); border:1px solid var(--color-gray-border); width:100%; background:white;">
+                                    <option value="Tarjeta de Crédito">Tarjeta de Crédito</option>
+                                    <option value="Tarjeta de Débito">Tarjeta de Débito</option>
+                                    <option value="Cheque">Cheque</option>
+                                    <option value="Transferencia Bancaria">Transferencia Bancaria</option>
+                                    <option value="ATH Móvil">ATH Móvil</option>
+                                    <option value="Efectivo">Efectivo</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="exp-notas" style="font-weight:600; font-size:13px; color:var(--color-olive-brown);">Notas Adicionales</label>
+                                <textarea id="exp-notas" placeholder="Detalles de factura, número de cheque..." style="padding:10px; border-radius:var(--radius-sm); border:1px solid var(--color-gray-border); width:100%; min-height:80px; box-sizing:border-box; resize:none;"></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-primary" style="width:100%; display:flex; justify-content:center; align-items:center; gap:8px; padding:12px; margin-top:8px;">
+                                <i data-lucide="check-circle"></i> Guardar Gasto
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- TABLA DE GASTOS -->
+                    <div class="card">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                            <h3 class="card-title" style="margin-bottom:0;">Historial de Gastos</h3>
+                            <span id="expenses-total-summary" style="font-size:14px; font-weight:700; color:var(--color-terracotta);">Total: $0.00</span>
+                        </div>
+                        <p style="color: #6c757d; font-size: 13.5px; margin-top:-8px; margin-bottom:16px;">
+                            Historial completo de gastos registrados en local storage.
+                        </p>
+                        <div class="table-container">
+                            <table class="custom-table" id="expenses-table">
+                                <thead>
+                                    <tr>
+                                        <th>Fecha</th>
+                                        <th>Concepto</th>
+                                        <th>Categoría</th>
+                                        <th>Método</th>
+                                        <th style="text-align:right;">Monto</th>
+                                        <th style="width:40px;"></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="expenses-table-body">
+                                    <tr>
+                                        <td colspan="6" style="text-align:center; padding:24px; color:#8c8c8c;">Cargando gastos...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- MODAL PARA REGISTRAR PAGO (COBRAR) -->
             <div id="payment-modal" class="modal-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(62,62,62,0.4); backdrop-filter: blur(4px); z-index: 2000; justify-content: center; align-items: center;">
                 <div class="card" style="width: 90%; max-width: 420px; padding: 24px; display: flex; flex-direction: column; gap: 16px; margin-top: 100px;">
@@ -892,31 +1002,102 @@ const FacturasComponent = {
         document.getElementById('inv-fecha-emision').value = this.invoiceDate;
         document.getElementById('inv-fecha-vence').value = this.invoiceDueDate;
         document.getElementById('inv-notas').value = this.invoiceNotes;
+
+        const expFecha = document.getElementById('exp-fecha');
+        if (expFecha) {
+            expFecha.value = this.invoiceDate;
+        }
     },
 
     async loadData() {
         try {
-            // Load clients and products
-            const [resFacturas, resClientes, resProductos, resReporte] = await Promise.all([
+            // Load clients, products and expenses
+            const [resFacturas, resClientes, resProductos, resReporte, resGastos] = await Promise.all([
                 EvergreenAPI.getFacturas(),
                 EvergreenAPI.getClientes(),
                 EvergreenAPI.getProductos(),
-                EvergreenAPI.getReporteContabilidad()
+                EvergreenAPI.getReporteContabilidad(),
+                EvergreenAPI.getGastos()
             ]);
 
             this.facturas = resFacturas.data || [];
             this.clientes = resClientes.data || [];
             this.productos = resProductos.data || [];
             this.reporte = resReporte;
+            this.gastos = resGastos.data || [];
 
             this.renderFacturasList();
             this.populateClientesSelect();
             this.populateProductosSelect();
             this.renderReports();
+            this.renderExpenses();
             this.updateAutoInvoiceNumber();
         } catch (error) {
             console.error("Error al cargar datos en FacturasComponent:", error);
         }
+    },
+
+    renderExpenses() {
+        const tbody = document.getElementById('expenses-table-body');
+        if (!tbody) return;
+
+        const totalSummary = document.getElementById('expenses-total-summary');
+        let totalSum = 0;
+
+        if (!this.gastos || this.gastos.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="6" style="text-align: center; color: #8c8c8c; padding: 24px;">
+                        No hay gastos registrados en la base de datos local.
+                    </td>
+                </tr>
+            `;
+            if (totalSummary) totalSummary.textContent = "Total: $0.00";
+            return;
+        }
+
+        tbody.innerHTML = '';
+        // Sort gastos by date descending
+        const sortedGastos = [...this.gastos].sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+        
+        sortedGastos.forEach(g => {
+            totalSum += g.monto;
+            const tr = document.createElement('tr');
+            tr.className = 'animate-fade-in';
+            tr.innerHTML = `
+                <td>${g.fecha}</td>
+                <td><strong>${g.descripcion}</strong>${g.notas ? `<br><small style="color:#8c8270;">${g.notas}</small>` : ''}</td>
+                <td><span class="badge" style="background:#ede6d8; color:var(--color-olive-brown); padding:3px 8px; border-radius:12px; font-size:11px;">${g.categoria}</span></td>
+                <td>${g.metodo_pago}</td>
+                <td style="text-align:right; font-weight:600; color:var(--color-terracotta);">${MONEY.format(g.monto)}</td>
+                <td style="text-align:right;">
+                    <button class="btn btn-secondary btn-delete-expense" data-id="${g.id}" style="color:var(--color-terracotta); border-color:var(--color-terracotta); padding: 4px 6px; font-size:11px; display:inline-flex; align-items:center; justify-content:center;">
+                        <i data-lucide="trash-2" style="width:13px; height:13px;"></i>
+                    </button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+        if (totalSummary) {
+            totalSummary.textContent = `Total: ${MONEY.format(totalSum)}`;
+        }
+
+        tbody.querySelectorAll('.btn-delete-expense').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const id = parseInt(btn.getAttribute('data-id'));
+                if (confirm("¿Está seguro de que desea eliminar este gasto de forma permanente?")) {
+                    try {
+                        await EvergreenAPI.deleteGasto(id);
+                        await this.loadData();
+                    } catch (err) {
+                        alert("Error al eliminar gasto: " + err.message);
+                    }
+                }
+            });
+        });
+
+        lucide.createIcons();
     },
 
     renderFacturasList() {
@@ -1280,10 +1461,18 @@ const FacturasComponent = {
             }
         });
 
+        const sumGastos = this.gastos ? this.gastos.reduce((s, g) => s + g.monto, 0) : 0;
+        const gananciaNeta = sumFacturado - sumGastos;
+
         document.getElementById('rep-kpi-facturado').innerText = MONEY.format(sumFacturado);
         document.getElementById('rep-kpi-recaudado').innerText = MONEY.format(sumRecaudado);
         document.getElementById('rep-kpi-pendiente').innerText = MONEY.format(sumPendiente);
         document.getElementById('rep-kpi-diez-porciento').innerText = MONEY.format(sumFacturado * 0.10);
+        
+        const repKpiGastos = document.getElementById('rep-kpi-gastos');
+        if (repKpiGastos) repKpiGastos.innerText = MONEY.format(sumGastos);
+        const repKpiGanancia = document.getElementById('rep-kpi-ganancia');
+        if (repKpiGanancia) repKpiGanancia.innerText = MONEY.format(gananciaNeta);
 
         const tbody = document.getElementById('ivu-report-body');
 
@@ -1470,6 +1659,22 @@ const FacturasComponent = {
         const tributableMunicipal = ivaMunicipal * 100;
         const exentoMunicipal = Math.max(0.0, subtotal - tributableMunicipal);
 
+        // Gastos del período
+        const monthExpenses = this.gastos ? this.gastos.filter(g => g.fecha.startsWith(monthStr)) : [];
+        const monthExpensesTotal = monthExpenses.reduce((s, g) => s + g.monto, 0);
+        const monthNetIncome = subtotal - monthExpensesTotal;
+
+        const expBreakdown = {};
+        monthExpenses.forEach(g => {
+            expBreakdown[g.categoria] = (expBreakdown[g.categoria] || 0) + g.monto;
+        });
+        
+        let expBreakdownStr = "";
+        for (const [cat, amt] of Object.entries(expBreakdown)) {
+            expBreakdownStr += `      - ${cat}: $${amt.toFixed(2)}\n`;
+        }
+        if (!expBreakdownStr) expBreakdownStr = "      - Ninguno\n";
+
         // Calcular rango de fechas dinámico: del 20 del mes anterior al 19 del mes seleccionado
         const parts = monthStr.split('-');
         const year = parseInt(parts[0]);
@@ -1494,7 +1699,13 @@ Evergreen Love — Período: ${monthStr} (${rangoFechas})
    • Tasa del Impuesto Municipal: 1.0%
    • IVU Municipal Devengado: $${ivaMunicipal.toFixed(2)}
 
-3. RESUMEN FINANCIERO ERP:
+3. BORRADOR PLANILLA DE CONTRIBUCIÓN SOBRE INGRESOS (Hacienda PR):
+   • Ingresos Brutos del Período (Subtotal): $${subtotal.toFixed(2)}
+   • Deducciones por Gastos Ordinarios y Necesarios:
+${expBreakdownStr}     Total Gastos Deducibles: $${monthExpensesTotal.toFixed(2)}
+   • Ingreso Neto Sujeto a Contribución (Ganancia Neta): $${monthNetIncome.toFixed(2)}
+
+4. RESUMEN FINANCIERO ERP:
    • Total Ventas Bruto Facturado: $${total.toFixed(2)}
    • Retención Sugerida de Impuestos (10%): $${diezPorciento.toFixed(2)}
    • Total de Efectivo Recaudado (Caja): $${cobrado.toFixed(2)}
@@ -1823,7 +2034,7 @@ Generado de forma segura por el ERP de Evergreen Love el ${new Date().toLocaleDa
                 document.querySelectorAll('.factura-section').forEach(sec => sec.style.display = 'none');
                 document.getElementById(`view-section-${tabName}`).style.display = 'block';
                 
-                if (tabName === 'list' || tabName === 'reports') {
+                if (tabName === 'list' || tabName === 'reports' || tabName === 'expenses') {
                     this.loadData();
                 } else if (tabName === 'create') {
                     this.updateAutoInvoiceNumber();
@@ -2238,6 +2449,57 @@ Generado de forma segura por el ERP de Evergreen Love el ${new Date().toLocaleDa
 
                 alert(`Período manual ${cleanMonth} añadido correctamente.`);
                 this.renderReports();
+            });
+        }
+
+        // Submit expense form
+        const formExpense = document.getElementById('expense-form');
+        if (formExpense) {
+            formExpense.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const btnSubmit = formExpense.querySelector('button[type="submit"]');
+                
+                const descripcion = document.getElementById('exp-descripcion').value;
+                const categoria = document.getElementById('exp-categoria').value;
+                const monto = parseFloat(document.getElementById('exp-monto').value);
+                const fecha = document.getElementById('exp-fecha').value;
+                const metodo_pago = document.getElementById('exp-metodo').value;
+                const notas = document.getElementById('exp-notas') ? document.getElementById('exp-notas').value : '';
+                
+                if (!descripcion || !categoria || isNaN(monto) || !fecha || !metodo_pago) {
+                    alert("Por favor rellene todos los campos requeridos.");
+                    return;
+                }
+                
+                btnSubmit.disabled = true;
+                btnSubmit.innerHTML = '<span class="spinner" style="width:14px; height:14px; margin-bottom:0; display:inline-block; vertical-align:middle; border-width:2px;"></span> Registrando...';
+                
+                try {
+                    await EvergreenAPI.createGasto({
+                        descripcion,
+                        categoria,
+                        monto,
+                        fecha,
+                        metodo_pago,
+                        notas
+                    });
+                    
+                    // Clear form
+                    formExpense.reset();
+                    // Set today date as default
+                    const todayStr = new Date().toISOString().split('T')[0];
+                    document.getElementById('exp-fecha').value = todayStr;
+                    
+                    // Reload data
+                    await this.loadData();
+                    alert("¡Gasto registrado con éxito!");
+                } catch (err) {
+                    alert("Error al registrar el gasto: " + err.message);
+                } finally {
+                    btnSubmit.disabled = false;
+                    btnSubmit.innerHTML = '<i data-lucide="check-circle"></i> Guardar Gasto';
+                    lucide.createIcons();
+                }
             });
         }
     }

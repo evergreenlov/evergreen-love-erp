@@ -23,7 +23,7 @@ function getFullImageUrl(path) {
     let offlineMode = false;
     let initialized = false;
 
-    const OFFLINE_DB_VERSION = "2026-06-09-v2";
+    const OFFLINE_DB_VERSION = "2026-06-09-v3";
     const SEED_DATA = {
         "materiales": [
                 {
@@ -1467,6 +1467,35 @@ function getFullImageUrl(path) {
                         "producto_id": 7,
                         "cantidad": 1
                 }
+        ],
+        "gastos": [
+                {
+                        "id": 1,
+                        "descripcion": "Compra de planchas de madera Basswood",
+                        "categoria": "Materiales",
+                        "metodo_pago": "Tarjeta de Crédito",
+                        "fecha": "2026-05-10",
+                        "monto": 120.50,
+                        "notas": "Lote de repuesto urgente comprado en Amazon"
+                },
+                {
+                        "id": 2,
+                        "descripcion": "Pago de energía eléctrica - Luma Energy",
+                        "categoria": "Utilidades",
+                        "metodo_pago": "Transferencia Bancaria",
+                        "fecha": "2026-05-15",
+                        "monto": 85.20,
+                        "notas": "Mes de Abril"
+                },
+                {
+                        "id": 3,
+                        "descripcion": "Renta mensual del local de taller",
+                        "categoria": "Renta",
+                        "metodo_pago": "Cheque",
+                        "fecha": "2026-05-01",
+                        "monto": 500.00,
+                        "notas": "Pago del local principal"
+                }
         ]
 };
 
@@ -1744,6 +1773,29 @@ function getFullImageUrl(path) {
                 return mockResponse({ status: "success", message: "Retazo eliminado" });
             }
 
+            // Gastos (Offline)
+            if (path === '/gastos' && method === 'GET') {
+                return mockResponse({ status: "success", data: getTable('gastos') });
+            }
+            if (path === '/gastos' && method === 'POST') {
+                const data = JSON.parse(options.body);
+                const table = getTable('gastos');
+                const nextId = table.reduce((max, g) => g.id > max ? g.id : max, 0) + 1;
+                const newGasto = { id: nextId, ...data };
+                table.push(newGasto);
+                saveTable('gastos', table);
+                return mockResponse(newGasto);
+            }
+            if (path.startsWith('/gastos/') && method === 'DELETE') {
+                const id = parseInt(path.split('/')[2]);
+                const table = getTable('gastos');
+                const idx = table.findIndex(g => g.id === id);
+                if (idx === -1) return mockResponse({ detail: "Gasto no encontrado" }, 404);
+                table.splice(idx, 1);
+                saveTable('gastos', table);
+                return mockResponse({ status: "success", message: "Gasto eliminado" });
+            }
+
             // 4. Productos
             if (path === '/productos' && method === 'GET') {
                 return mockResponse({ status: "success", data: getTable('productos') });
@@ -1982,12 +2034,13 @@ function getFullImageUrl(path) {
             if (path === '/contabilidad/reporte' && method === 'GET') {
                 const invoices = getTable('facturas');
                 const pagadas = invoices.filter(f => f.estado === 'Pagada');
+                const expenses = getTable('gastos');
                 
                 const desgloseMensual = {};
                 pagadas.forEach(f => {
                     const mes = f.fecha_emision.substring(0, 7); // YYYY-MM
                     if (!desgloseMensual[mes]) {
-                        desgloseMensual[mes] = { subtotal: 0, ivu_estatal: 0, ivu_municipal: 0, total: 0, count: 0 };
+                        desgloseMensual[mes] = { subtotal: 0, ivu_estatal: 0, ivu_municipal: 0, total: 0, count: 0, gastos: 0 };
                     }
                     desgloseMensual[mes].subtotal += f.subtotal;
                     desgloseMensual[mes].ivu_estatal += f.ivu_estatal;
@@ -1996,10 +2049,29 @@ function getFullImageUrl(path) {
                     desgloseMensual[mes].count++;
                 });
 
+                expenses.forEach(e => {
+                    const mes = e.fecha.substring(0, 7); // YYYY-MM
+                    if (!desgloseMensual[mes]) {
+                        desgloseMensual[mes] = { subtotal: 0, ivu_estatal: 0, ivu_municipal: 0, total: 0, count: 0, gastos: 0 };
+                    }
+                    desgloseMensual[mes].gastos += e.monto;
+                });
+
+                for (const mes in desgloseMensual) {
+                    desgloseMensual[mes].subtotal = round(desgloseMensual[mes].subtotal);
+                    desgloseMensual[mes].ivu_estatal = round(desgloseMensual[mes].ivu_estatal);
+                    desgloseMensual[mes].ivu_municipal = round(desgloseMensual[mes].ivu_municipal);
+                    desgloseMensual[mes].total = round(desgloseMensual[mes].total);
+                    desgloseMensual[mes].gastos = round(desgloseMensual[mes].gastos || 0);
+                    desgloseMensual[mes].ganancia_neta = round(desgloseMensual[mes].subtotal - desgloseMensual[mes].gastos);
+                }
+
                 const total_recaudado = pagadas.reduce((s, f) => s + f.total, 0);
                 const subtotal_facturado = pagadas.reduce((s, f) => s + f.subtotal, 0);
                 const ivu_estatal_total = pagadas.reduce((s, f) => s + f.ivu_estatal, 0);
                 const ivu_municipal_total = pagadas.reduce((s, f) => s + f.ivu_municipal, 0);
+                const total_gastos = expenses.reduce((s, e) => s + e.monto, 0);
+                const ganancia_neta = subtotal_facturado - total_gastos;
 
                 return mockResponse({
                     status: "success",
@@ -2008,7 +2080,9 @@ function getFullImageUrl(path) {
                         subtotal_facturado: round(subtotal_facturado),
                         ivu_estatal_total: round(ivu_estatal_total),
                         ivu_municipal_total: round(ivu_municipal_total),
-                        facturas_pagadas_count: pagadas.length
+                        facturas_pagadas_count: pagadas.length,
+                        total_gastos: round(total_gastos),
+                        ganancia_neta: round(ganancia_neta)
                     },
                     desglose_mensual: desgloseMensual
                 });
@@ -2949,6 +3023,43 @@ const EvergreenAPI = {
             return await response.json();
         } catch (error) {
             console.error("marcarFacturasLeidas error:", error);
+            throw error;
+        }
+    },
+    // Gastos y contabilidad
+    async getGastos() {
+        try {
+            const response = await fetch(`${API_BASE_URL}/gastos`);
+            if (!response.ok) throw new Error("Error al obtener la lista de gastos");
+            return await response.json();
+        } catch (error) {
+            console.error("getGastos error:", error);
+            throw error;
+        }
+    },
+    async createGasto(gastoData) {
+        try {
+            const response = await fetch(`${API_BASE_URL}/gastos`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(gastoData)
+            });
+            if (!response.ok) throw new Error("Error al registrar gasto");
+            return await response.json();
+        } catch (error) {
+            console.error("createGasto error:", error);
+            throw error;
+        }
+    },
+    async deleteGasto(id) {
+        try {
+            const response = await fetch(`${API_BASE_URL}/gastos/${id}`, {
+                method: 'DELETE'
+            });
+            if (!response.ok) throw new Error("Error al eliminar gasto");
+            return await response.json();
+        } catch (error) {
+            console.error("deleteGasto error:", error);
             throw error;
         }
     },
