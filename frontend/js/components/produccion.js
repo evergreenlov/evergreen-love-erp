@@ -222,11 +222,18 @@ const ProduccionComponent = {
                         </div>
                         <span style="margin-top: 4px;">Cantidad Total: <strong>${totalQty} uds</strong></span>
                     </div>
-                    <div style="border-top: 1px solid var(--color-gray-border); padding-top: 8px; margin-top: 4px; display: flex; justify-content: space-between; align-items: center; gap: 8px;">
-                        ${discountBadge}
-                        <button class="btn btn-secondary btn-delete-orden" style="padding: 4px; border: none; font-size: 11px; color: var(--color-danger); background: none; box-shadow: none; margin: 0;" data-ids="${idsList}">
-                            Eliminar de Columna
-                        </button>
+                    <div style="border-top: 1px solid var(--color-gray-border); padding-top: 8px; margin-top: 4px; display: flex; flex-direction: column; gap: 8px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px;">
+                            ${discountBadge}
+                            <button class="btn btn-primary btn-facturar-orden" style="padding: 4px 8px; font-size: 11px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;" data-code="${c.codigo_orden}" data-ids="${idsList}">
+                                <i class="fas fa-file-invoice-dollar" style="font-size: 12px;"></i> Facturar
+                            </button>
+                        </div>
+                        <div style="display: flex; justify-content: flex-end;">
+                            <button class="btn btn-secondary btn-delete-orden" style="padding: 0; border: none; font-size: 11px; color: var(--color-danger); background: none; box-shadow: none; margin: 0;" data-ids="${idsList}">
+                                Eliminar de Columna
+                            </button>
+                        </div>
                     </div>
                 </div>
             `;
@@ -239,6 +246,125 @@ const ProduccionComponent = {
         if (btnNew) {
             btnNew.addEventListener('click', () => this.openNewOrdenModal());
         }
+
+        // Botón de Facturar Orden desde Kanban
+        document.querySelectorAll('.btn-facturar-orden').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const baseCode = btn.getAttribute('data-code');
+                const orderIds = btn.getAttribute('data-ids').split(',').map(Number);
+                
+                // Buscar los items de esta orden agrupada
+                const groupedItems = this.ordenes.filter(o => orderIds.includes(o.id));
+                if (groupedItems.length === 0) return;
+                
+                const sampleOrder = groupedItems[0];
+                
+                if (confirm(`¿Deseas generar una factura para la orden ${baseCode}?`)) {
+                    btn.disabled = true;
+                    btn.textContent = 'Procesando...';
+                    
+                    try {
+                        // 1. Obtener facturas existentes para evitar duplicados
+                        const facturasRes = await EvergreenAPI.getFacturas();
+                        const facturasList = facturasRes.data || [];
+                        const existingFactura = facturasList.find(f => f.notas && f.notas.includes(baseCode));
+                        
+                        if (existingFactura) {
+                            alert(`Esta orden ya cuenta con una factura asociada: ${existingFactura.numero_factura}`);
+                            btn.disabled = false;
+                            btn.innerHTML = '<i class="fas fa-file-invoice-dollar" style="font-size: 12px;"></i> Facturar';
+                            return;
+                        }
+                        
+                        // 2. Obtener clientes B2B para buscar coincidencia
+                        const clientsRes = await EvergreenAPI.getClientes();
+                        const clientsList = clientsRes.data || [];
+                        
+                        // Función auxiliar inline para limpiar nombre
+                        function getCleanClientName(clienteStr) {
+                            if (!clienteStr) return 'Cliente Público';
+                            if (!clienteStr.includes('|')) return clienteStr.trim();
+                            try {
+                                const parts = clienteStr.split('|').map(p => p.trim());
+                                const data = {};
+                                let firstPart = parts[0];
+                                firstPart = firstPart.replace('[PEDIDO B2B]', '').replace('[PEDIDO PÚBLICO]', '').trim();
+                                if (firstPart.includes(':')) {
+                                    const kv = firstPart.split(':');
+                                    data[kv[0].trim()] = kv[1].trim();
+                                }
+                                parts.slice(1).forEach(part => {
+                                    if (part.includes(':')) {
+                                        const kv = part.split(':');
+                                        data[kv[0].trim()] = kv[1].trim();
+                                    }
+                                });
+                                return data['Cliente'] || data['Contacto'] || 'Cliente Público';
+                            } catch(e) {
+                                return 'Cliente Público';
+                            }
+                        }
+                        
+                        const cleanName = getCleanClientName(sampleOrder.cliente);
+                        let matchedClient = clientsList.find(cl => cl.nombre.toLowerCase() === cleanName.toLowerCase());
+                        
+                        let clienteId = null;
+                        if (matchedClient) {
+                            clienteId = matchedClient.id;
+                        } else {
+                            let publicClient = clientsList.find(cl => cl.nombre === 'Cliente Público');
+                            if (publicClient) {
+                                clienteId = publicClient.id;
+                            } else {
+                                clienteId = 1; // Fallback
+                            }
+                        }
+                        
+                        // 3. Mapear items de la orden a items de factura buscando precios en la base de datos
+                        const invoiceItems = groupedItems.map(item => {
+                            const prod = this.productos.find(p => p.id === item.producto_id);
+                            const precio = prod ? prod.precio_final : 0.0;
+                            const nombre = prod ? prod.nombre : (item.producto_nombre || 'Producto');
+                            return {
+                                producto_id: item.producto_id,
+                                nombre_producto: nombre,
+                                cantidad: item.cantidad,
+                                precio_unitario: precio,
+                                total: item.cantidad * precio
+                            };
+                        });
+                        
+                        const subtotal = invoiceItems.reduce((sum, item) => sum + item.total, 0);
+                        const ivuEstatal = subtotal * 0.105;
+                        const ivuMunicipal = subtotal * 0.01;
+                        const totalFactura = subtotal + ivuEstatal + ivuMunicipal;
+                        
+                        const facturaData = {
+                            cliente_id: clienteId,
+                            fecha_emision: new Date().toISOString().split('T')[0],
+                            fecha_vencimiento: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+                            subtotal: Math.round(subtotal * 100) / 100,
+                            ivu_estatal: Math.round(ivuEstatal * 100) / 100,
+                            ivu_municipal: Math.round(ivuMunicipal * 100) / 100,
+                            total: Math.round(totalFactura * 100) / 100,
+                            notas: `Factura generada automáticamente desde Producción Láser para la orden ${baseCode}. Cliente real: ${cleanName}.`,
+                            estado: 'Pendiente',
+                            items: invoiceItems
+                        };
+                        
+                        const res = await EvergreenAPI.createFactura(facturaData);
+                        alert(`¡Factura ${res.numero_factura} creada con éxito para ${cleanName}! Redirigiendo a facturas...`);
+                        
+                        // Redirigir a la pestaña de facturas mediante el hash de navegación
+                        window.location.hash = 'facturas';
+                    } catch (err) {
+                        alert("Error al generar la factura: " + err.message);
+                        btn.disabled = false;
+                        btn.innerHTML = '<i class="fas fa-file-invoice-dollar" style="font-size: 12px;"></i> Facturar';
+                    }
+                }
+            });
+        });
 
         // Cambio de Estado select interactivo de cada producto individual
         document.querySelectorAll('.change-item-state-select').forEach(sel => {
