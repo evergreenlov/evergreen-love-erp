@@ -1,0 +1,3 @@
+/api/*  https://evergreen-love-erp.onrender.com/api/:splat  200
+/fotos_import/*  https://evergreen-love-erp.onrender.com/fotos_import/:splat  200
+
