@@ -234,11 +234,10 @@ const CatalogoComponent = {
                     </span>
                 </div>
             ` : '';
-
             const fotoImg = p.foto_ruta 
-                ? `<div style="width:100%; height:175px; background: linear-gradient(135deg, #fdfbf7 0%, #f5f0e6 100%); display:flex; align-items:center; justify-content:center; border-bottom: 1px solid rgba(237, 230, 216, 0.5); overflow:hidden; position:relative;">
+                ? `<div style="width:100%; height:175px; background: linear-gradient(135deg, #fdfbf7 0%, #f5f0e6 100%); display:flex; align-items:center; justify-content:center; border-bottom: 1px solid rgba(237, 230, 216, 0.5); overflow:hidden; position:relative; padding: 8px; box-sizing: border-box;">
                     ${customBadgeHtml}
-                    <img src="${getFullImageUrl(p.foto_ruta)}" alt="${p.nombre}" style="width:100%; height:100%; object-fit:cover; display:block; transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);">
+                    <img src="${getFullImageUrl(p.foto_ruta)}" alt="${p.nombre}" style="max-width:100%; max-height:100%; object-fit:contain; display:block; transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);">
                     ${adminOverlayHtml}
                    </div>` 
                 : `<div style="width:100%; height:175px; background: linear-gradient(135deg, #fbfbfb 0%, #f0f0f0 100%); display:flex; align-items:center; justify-content:center; color:#ac9f8a; font-size:12.5px; font-style: italic; border-bottom: 1px solid rgba(237, 230, 216, 0.5); position:relative; gap: 6px;">

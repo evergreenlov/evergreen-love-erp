@@ -38,8 +38,8 @@ const PersonalizadosComponent = {
             } else {
                 this.productos.forEach(p => {
                     const fotoImg = p.foto_ruta 
-                        ? `<div style="width: 100%; height: 180px; background: linear-gradient(135deg, #fdfbf7 0%, #f5f0e6 100%); border-bottom: 1px solid rgba(237, 230, 216, 0.5); overflow: hidden; position: relative; display: flex; align-items: center; justify-content: center;">
-                            <img src="${getFullImageUrl(p.foto_ruta)}" alt="${p.nombre}" style="width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);">
+                        ? `<div style="width: 100%; height: 180px; background: linear-gradient(135deg, #fdfbf7 0%, #f5f0e6 100%); border-bottom: 1px solid rgba(237, 230, 216, 0.5); overflow: hidden; position: relative; display: flex; align-items: center; justify-content: center; padding: 8px; box-sizing: border-box;">
+                            <img src="${getFullImageUrl(p.foto_ruta)}" alt="${p.nombre}" style="max-width: 100%; max-height: 100%; object-fit: contain; display: block; transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);">
                            </div>` 
                         : `<div style="width: 100%; height: 180px; background: linear-gradient(135deg, #fbfbfb 0%, #f0f0f0 100%); display: flex; align-items: center; justify-content: center; color: #ac9f8a; font-size: 12.5px; font-style: italic; border-bottom: 1px solid rgba(237, 230, 216, 0.5); gap: 6px;"><i data-lucide="image" style="width:18px; height:18px; opacity:0.6;"></i>Sin imagen de muestra</div>`;
 
