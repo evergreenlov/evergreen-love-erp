@@ -430,6 +430,13 @@ def init_db(force_reset=False):
     except Exception:
         pass  # Ya existe
 
+    # Migración segura: agregar columna metodo_pago a facturas si no existe
+    try:
+        cursor.execute("ALTER TABLE facturas ADD COLUMN metodo_pago TEXT")
+        print("Columna 'metodo_pago' añadida a facturas.")
+    except Exception:
+        pass  # Ya existe
+
     conn.commit()
     conn.close()
     print("Base de datos reconstruida exitosamente con las unidades en pulgadas y desglose de componentes.")
