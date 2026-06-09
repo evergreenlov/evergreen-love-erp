@@ -45,7 +45,7 @@ const CatalogoComponent = {
             <div id="simulador-modal" class="modal-overlay" style="display: none;"></div>
 
             <!-- Modal de Configuración de Cloudflare R2 -->
-            <div id="cloudflare-config-modal-catalogo" class="modal-overlay" style="display: none;"></div>
+            <div id="cloudflare-config-modal-catalogo" class="modal-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(62, 62, 62, 0.4); backdrop-filter: blur(4px); z-index: 3000; justify-content: center; align-items: center;"></div>
 
             <!-- MODAL: ENLACE CATÁLOGO PÚBLICO -->
             <div id="catalogo-pub-share-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.45); backdrop-filter:blur(4px); z-index:3000; align-items:center; justify-content:center;">
@@ -90,7 +90,7 @@ const CatalogoComponent = {
         const deliveryUrl = localStorage.getItem('evergreen_cloudflare_delivery_url') || '';
 
         modal.innerHTML = `
-            <div class="modal-card card" style="max-width: 480px; width: 90%; margin: 100px auto; position: relative; background: white; border-radius: 12px; padding: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.15); text-align: left;">
+            <div class="modal-card card" style="max-width: 480px; width: 90%; margin: 0; position: relative; background: white; border-radius: 12px; padding: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.15); text-align: left;">
                 <h3 class="card-title" style="display: flex; align-items: center; gap: 6px; color: #f38020; margin-top: 0;">
                     <i data-lucide="cloud"></i> Configurar Cloudflare R2
                 </h3>
