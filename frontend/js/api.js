@@ -4,7 +4,7 @@
 
 const API_BASE_URL = window.location.origin.includes('localhost') || window.location.origin.includes('127.0.0.1') || window.location.protocol === 'file:'
     ? 'http://127.0.0.1:8000/api'
-    : '/api';
+    : 'https://evergreen-love-erp.onrender.com/api';
 
 function getFullImageUrl(path) {
     if (!path) return "";

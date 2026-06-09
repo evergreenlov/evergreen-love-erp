@@ -644,7 +644,7 @@ const Carrito = {
                 }))
             };
 
-            const res = await fetch('/api/carrito/pedido', {
+            const res = await fetch(`${API_BASE_URL}/carrito/pedido`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
