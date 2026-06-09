@@ -47,6 +47,21 @@ app.add_middleware(
 @app.on_event("startup")
 def startup_event():
     init_db()
+    # Copiar fotos semilla desde frontend/fotos_import a data/fotos_import en el disco persistente
+    try:
+        import shutil
+        src_dir = os.path.join(FRONTEND_DIR, "fotos_import")
+        dst_dir = FOTOS_IMPORT_DIR
+        if os.path.exists(src_dir):
+            for file_name in os.listdir(src_dir):
+                src_file = os.path.join(src_dir, file_name)
+                dst_file = os.path.join(dst_dir, file_name)
+                if os.path.isfile(src_file) and not os.path.exists(dst_file):
+                    shutil.copy2(src_file, dst_file)
+            print("✅ Fotos semilla copiadas al disco persistente.")
+    except Exception as e:
+        print(f"⚠️ Error al copiar fotos semilla: {str(e)}")
+
     try:
         scan_and_index_photos()
         print("✅ Fotos escaneadas e indexadas exitosamente al iniciar.")
