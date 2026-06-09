@@ -74,9 +74,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     break;
                 case 'produccion':
                     ProduccionComponent.render('produccion-container');
-                    break;
-                case 'evaluaciones':
-                    EvaluacionesComponent.render('evaluaciones-container');
                 case 'catalogo':
                     CatalogoComponent.render('catalogo-view');
                     break;
