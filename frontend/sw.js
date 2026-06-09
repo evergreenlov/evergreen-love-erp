@@ -1,4 +1,4 @@
-const CACHE_NAME = 'evergreen-cache-v1';
+const CACHE_NAME = 'evergreen-cache-v51';
 const ASSETS = [
   '/catalogo_publico.html',
   '/css/style.css',
