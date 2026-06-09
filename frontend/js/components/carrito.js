@@ -348,6 +348,13 @@ const Carrito = {
                     <textarea id="pub-ord-notas" placeholder="Fecha de entrega preferida, instrucciones especiales..."></textarea>
                 </div>
                 <div class="form-group">
+                    <label>Método de Entrega *</label>
+                    <select id="pub-ord-entrega" style="width: 100%; padding: 11px 13px; border: 1.5px solid #ddd; border-radius: 10px; font-family: var(--font-primary); font-size: 13px; transition: border-color 0.2s;" onchange="Carrito.onDeliveryMethodChange()">
+                        <option value="recogida">Recogida en Taller (Gratis)</option>
+                        <option value="envio">Envío Postal USPS (+$6.00)</option>
+                    </select>
+                </div>
+                <div class="form-group">
                     <label>Método de Pago *</label>
                     <select id="pub-ord-pago" style="width: 100%; padding: 11px 13px; border: 1.5px solid #ddd; border-radius: 10px; font-family: var(--font-primary); font-size: 13px; transition: border-color 0.2s;" onchange="Carrito.onPaymentMethodChange()">
                         <option value="ATH Movil">ATH Móvil (Recomendado)</option>
@@ -518,7 +525,9 @@ const Carrito = {
         const subtotal = this.cart.reduce((s, c) => s + c.precio_final * c.cantidad, 0);
         const stateTax = subtotal * 0.105;
         const municipalTax = subtotal * 0.01;
-        const total = subtotal + stateTax + municipalTax;
+        const entregaSelect = document.getElementById('pub-ord-entrega');
+        const costoEnvio = (entregaSelect && entregaSelect.value === 'envio') ? 6.00 : 0.00;
+        const total = subtotal + stateTax + municipalTax + costoEnvio;
         
         const container = document.getElementById('pub-order-summary-box');
         const itemCount = this.cart.reduce((s, c) => s + c.cantidad, 0);
@@ -576,6 +585,10 @@ const Carrito = {
                     <span>IVU Municipal (1.0%):</span>
                     <span>$${municipalTax.toFixed(2)}</span>
                 </div>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span>Costo de Envío:</span>
+                    <span style="font-weight: 600; color: #2d2d2d;">$${costoEnvio.toFixed(2)}</span>
+                </div>
             </div>
 
             <div class="order-summary-line total" style="margin-top: 8px; border-top: 2px solid var(--color-moss-green); padding-top: 8px; display: flex; justify-content: space-between; align-items: center;">
@@ -627,15 +640,25 @@ const Carrito = {
             const email = document.getElementById('pub-ord-email').value.trim() || null;
             const notasAdicionales = document.getElementById('pub-ord-notas').value.trim() || null;
             const metodoPago = document.getElementById('pub-ord-pago').value;
+            const entregaSelect = document.getElementById('pub-ord-entrega');
+            const costoEnvio = (entregaSelect && entregaSelect.value === 'envio') ? 6.00 : 0.00;
+            
+            let notasConEnvio = notasAdicionales;
+            if (entregaSelect && entregaSelect.value === 'envio') {
+                notasConEnvio = notasAdicionales 
+                    ? `[Envío por USPS] ${notasAdicionales}` 
+                    : `[Envío por USPS]`;
+            }
 
             // Formatear payload agrupado para enviar al nuevo endpoint
             const payload = {
                 nombre_contacto: nombre,
                 email_contacto: email,
                 telefono_contacto: telefono,
-                notas: notasAdicionales,
+                notas: notasConEnvio,
                 session_id: sessionId,
                 metodo_pago: metodoPago,
+                costo_envio: costoEnvio,
                 items: this.cart.map(item => ({
                     producto_id: item.producto_id,
                     cantidad: item.cantidad,
@@ -780,6 +803,19 @@ const Carrito = {
         } else {
             inst.innerHTML = `💳 <strong>Instrucciones:</strong> El pago automático con tarjeta estará disponible próximamente. Por favor, selecciona ATH Móvil, PayPal o Efectivo.`;
             inst.style.display = 'block';
+        }
+    },
+
+    // Manejador del cambio de método de envío/entrega
+    onDeliveryMethodChange() {
+        this.renderOrderSummary();
+        
+        // Ajustar método de pago si el cliente elige envío para que no pague en efectivo
+        const selectEntrega = document.getElementById('pub-ord-entrega');
+        const selectPago = document.getElementById('pub-ord-pago');
+        if (selectEntrega && selectPago && selectEntrega.value === 'envio' && selectPago.value === 'Efectivo') {
+            selectPago.value = 'ATH Movil';
+            this.onPaymentMethodChange();
         }
     },
 

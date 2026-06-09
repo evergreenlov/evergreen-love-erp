@@ -2157,7 +2157,8 @@ function getFullImageUrl(path) {
                 const subtotal = pedido.items.reduce((s, it) => s + (it.cantidad * it.precio_unitario), 0);
                 const ivuEstatal = subtotal * 0.105;
                 const ivuMunicipal = subtotal * 0.01;
-                const total = subtotal + ivuEstatal + ivuMunicipal;
+                const envio = pedido.costo_envio || 0.0;
+                const total = subtotal + ivuEstatal + ivuMunicipal + envio;
 
                 const newInvoice = {
                     id: invoiceId,
@@ -2193,6 +2194,19 @@ function getFullImageUrl(path) {
                         total: round(it.cantidad * it.precio_unitario)
                     });
                 });
+
+                if (envio > 0) {
+                    const nextItemId = invoiceItems.reduce((max, item) => item.id > max ? item.id : max, 0) + 1;
+                    invoiceItems.push({
+                        id: nextItemId,
+                        factura_id: invoiceId,
+                        producto_id: null,
+                        nombre_producto: 'Envío Postal (USPS)',
+                        cantidad: 1,
+                        precio_unitario: envio,
+                        total: round(envio)
+                    });
+                }
                 saveTable('items_factura', invoiceItems);
 
                 // Registrar Ordenes de Producción

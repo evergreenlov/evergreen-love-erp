@@ -127,6 +127,7 @@ class PedidoPublicoSchema(BaseModel):
     items: List[PedidoPublicoItemSchema]
     session_id: str
     metodo_pago: Optional[str] = "ATH Movil"
+    costo_envio: Optional[float] = 0.0
 
 @router.post("/carrito/pedido", status_code=status.HTTP_201_CREATED)
 def crear_pedido_publico(pedido: PedidoPublicoSchema, background_tasks: BackgroundTasks):
@@ -178,7 +179,8 @@ def crear_pedido_publico(pedido: PedidoPublicoSchema, background_tasks: Backgrou
             
         ivu_estatal = subtotal * 0.105
         ivu_municipal = 0.0 if is_exempt else subtotal * 0.01
-        total_factura = subtotal + ivu_estatal + ivu_municipal
+        envio = pedido.costo_envio or 0.0
+        total_factura = subtotal + ivu_estatal + ivu_municipal + envio
 
         # Generar número de factura EV-YYYY-XXXX
         anio_actual = datetime.datetime.now().strftime("%Y")
@@ -245,6 +247,14 @@ def crear_pedido_publico(pedido: PedidoPublicoSchema, background_tasks: Backgrou
                 item.precio_unitario,
                 round(item.cantidad * item.precio_unitario, 2)
             ))
+
+        # Si hay costo de envío, agregarlo como partida a la factura
+        if pedido.costo_envio and pedido.costo_envio > 0:
+            cursor.execute("""
+                INSERT INTO items_factura (
+                    factura_id, producto_id, nombre_producto, cantidad, precio_unitario, total
+                ) VALUES (?, NULL, 'Envío Postal (USPS)', 1, ?, ?)
+            """, (factura_id, pedido.costo_envio, pedido.costo_envio))
 
         # 4. Vaciar carrito de la sesión
         cursor.execute("DELETE FROM carrito WHERE session_id = ?", (pedido.session_id,))
