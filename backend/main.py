@@ -6,6 +6,7 @@ from fastapi.responses import FileResponse
 import sqlite3
 
 from database import get_db_connection, init_db
+from utils.photo_scanner import scan_and_index_photos
 from routes import materiales
 from routes import costos
 from routes import produccion
@@ -46,6 +47,11 @@ app.add_middleware(
 @app.on_event("startup")
 def startup_event():
     init_db()
+    try:
+        scan_and_index_photos()
+        print("✅ Fotos escaneadas e indexadas exitosamente al iniciar.")
+    except Exception as e:
+        print(f"⚠️ Error al indexar fotos en el startup: {str(e)}")
 
 # Ruta de diagnóstico de la API
 @app.get("/api/health")
