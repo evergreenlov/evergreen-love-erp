@@ -5,6 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Catálogo - Evergreen Love</title>
     
+    <!-- PWA Mobile Config -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Evergreen">
+    <link rel="apple-touch-icon" href="img/apple-touch-icon.png">
+    <link rel="manifest" href="manifest.json">
+    
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -120,6 +127,15 @@
             lucide.createIcons();
             Carrito.init();
             CatalogoComponent.render('catalogo-view');
+
+            // Registrar Service Worker para PWA / Instalar en Pantalla de Inicio
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('sw.js').then(() => {
+                    console.log('PWA Service Worker registrado con éxito.');
+                }).catch(err => {
+                    console.warn('Error al registrar PWA Service Worker:', err);
+                });
+            }
         });
     </script>
 </body>

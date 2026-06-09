@@ -137,6 +137,22 @@ def read_catalogo_publico():
         return FileResponse(path)
     return {"message": "catalogo_publico.html no encontrado"}
 
+# Servir manifest.json para PWA
+@app.get("/manifest.json")
+def read_manifest():
+    path = os.path.join(FRONTEND_DIR, "manifest.json")
+    if os.path.exists(path):
+        return FileResponse(path, media_type="application/json")
+    return {"message": "manifest.json no encontrado"}
+
+# Servir sw.js para PWA
+@app.get("/sw.js")
+def read_sw():
+    path = os.path.join(FRONTEND_DIR, "sw.js")
+    if os.path.exists(path):
+        return FileResponse(path, media_type="application/javascript")
+    return {"message": "sw.js no encontrado"}
+
 # Servir el portal B2B de pedidos
 @app.get("/catalogo_b2b.html")
 @app.get("/b2b")
