@@ -1746,9 +1746,6 @@ function getFullImageUrl(path) {
                     return mockResponse({ status: "success", message: "Material eliminado" });
                 }
             }
-            if (path.startsWith('/materiales/') && path.endsWith('/foto')) {
-                return mockResponse({ status: "success", foto_url: "" });
-            }
 
             // 3. Retazos
             if (path === '/retazos' && method === 'GET') {
@@ -2381,8 +2378,20 @@ const EvergreenAPI = {
             const formData = new FormData();
             formData.append("file", file);
             
+            const headers = {};
+            const cfAccountId = localStorage.getItem('evergreen_cloudflare_account_id');
+            const cfApiToken = localStorage.getItem('evergreen_cloudflare_api_token');
+            const cfBucket = localStorage.getItem('evergreen_cloudflare_bucket');
+            const cfDeliveryUrl = localStorage.getItem('evergreen_cloudflare_delivery_url');
+
+            if (cfAccountId) headers['X-Cloudflare-Account-Id'] = cfAccountId;
+            if (cfApiToken) headers['X-Cloudflare-Api-Token'] = cfApiToken;
+            if (cfBucket) headers['X-Cloudflare-Bucket'] = cfBucket;
+            if (cfDeliveryUrl) headers['X-Cloudflare-Delivery-Url'] = cfDeliveryUrl;
+
             const response = await fetch(`${API_BASE_URL}/materiales/${id}/foto`, {
                 method: 'POST',
+                headers: headers,
                 body: formData
             });
             if (!response.ok) {
