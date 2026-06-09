@@ -10,6 +10,7 @@ const CatalogoComponent = {
 
     async render(containerId) {
         const container = document.getElementById(containerId);
+        const isAdmin = !!document.querySelector('.sidebar');
         container.innerHTML = `
             <div class="card" style="margin-bottom: 24px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 16px;">
@@ -20,12 +21,14 @@ const CatalogoComponent = {
                         </p>
                     </div>
                     <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        ${isAdmin ? `
                         <button class="btn btn-secondary" id="btn-config-cloudflare-catalogo" style="border-color: #f38020; color: #f38020; padding: 8px 14px; font-size: 13px; display: inline-flex; gap: 6px; align-items: center;">
                             <i data-lucide="cloud"></i> Integrar Cloudflare R2
                         </button>
                         <button class="btn btn-secondary" id="btn-compartir-catalogo-pub" style="padding: 8px 14px; font-size: 13px; display: inline-flex; gap: 6px; align-items: center;" onclick="CatalogoComponent.abrirEnlaceCatalogo()">
                             <i data-lucide="share-2"></i> Compartir Enlace Catálogo
                         </button>
+                        ` : ''}
                     </div>
                 </div>
 
