@@ -1,9 +1,10 @@
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, status, BackgroundTasks
 from pydantic import BaseModel
 from typing import Optional, List
 import sqlite3
 
 from database import get_db_connection
+from utils.email_helper import send_receipt_email
 
 router = APIRouter(
     prefix="/api",
@@ -197,7 +198,7 @@ class PedidoB2BSchema(BaseModel):
     items: List[PedidoB2BItemSchema]
 
 @router.post("/clientes/{cliente_id}/pedido", status_code=status.HTTP_201_CREATED)
-def crear_pedido_b2b(cliente_id: int, pedido: PedidoB2BSchema):
+def crear_pedido_b2b(cliente_id: int, pedido: PedidoB2BSchema, background_tasks: BackgroundTasks):
     """Crea un pedido B2B desde el catálogo público del cliente."""
     try:
         conn = get_db_connection()
@@ -305,6 +306,28 @@ def crear_pedido_b2b(cliente_id: int, pedido: PedidoB2BSchema):
 
         conn.commit()
         conn.close()
+
+        # Enviar recibo por correo si se ingresó uno
+        if pedido.email_contacto and "@" in pedido.email_contacto:
+            order_data = {
+                "nombre_contacto": pedido.nombre_contacto,
+                "telefono_contacto": pedido.telefono_contacto or "",
+                "numero_factura": num_factura,
+                "subtotal": subtotal,
+                "ivu_estatal": ivu_estatal,
+                "ivu_municipal": ivu_municipal,
+                "total": total_factura,
+                "metodo_pago": "B2B",
+                "notas": pedido.notas or "",
+                "items": [
+                    {
+                        "nombre_producto": item.nombre_producto,
+                        "cantidad": item.cantidad,
+                        "precio_unitario": item.precio_unitario
+                    } for item in pedido.items
+                ]
+            }
+            background_tasks.add_task(send_receipt_email, pedido.email_contacto.strip(), order_data)
 
         return {
             "status": "success",

@@ -1,9 +1,10 @@
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, HTTPException, Query, status, BackgroundTasks
 from database import get_db_connection
 from pydantic import BaseModel
 from typing import List, Optional
 import datetime
 import time
+from utils.email_helper import send_receipt_email
 
 router = APIRouter(
     prefix="/api",
@@ -128,7 +129,7 @@ class PedidoPublicoSchema(BaseModel):
     metodo_pago: Optional[str] = "ATH Movil"
 
 @router.post("/carrito/pedido", status_code=status.HTTP_201_CREATED)
-def crear_pedido_publico(pedido: PedidoPublicoSchema):
+def crear_pedido_publico(pedido: PedidoPublicoSchema, background_tasks: BackgroundTasks):
     """Crea un pedido desde el catálogo público de retail y genera su factura."""
     try:
         conn = get_db_connection()
@@ -250,6 +251,28 @@ def crear_pedido_publico(pedido: PedidoPublicoSchema):
 
         conn.commit()
         conn.close()
+
+        # 5. Enviar recibo por correo si se ingresó uno
+        if pedido.email_contacto and "@" in pedido.email_contacto:
+            order_data = {
+                "nombre_contacto": pedido.nombre_contacto,
+                "telefono_contacto": pedido.telefono_contacto,
+                "numero_factura": num_factura,
+                "subtotal": subtotal,
+                "ivu_estatal": ivu_estatal,
+                "ivu_municipal": ivu_municipal,
+                "total": total_factura,
+                "metodo_pago": pedido.metodo_pago or "ATH Movil",
+                "notas": pedido.notas or "",
+                "items": [
+                    {
+                        "nombre_producto": item.nombre_producto,
+                        "cantidad": item.cantidad,
+                        "precio_unitario": item.precio_unitario
+                    } for item in pedido.items
+                ]
+            }
+            background_tasks.add_task(send_receipt_email, pedido.email_contacto.strip(), order_data)
 
         return {
             "status": "success",
