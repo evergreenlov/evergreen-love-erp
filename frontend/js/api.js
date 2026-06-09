@@ -1572,6 +1572,54 @@ function getFullImageUrl(path) {
     // Interceptar llamadas HTTP locales
     const originalFetch = window.fetch;
     window.fetch = async function(url, options = {}) {
+        async function handleImageUpload(file, folder, id, suffix) {
+            const cfAccountId = StorageEmulation.getItem('evergreen_cloudflare_account_id') || localStorage.getItem('evergreen_cloudflare_account_id');
+            const cfApiToken = StorageEmulation.getItem('evergreen_cloudflare_api_token') || localStorage.getItem('evergreen_cloudflare_api_token');
+            const cfBucket = StorageEmulation.getItem('evergreen_cloudflare_bucket') || localStorage.getItem('evergreen_cloudflare_bucket');
+            const cfDeliveryUrl = StorageEmulation.getItem('evergreen_cloudflare_delivery_url') || localStorage.getItem('evergreen_cloudflare_delivery_url');
+
+            if (cfAccountId && cfApiToken && cfBucket && cfDeliveryUrl) {
+                const extension = file.name ? file.name.split('.').pop() : 'jpg';
+                const fileName = `${folder}/${id}_${suffix || 'foto'}_${Date.now()}.${extension}`;
+                const uploadUrl = `https://api.cloudflare.com/client/v4/accounts/${cfAccountId}/r2/buckets/${cfBucket}/objects/${encodeURIComponent(fileName)}`;
+                
+                try {
+                    const uploadResponse = await originalFetch(uploadUrl, {
+                        method: 'PUT',
+                        headers: {
+                            'Authorization': `Bearer ${cfApiToken}`,
+                            'Content-Type': file.type || 'image/jpeg'
+                        },
+                        body: file
+                    });
+
+                    if (!uploadResponse.ok) {
+                        let errText = '';
+                        try {
+                            const errJson = await uploadResponse.json();
+                            errText = errJson.errors && errJson.errors[0] ? errJson.errors[0].message : uploadResponse.statusText;
+                        } catch(e) {
+                            errText = uploadResponse.statusText;
+                        }
+                        throw new Error("Direct Cloudflare R2 Upload failed: " + errText);
+                    }
+
+                    const cleanDelivery = cfDeliveryUrl.endsWith('/') ? cfDeliveryUrl.slice(0, -1) : cfDeliveryUrl;
+                    return `${cleanDelivery}/${fileName}`;
+                } catch (r2Err) {
+                    console.error("Error al subir a Cloudflare R2:", r2Err);
+                    alert("Error al subir a Cloudflare R2. Se guardará de forma local temporalmente.");
+                }
+            }
+
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = e => reject(e);
+                reader.readAsDataURL(file);
+            });
+        }
+
         let urlStr = '';
         if (typeof url === 'string') {
             urlStr = url;
@@ -2106,6 +2154,58 @@ function getFullImageUrl(path) {
                     numero_factura: numFactura,
                     factura_id: invoiceId
                 }, 201);
+            }
+
+            // 11. Carga de Fotos
+            if (path === '/fotos/subir' && method === 'POST') {
+                const tipoFoto = parsedUrl.searchParams.get('tipo_foto') || 'referencia';
+                const productoId = parseInt(parsedUrl.searchParams.get('producto_id'));
+                const ordenId = parseInt(parsedUrl.searchParams.get('orden_id'));
+                const file = options.body.get('file');
+
+                if (productoId) {
+                    const url = await handleImageUpload(file, 'productos', productoId, tipoFoto);
+                    const prods = getTable('productos');
+                    const idx = prods.findIndex(p => p.id === productoId);
+                    if (idx !== -1) {
+                        prods[idx].foto_ruta = url;
+                        saveTable('productos', prods);
+                    }
+                    return mockResponse({ status: "success", foto_url: url });
+                }
+                
+                if (ordenId) {
+                    const url = await handleImageUpload(file, 'ordenes', ordenId, tipoFoto);
+                    const orders = getTable('ordenes');
+                    const idx = orders.findIndex(o => o.id === ordenId);
+                    if (idx !== -1) {
+                        if (tipoFoto === 'antes') {
+                            orders[idx].foto_antes = url;
+                        } else {
+                            orders[idx].foto_despues = url;
+                        }
+                        saveTable('ordenes', orders);
+                    }
+                    return mockResponse({ status: "success", foto_url: url });
+                }
+
+                const url = await handleImageUpload(file, 'general', Date.now(), tipoFoto);
+                return mockResponse({ status: "success", foto_url: url });
+            }
+
+            if (path.startsWith('/materiales/') && path.endsWith('/foto') && method === 'POST') {
+                const parts = path.split('/');
+                const id = parseInt(parts[2]);
+                const file = options.body.get('file');
+                
+                const url = await handleImageUpload(file, 'materiales', id, 'foto');
+                const mats = getTable('materiales');
+                const idx = mats.findIndex(m => m.id === id);
+                if (idx !== -1) {
+                    mats[idx].foto_url = url;
+                    saveTable('materiales', mats);
+                }
+                return mockResponse({ status: "success", foto_url: url });
             }
 
             return mockResponse({ detail: "Endpoint offline no implementado" }, 404);
