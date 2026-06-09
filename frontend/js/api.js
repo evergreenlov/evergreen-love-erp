@@ -23,7 +23,7 @@ function getFullImageUrl(path) {
     let offlineMode = false;
     let initialized = false;
 
-    const OFFLINE_DB_VERSION = "2026-06-08-v4";
+    const OFFLINE_DB_VERSION = "2026-06-08-v5";
     const SEED_DATA = {
         "materiales": [
                 {
@@ -1586,6 +1586,10 @@ function getFullImageUrl(path) {
                 const check = await originalFetch(`${API_BASE_URL}/health`, { signal: controller.signal });
                 clearTimeout(timeoutId);
                 if (!check.ok) throw new Error();
+                
+                // Validar que la respuesta sea JSON real y no HTML de redirección de hosting
+                const health = await check.json();
+                if (!health || health.status !== 'healthy') throw new Error();
             } catch (e) {
                 console.warn("⚠️ Backend no disponible. Activando modo emulación offline en localStorage.");
                 offlineMode = true;
