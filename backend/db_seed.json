@@ -283,6 +283,8 @@
     "productos": [
         {
             "id": 4,
+            "ancho": 2.0,
+            "alto": 2.0,
             "sku": "SKU-EVG-1560",
             "nombre": "Llavero Guitarra y Cotorra",
             "diseno_id": null,
@@ -298,12 +300,12 @@
             "shopify_titulo": "Llavero Guitarra y Cotorra - Hecho en Puerto Rico",
             "shopify_descripcion": "4.72\"x3.6\"/BassWood",
             "shopify_tags": "llavero, guitarra, cotorra",
-            "shopify_alt_text": "Fotografía de producto terminado de Llavero Guitarra y Cotorra",
-            "ancho": 2.0,
-            "alto": 2.0
+            "shopify_alt_text": "Fotografía de producto terminado de Llavero Guitarra y Cotorra"
         },
         {
             "id": 5,
+            "ancho": 2.0,
+            "alto": 2.0,
             "sku": "SKU-EVG-8582",
             "nombre": "Llavero flor de Maga",
             "diseno_id": null,
@@ -319,12 +321,12 @@
             "shopify_titulo": "Llavero flor de Maga - Hecho en Puerto Rico",
             "shopify_descripcion": "3.1\"x3.3/BassWood",
             "shopify_tags": "llavero, flor, maga",
-            "shopify_alt_text": "Fotografía de producto terminado de Llavero flor de Maga",
-            "ancho": 2.0,
-            "alto": 2.0
+            "shopify_alt_text": "Fotografía de producto terminado de Llavero flor de Maga"
         },
         {
             "id": 6,
+            "ancho": 2.0,
+            "alto": 2.0,
             "sku": "SKU-EVG-6636",
             "nombre": "Garita Flor Maga",
             "diseno_id": null,
@@ -340,12 +342,12 @@
             "shopify_titulo": "Garita Flor Maga - Hecho en Puerto Rico",
             "shopify_descripcion": "1.9\"x2.7\"/BassWood",
             "shopify_tags": "garita, flor, maga",
-            "shopify_alt_text": "Fotografía de producto terminado de Garita Flor Maga",
-            "ancho": 2.0,
-            "alto": 2.0
+            "shopify_alt_text": "Fotografía de producto terminado de Garita Flor Maga"
         },
         {
             "id": 7,
+            "ancho": 2.0,
+            "alto": 2.0,
             "sku": "SKU-EVG-1661",
             "nombre": "Garita Morro con Flor de Maga",
             "diseno_id": null,
@@ -361,12 +363,12 @@
             "shopify_titulo": "Garita Morro con Flor de Maga - Hecho en Puerto Rico",
             "shopify_descripcion": "2.01\"x4.1/BassWood",
             "shopify_tags": "garita, morro, flor, maga",
-            "shopify_alt_text": "Fotografía de producto terminado de Garita Morro con Flor de Maga",
-            "ancho": 2.0,
-            "alto": 2.0
+            "shopify_alt_text": "Fotografía de producto terminado de Garita Morro con Flor de Maga"
         },
         {
             "id": 8,
+            "ancho": 2.0,
+            "alto": 2.0,
             "sku": "SKU-EVG-8533",
             "nombre": "Corazón con flor de Maga",
             "diseno_id": null,
@@ -382,12 +384,12 @@
             "shopify_titulo": "Corazón con flor de Maga - Hecho en Puerto Rico",
             "shopify_descripcion": "2.9\"x2.3\"/BassWood",
             "shopify_tags": "corazón, flor, maga",
-            "shopify_alt_text": "Fotografía de producto terminado de Corazón con flor de Maga",
-            "ancho": 2.0,
-            "alto": 2.0
+            "shopify_alt_text": "Fotografía de producto terminado de Corazón con flor de Maga"
         },
         {
             "id": 9,
+            "ancho": 2.0,
+            "alto": 2.0,
             "sku": "SKU-EVG-4102",
             "nombre": "Corazón Flor Maga y Garita",
             "diseno_id": null,
@@ -403,12 +405,12 @@
             "shopify_titulo": "Corazón Flor Maga y Garita - Hecho en Puerto Rico",
             "shopify_descripcion": "4.6\"x3.8\"/BassWood",
             "shopify_tags": "corazón, flor, maga, garita",
-            "shopify_alt_text": "Fotografía de producto terminado de Corazón Flor Maga y Garita",
-            "ancho": 2.0,
-            "alto": 2.0
+            "shopify_alt_text": "Fotografía de producto terminado de Corazón Flor Maga y Garita"
         },
         {
             "id": 10,
+            "ancho": 2.0,
+            "alto": 2.0,
             "sku": "SKU-EVG-3704",
             "nombre": "Corazón Bandera Puerto Rico",
             "diseno_id": null,
@@ -424,12 +426,12 @@
             "shopify_titulo": "Corazón Bandera Puerto Rico - Hecho en Puerto Rico",
             "shopify_descripcion": "3.68\"x3\"/BassWood",
             "shopify_tags": "corazón, bandera, puerto, rico",
-            "shopify_alt_text": "Fotografía de producto terminado de Corazón Bandera Puerto Rico",
-            "ancho": 2.0,
-            "alto": 2.0
+            "shopify_alt_text": "Fotografía de producto terminado de Corazón Bandera Puerto Rico"
         },
         {
             "id": 11,
+            "ancho": 4.72,
+            "alto": 3.8,
             "sku": "SKU-EVG-8515",
             "nombre": "Llavero Tambor Garita",
             "diseno_id": null,
@@ -445,12 +447,12 @@
             "shopify_titulo": "Llavero Tambor Garita - Hecho en Puerto Rico",
             "shopify_descripcion": "4.72\"x3.8\"/BassWood",
             "shopify_tags": "llavero, tambor, garita",
-            "shopify_alt_text": "Fotografía de producto terminado de Llavero Tambor Garita",
-            "ancho": 4.72,
-            "alto": 3.8
+            "shopify_alt_text": "Fotografía de producto terminado de Llavero Tambor Garita"
         },
         {
             "id": 12,
+            "ancho": 4.2,
+            "alto": 4.4,
             "sku": "SKU-EVG-5425",
             "nombre": "Cuadro Garita",
             "diseno_id": null,
@@ -466,12 +468,12 @@
             "shopify_titulo": "Cuadro Garita - Hecho en Puerto Rico",
             "shopify_descripcion": "4.2\"x4.4\"/BassWood",
             "shopify_tags": "cuadro, garita",
-            "shopify_alt_text": "Fotografía de producto terminado de Cuadro Garita",
-            "ancho": 4.2,
-            "alto": 4.4
+            "shopify_alt_text": "Fotografía de producto terminado de Cuadro Garita"
         },
         {
             "id": 13,
+            "ancho": 4.5,
+            "alto": 1.8,
             "sku": "SKU-EVG-4368",
             "nombre": "Macrame Isla Puerto Rico",
             "diseno_id": null,
@@ -487,12 +489,12 @@
             "shopify_titulo": "Macrame Isla Puerto Rico - Hecho en Puerto Rico",
             "shopify_descripcion": "4.5\"x1.8\"/BassWood",
             "shopify_tags": "macrame, isla, puerto, rico",
-            "shopify_alt_text": "Fotografía de producto terminado de Macrame Isla Puerto Rico",
-            "ancho": 4.5,
-            "alto": 1.8
+            "shopify_alt_text": "Fotografía de producto terminado de Macrame Isla Puerto Rico"
         },
         {
             "id": 14,
+            "ancho": 4.44,
+            "alto": 1.93,
             "sku": "SKU-EVG-5975",
             "nombre": "Macrame Rectangular Puerto Rico",
             "diseno_id": null,
@@ -508,12 +510,12 @@
             "shopify_titulo": "Macrame Rectangular Puerto Rico - Hecho en Puerto Rico",
             "shopify_descripcion": "4.44\"x1.93\"/BassWood",
             "shopify_tags": "macrame, rectangular, puerto, rico",
-            "shopify_alt_text": "Fotografía de producto terminado de Macrame Rectangular Puerto Rico",
-            "ancho": 4.44,
-            "alto": 1.93
+            "shopify_alt_text": "Fotografía de producto terminado de Macrame Rectangular Puerto Rico"
         },
         {
             "id": 15,
+            "ancho": 4.1,
+            "alto": 2.53,
             "sku": "SKU-EVG-9392",
             "nombre": "Media Luna Flor Maga Puerto Rico(Pequeña)",
             "diseno_id": null,
@@ -529,12 +531,12 @@
             "shopify_titulo": "Media Luna Flor Maga Puerto Rico(Pequeña) - Hecho en Puerto Rico",
             "shopify_descripcion": "4.1\"x2.53/BassWood (Media Luna Pequeña)",
             "shopify_tags": "media, luna, flor, maga, puerto, ricopequeña",
-            "shopify_alt_text": "Fotografía de producto terminado de Media Luna Flor Maga Puerto Rico(Pequeña)",
-            "ancho": 4.1,
-            "alto": 2.53
+            "shopify_alt_text": "Fotografía de producto terminado de Media Luna Flor Maga Puerto Rico(Pequeña)"
         },
         {
             "id": 16,
+            "ancho": 4.1,
+            "alto": 2.53,
             "sku": "SKU-EVG-6738",
             "nombre": "Media Luna Bandera Puerto Rico (Pequeña)",
             "diseno_id": null,
@@ -550,12 +552,12 @@
             "shopify_titulo": "Media Luna Bandera Puerto Rico (Pequeña) - Hecho en Puerto Rico",
             "shopify_descripcion": "4.1\"x2.53\"/BassWood (Media Luna Pequeña)",
             "shopify_tags": "media, luna, bandera, puerto, rico, pequeña",
-            "shopify_alt_text": "Fotografía de producto terminado de Media Luna Bandera Puerto Rico (Pequeña)",
-            "ancho": 4.1,
-            "alto": 2.53
+            "shopify_alt_text": "Fotografía de producto terminado de Media Luna Bandera Puerto Rico (Pequeña)"
         },
         {
             "id": 17,
+            "ancho": 4.75,
+            "alto": 2.8,
             "sku": "SKU-EVG-4827",
             "nombre": "Media Luna Garita Bandera Puerto Rico",
             "diseno_id": null,
@@ -571,12 +573,12 @@
             "shopify_titulo": "Media Luna Garita Bandera Puerto Rico  - Hecho en Puerto Rico",
             "shopify_descripcion": "4.75\"x2.8\"/BassWood (Media Luna Pequeña)",
             "shopify_tags": "media, luna, garita, bandera, puerto, rico",
-            "shopify_alt_text": "Fotografía de producto terminado de Media Luna Garita Bandera Puerto Rico",
-            "ancho": 4.75,
-            "alto": 2.8
+            "shopify_alt_text": "Fotografía de producto terminado de Media Luna Garita Bandera Puerto Rico"
         },
         {
             "id": 18,
+            "ancho": 4.75,
+            "alto": 2.84,
             "sku": "SKU-EVG-3464",
             "nombre": "Media Luna Tambor y Garita",
             "diseno_id": null,
@@ -592,12 +594,12 @@
             "shopify_titulo": "Media Luna Tambor y Garita - Hecho en Puerto Rico",
             "shopify_descripcion": "4.75\"x2.84/BassWood (Media Luna Pequeña)",
             "shopify_tags": "media, luna, tambor, garita",
-            "shopify_alt_text": "Fotografía de producto terminado de Media Luna Tambor y Garita",
-            "ancho": 4.75,
-            "alto": 2.84
+            "shopify_alt_text": "Fotografía de producto terminado de Media Luna Tambor y Garita"
         },
         {
             "id": 19,
+            "ancho": 4.75,
+            "alto": 2.8,
             "sku": "SKU-EVG-1558",
             "nombre": "Media Luna Guitarra Cotorra",
             "diseno_id": null,
@@ -613,12 +615,12 @@
             "shopify_titulo": "Media Luna Guitarra Cotorra - Hecho en Puerto Rico",
             "shopify_descripcion": "4.75\"x2.8\"",
             "shopify_tags": "media, luna, guitarra, cotorra",
-            "shopify_alt_text": "Fotografía de producto terminado de Media Luna Guitarra Cotorra",
-            "ancho": 4.75,
-            "alto": 2.8
+            "shopify_alt_text": "Fotografía de producto terminado de Media Luna Guitarra Cotorra"
         },
         {
             "id": 20,
+            "ancho": 6.2,
+            "alto": 3.7,
             "sku": "SKU-EVG-9429",
             "nombre": "Media Luna Garita Coqui (Grande)",
             "diseno_id": null,
@@ -634,12 +636,12 @@
             "shopify_titulo": "Media Luna Garita Coqui (Grande) - Hecho en Puerto Rico",
             "shopify_descripcion": "6.2\"x3.7\"/BassWood (Media Luna Grande)",
             "shopify_tags": "media, luna, garita, coqui, grande",
-            "shopify_alt_text": "Fotografía de producto terminado de Media Luna Garita Coqui (Grande)",
-            "ancho": 6.2,
-            "alto": 3.7
+            "shopify_alt_text": "Fotografía de producto terminado de Media Luna Garita Coqui (Grande)"
         },
         {
             "id": 21,
+            "ancho": 6.2,
+            "alto": 3.7,
             "sku": "SKU-EVG-9460",
             "nombre": "Media Luna Tambor y Garita (Media Luna Grande)",
             "diseno_id": null,
@@ -655,12 +657,12 @@
             "shopify_titulo": "Media Luna Tambor y Garita (Media Luna Grande) - Hecho en Puerto Rico",
             "shopify_descripcion": "6.2\"x3.7/BassWood (Media Luna Grande)",
             "shopify_tags": "media, luna, tambor, garita, media, luna, grande",
-            "shopify_alt_text": "Fotografía de producto terminado de Media Luna Tambor y Garita (Media Luna Grande)",
-            "ancho": 6.2,
-            "alto": 3.7
+            "shopify_alt_text": "Fotografía de producto terminado de Media Luna Tambor y Garita (Media Luna Grande)"
         },
         {
             "id": 22,
+            "ancho": 6.2,
+            "alto": 3.7,
             "sku": "SKU-EVG-7533",
             "nombre": "Media Luna Guitarra Cotorra",
             "diseno_id": null,
@@ -676,12 +678,12 @@
             "shopify_titulo": "Media Luna Guitarra Cotorra - Hecho en Puerto Rico",
             "shopify_descripcion": "6.2\"x3.7\"",
             "shopify_tags": "media, luna, guitarra, cotorra",
-            "shopify_alt_text": "Fotografía de producto terminado de Media Luna Guitarra Cotorra",
-            "ancho": 6.2,
-            "alto": 3.7
+            "shopify_alt_text": "Fotografía de producto terminado de Media Luna Guitarra Cotorra"
         },
         {
             "id": 23,
+            "ancho": 6.2,
+            "alto": 3.7,
             "sku": "SKU-EVG-8477",
             "nombre": "Media Luna Casitas de San Juan",
             "diseno_id": null,
@@ -697,12 +699,12 @@
             "shopify_titulo": "Media Luna Casitas de San Juan - Hecho en Puerto Rico",
             "shopify_descripcion": "6.2\"x3.7\"",
             "shopify_tags": "media, luna, casitas, juan",
-            "shopify_alt_text": "Fotografía de producto terminado de Media Luna Casitas de San Juan",
-            "ancho": 6.2,
-            "alto": 3.7
+            "shopify_alt_text": "Fotografía de producto terminado de Media Luna Casitas de San Juan"
         },
         {
             "id": 24,
+            "ancho": 6.2,
+            "alto": 3.7,
             "sku": "SKU-EVG-7500",
             "nombre": "Media Luna Garita Doble Bandera San Juan",
             "diseno_id": null,
@@ -718,12 +720,12 @@
             "shopify_titulo": "Media Luna Garita Doble Bandera San Juan - Hecho en Puerto Rico",
             "shopify_descripcion": "6.2\"x3.7\"/BassWood (Media Luna Grande)",
             "shopify_tags": "media, luna, garita, doble, bandera, juan",
-            "shopify_alt_text": "Fotografía de producto terminado de Media Luna Garita Doble Bandera San Juan",
-            "ancho": 6.2,
-            "alto": 3.7
+            "shopify_alt_text": "Fotografía de producto terminado de Media Luna Garita Doble Bandera San Juan"
         },
         {
             "id": 25,
+            "ancho": 6.2,
+            "alto": 3.7,
             "sku": "SKU-EVG-6685",
             "nombre": "Media Luna Flor Maga Puerto Rico (Media Luna Grande)",
             "diseno_id": null,
@@ -739,9 +741,7 @@
             "shopify_titulo": "Media Luna Flor Maga Puerto Rico (Media Luna Grande) - Hecho en Puerto Rico",
             "shopify_descripcion": "6.2\"x3.7\"/BassWood (Media Luna Grande",
             "shopify_tags": "media, luna, flor, maga, puerto, rico, media, luna, grande",
-            "shopify_alt_text": "Fotografía de producto terminado de Media Luna Flor Maga Puerto Rico (Media Luna Grande)",
-            "ancho": 6.2,
-            "alto": 3.7
+            "shopify_alt_text": "Fotografía de producto terminado de Media Luna Flor Maga Puerto Rico (Media Luna Grande)"
         }
     ],
     "componentes_producto": [
@@ -1159,10 +1159,10 @@
             "ivu_estatal": 2.1,
             "ivu_municipal": 0.2,
             "total": 22.3,
-            "notas": "Pedido B2B de Carlos Rivera. Notas adicionales: [IVU DETALLES - Subtotal: $20.00 | IVU Estatal (10.5%): $2.10 | IVU Municipal (1.0%): $0.20 (COBRADO) | Total Final: $22.30]",
-            "estado": "Pagada",
             "monto_pagado": 22.3,
-            "notificado": 0
+            "notificado": 0,
+            "notas": "Pedido B2B de Carlos Rivera. Notas adicionales: [IVU DETALLES - Subtotal: $20.00 | IVU Estatal (10.5%): $2.10 | IVU Municipal (1.0%): $0.20 (COBRADO) | Total Final: $22.30]",
+            "estado": "Pagada"
         }
     ],
     "items_factura": [
@@ -1409,5 +1409,6 @@
             "precio_unitario": 4.5,
             "total": 4.5
         }
-    ]
+    ],
+    "gastos": []
 }

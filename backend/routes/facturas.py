@@ -354,3 +354,69 @@ def marcar_facturas_leidas(payload: MarcarLeidasSchema):
         return {"status": "success", "message": f"{cursor.rowcount} facturas marcadas como leídas."}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+# --- MODELOS GASTOS ---
+class GastoCreate(BaseModel):
+    concepto: str
+    categoria: str
+    monto: float
+    fecha: str
+    metodo_pago: Optional[str] = None
+    notas: Optional[str] = None
+
+# --- ENDPOINTS GASTOS ---
+@router.get("/gastos")
+def listar_gastos():
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM gastos ORDER BY fecha DESC, id DESC")
+        gastos = [dict(row) for row in cursor.fetchall()]
+        conn.close()
+        return {"status": "success", "data": gastos}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al listar gastos: {str(e)}")
+
+@router.post("/gastos", status_code=201)
+def crear_gasto(gasto: GastoCreate):
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO gastos (concepto, categoria, monto, fecha, metodo_pago, notas)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (gasto.concepto, gasto.categoria, gasto.monto, gasto.fecha, gasto.metodo_pago, gasto.notas))
+        gasto_id = cursor.lastrowid
+        conn.commit()
+        conn.close()
+        return {
+            "status": "success",
+            "message": "Gasto registrado con éxito",
+            "id": gasto_id,
+            "concepto": gasto.concepto,
+            "categoria": gasto.categoria,
+            "monto": gasto.monto,
+            "fecha": gasto.fecha,
+            "metodo_pago": gasto.metodo_pago,
+            "notas": gasto.notas
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al crear gasto: {str(e)}")
+
+@router.delete("/gastos/{gasto_id}")
+def eliminar_gasto(gasto_id: int):
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT id FROM gastos WHERE id = ?", (gasto_id,))
+        if not cursor.fetchone():
+            conn.close()
+            raise HTTPException(status_code=404, detail="Gasto no encontrado")
+        cursor.execute("DELETE FROM gastos WHERE id = ?", (gasto_id,))
+        conn.commit()
+        conn.close()
+        return {"status": "success", "message": "Gasto eliminado con éxito"}
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al eliminar gasto: {str(e)}")

@@ -262,6 +262,19 @@ def init_db(force_reset=False):
         FOREIGN KEY (producto_id) REFERENCES productos (id) ON DELETE CASCADE
     );
     """)
+
+    # 14. Tabla de Gastos Operativos
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS gastos (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        concepto TEXT NOT NULL,
+        categoria TEXT NOT NULL,
+        monto REAL NOT NULL,
+        fecha TEXT NOT NULL,
+        metodo_pago TEXT,
+        notas TEXT
+    );
+    """)
     
     # Insertar datos semilla si la base de datos está vacía o solo contiene los dos productos de prueba
     cursor.execute("SELECT COUNT(*) FROM productos")
@@ -280,7 +293,7 @@ def init_db(force_reset=False):
                 tablas_a_limpiar = [
                     'items_factura', 'facturas', 'ordenes_produccion', 'catalogo_cliente', 
                     'clientes', 'componentes_producto', 'productos', 'laser_settings', 
-                    'disenos', 'retazos', 'materiales'
+                    'disenos', 'retazos', 'materiales', 'gastos'
                 ]
                 for t in tablas_a_limpiar:
                     cursor.execute(f"DELETE FROM {t}")
@@ -289,7 +302,7 @@ def init_db(force_reset=False):
                 tablas_orden = [
                     'materiales', 'retazos', 'disenos', 'laser_settings', 
                     'productos', 'componentes_producto', 'clientes', 
-                    'catalogo_cliente', 'ordenes_produccion', 'facturas', 'items_factura'
+                    'catalogo_cliente', 'ordenes_produccion', 'facturas', 'items_factura', 'gastos'
                 ]
                 for table in tablas_orden:
                     rows = seed_data.get(table, [])
