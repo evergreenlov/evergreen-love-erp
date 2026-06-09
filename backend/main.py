@@ -77,6 +77,34 @@ def health():
         "database": "connected"
     }
 
+@app.get("/api/diagnostic")
+def diagnostic():
+    import os
+    backend_dir = os.path.dirname(__file__)
+    files = []
+    try:
+        files = os.listdir(backend_dir)
+    except Exception as e:
+        files = str(e)
+    
+    db_file_exists = os.path.exists(os.path.join(backend_dir, "db_seed.json"))
+    
+    # Intentar ejecutar init_db() para forzar el sembrado si no se ha hecho
+    seeding_result = "No running"
+    try:
+        from database import init_db
+        init_db()
+        seeding_result = "Ran init_db()"
+    except Exception as e:
+        seeding_result = f"Error running init_db: {str(e)}"
+        
+    return {
+        "current_dir": backend_dir,
+        "files_in_backend": files,
+        "db_seed_exists": db_file_exists,
+        "seeding_result": seeding_result
+    }
+
 # Endpoint para verificar el estado de la base de datos y contar registros
 @app.get("/api/db_status")
 def db_status():
