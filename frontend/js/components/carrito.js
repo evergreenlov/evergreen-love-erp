@@ -114,7 +114,7 @@ const Carrito = {
             }
             .cart-footer {
                 padding: 20px 24px;
-                border-top: 1px solid #f0ece4;
+                border-bottom: 1px solid #f0ece4;
                 background: #fdfaf5;
             }
             .cart-total-row {
@@ -303,12 +303,6 @@ const Carrito = {
                 <h3><i data-lucide="shopping-bag" style="width:18px;height:18px;display:inline;vertical-align:-3px;margin-right:6px;"></i>Mi Pedido</h3>
                 <button id="btn-close-cart" onclick="Carrito.close()"><i data-lucide="x" style="width:20px;height:20px;"></i></button>
             </div>
-            <div id="cart-items">
-                <div id="cart-empty" style="display:flex;flex-direction:column;align-items:center;gap:10px;">
-                    <i data-lucide="package" style="width:40px;height:40px;color:#e0d9ce;"></i>
-                    Tu pedido está vacío
-                </div>
-            </div>
             <div class="cart-footer">
                 <div class="cart-total-row">
                     <span>Total Estimado</span>
@@ -318,6 +312,12 @@ const Carrito = {
                     <i data-lucide="send" style="width:16px;height:16px;"></i>
                     Enviar Pedido
                 </button>
+            </div>
+            <div id="cart-items">
+                <div id="cart-empty" style="display:flex;flex-direction:column;align-items:center;gap:10px;">
+                    <i data-lucide="package" style="width:40px;height:40px;color:#e0d9ce;"></i>
+                    Tu pedido está vacío
+                </div>
             </div>
         `;
         document.body.appendChild(cartPanel);
