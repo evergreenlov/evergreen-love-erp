@@ -77,10 +77,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     break;
                 case 'evaluaciones':
                     EvaluacionesComponent.render('evaluaciones-container');
-                    break;
-                case 'shopify':
-                    ShopifyComponent.render('shopify-container');
-                    break;
                 case 'catalogo':
                     CatalogoComponent.render('catalogo-view');
                     break;

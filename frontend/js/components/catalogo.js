@@ -19,7 +19,10 @@ const CatalogoComponent = {
                             Explora nuestro catálogo de productos láser. Cada tarjeta muestra foto, nombre y precio.
                         </p>
                     </div>
-                    <div>
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <button class="btn btn-secondary" id="btn-config-cloudflare-catalogo" style="border-color: #f38020; color: #f38020; padding: 8px 14px; font-size: 13px; display: inline-flex; gap: 6px; align-items: center;">
+                            <i data-lucide="cloud"></i> Integrar Cloudflare R2
+                        </button>
                         <button class="btn btn-secondary" id="btn-compartir-catalogo-pub" style="padding: 8px 14px; font-size: 13px; display: inline-flex; gap: 6px; align-items: center;" onclick="CatalogoComponent.abrirEnlaceCatalogo()">
                             <i data-lucide="share-2"></i> Compartir Enlace Catálogo
                         </button>
@@ -40,6 +43,9 @@ const CatalogoComponent = {
             </div>
             <div id="product-edit-modal" style="display: none;"></div>
             <div id="simulador-modal" class="modal-overlay" style="display: none;"></div>
+
+            <!-- Modal de Configuración de Cloudflare R2 -->
+            <div id="cloudflare-config-modal-catalogo" class="modal-overlay" style="display: none;"></div>
 
             <!-- MODAL: ENLACE CATÁLOGO PÚBLICO -->
             <div id="catalogo-pub-share-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.45); backdrop-filter:blur(4px); z-index:3000; align-items:center; justify-content:center;">
@@ -66,9 +72,87 @@ const CatalogoComponent = {
             </div>
         `;
         lucide.createIcons();
+
+        const btnConfigR2 = document.getElementById('btn-config-cloudflare-catalogo');
+        if (btnConfigR2) {
+            btnConfigR2.addEventListener('click', () => this.openCloudflareConfigModal());
+        }
+
         await this.loadProductos();
         this.renderCards();
     },
+
+    openCloudflareConfigModal() {
+        const modal = document.getElementById('cloudflare-config-modal-catalogo');
+        const accountId = localStorage.getItem('evergreen_cloudflare_account_id') || '';
+        const apiToken = localStorage.getItem('evergreen_cloudflare_api_token') || '';
+        const bucket = localStorage.getItem('evergreen_cloudflare_bucket') || '';
+        const deliveryUrl = localStorage.getItem('evergreen_cloudflare_delivery_url') || '';
+
+        modal.innerHTML = `
+            <div class="modal-card card" style="max-width: 480px; width: 90%; margin: 100px auto; position: relative; background: white; border-radius: 12px; padding: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.15); text-align: left;">
+                <h3 class="card-title" style="display: flex; align-items: center; gap: 6px; color: #f38020; margin-top: 0;">
+                    <i data-lucide="cloud"></i> Configurar Cloudflare R2
+                </h3>
+                <p style="color: #6c757d; font-size: 13px; margin-bottom: 16px; line-height: 1.4;">
+                    Configura tu bucket de Cloudflare R2 para almacenar las imágenes del catálogo en la nube. Esto guardará las imágenes de forma permanente.
+                </p>
+                
+                <form id="cloudflare-config-form-catalogo" style="display: flex; flex-direction: column; gap: 14px;">
+                    <div style="display: flex; flex-direction: column; gap: 4px;">
+                        <label style="font-weight: 500; font-size: 13px;">Account ID (ID de Cuenta)</label>
+                        <input type="text" id="cf-account-id" value="${accountId}" placeholder="Ej. 1a2b3c4d5e6f7g8h9i0j..." style="padding: 8px 12px; border-radius: var(--radius-sm); border: 1px solid var(--color-gray-border); font-family: var(--font-primary); font-size: 13px;">
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 4px;">
+                        <label style="font-weight: 500; font-size: 13px;">API Token (Token de API de R2)</label>
+                        <input type="password" id="cf-api-token" value="${apiToken}" placeholder="Token de Cloudflare con permisos de edición R2" style="padding: 8px 12px; border-radius: var(--radius-sm); border: 1px solid var(--color-gray-border); font-family: var(--font-primary); font-size: 13px;">
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 4px;">
+                        <label style="font-weight: 500; font-size: 13px;">Bucket Name (Nombre del Bucket)</label>
+                        <input type="text" id="cf-bucket" value="${bucket}" placeholder="Ej. evergreen-fotos" style="padding: 8px 12px; border-radius: var(--radius-sm); border: 1px solid var(--color-gray-border); font-family: var(--font-primary); font-size: 13px;">
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 4px;">
+                        <label style="font-weight: 500; font-size: 13px;">Delivery URL (URL Pública / Dominio R2)</label>
+                        <input type="url" id="cf-delivery-url" value="${deliveryUrl}" placeholder="Ej. https://pub-xxxxxx.r2.dev" style="padding: 8px 12px; border-radius: var(--radius-sm); border: 1px solid var(--color-gray-border); font-family: var(--font-primary); font-size: 13px;">
+                    </div>
+                    <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 10px;">
+                        <button type="button" class="btn btn-secondary" onclick="document.getElementById('cloudflare-config-modal-catalogo').style.display='none'">Cancelar</button>
+                        <button type="submit" class="btn btn-primary" style="background: #f38020; border-color: #f38020; color: white;">Guardar Configuración</button>
+                    </div>
+                </form>
+            </div>
+        `;
+        modal.style.display = 'flex';
+        lucide.createIcons();
+
+        document.getElementById('cloudflare-config-form-catalogo').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const idVal = document.getElementById('cf-account-id').value.trim();
+            const tokenVal = document.getElementById('cf-api-token').value.trim();
+            const bucketVal = document.getElementById('cf-bucket').value.trim();
+            const deliveryVal = document.getElementById('cf-delivery-url').value.trim();
+
+            if (idVal && tokenVal && bucketVal) {
+                localStorage.setItem('evergreen_cloudflare_account_id', idVal);
+                localStorage.setItem('evergreen_cloudflare_api_token', tokenVal);
+                localStorage.setItem('evergreen_cloudflare_bucket', bucketVal);
+                if (deliveryVal) {
+                    localStorage.setItem('evergreen_cloudflare_delivery_url', deliveryVal);
+                } else {
+                    localStorage.removeItem('evergreen_cloudflare_delivery_url');
+                }
+                alert("Configuración de Cloudflare R2 guardada correctamente.");
+            } else {
+                localStorage.removeItem('evergreen_cloudflare_account_id');
+                localStorage.removeItem('evergreen_cloudflare_api_token');
+                localStorage.removeItem('evergreen_cloudflare_bucket');
+                localStorage.removeItem('evergreen_cloudflare_delivery_url');
+                alert("Configuración de Cloudflare R2 eliminada. Las subidas se mantendrán locales.");
+            }
+            modal.style.display = 'none';
+        });
+    },
+
     async loadProductos() {
         try {
             const res = await EvergreenAPI.getProductos();
