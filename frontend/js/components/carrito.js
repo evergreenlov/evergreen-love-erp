@@ -462,7 +462,7 @@ const Carrito = {
             container.innerHTML = this.cart.map(item => `
                 <div class="cart-item">
                     ${item.foto_ruta
-                        ? `<img src="${item.foto_ruta}" alt="${item.nombre}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                        ? `<img src="${getFullImageUrl(item.foto_ruta)}" alt="${item.nombre}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
                            <div class="cart-item-placeholder" style="display:none;"><i data-lucide="package" style="width:20px;height:20px;color:#c8bba8;"></i></div>`
                         : `<div class="cart-item-placeholder"><i data-lucide="package" style="width:20px;height:20px;color:#c8bba8;"></i></div>`}
                     <div class="cart-item-info">
@@ -539,7 +539,7 @@ const Carrito = {
             <div id="pub-summary-items-list" style="display: ${this.isSummaryExpanded ? 'flex' : 'none'}; flex-direction: column; gap: 6px; margin-bottom: 8px; max-height: 120px; overflow-y: auto; padding-right: 4px; border-bottom: 1px solid rgba(0, 0, 0, 0.03); padding-bottom: 8px;">
                 ${this.cart.map(item => {
                     const imgHtml = item.foto_ruta
-                        ? `<img src="${item.foto_ruta}" alt="${item.nombre}" style="width: 40px; height: 40px; object-fit: cover; border-radius: 8px; border: 1px solid #ede6d8; flex-shrink: 0;" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                        ? `<img src="${getFullImageUrl(item.foto_ruta)}" alt="${item.nombre}" style="width: 40px; height: 40px; object-fit: cover; border-radius: 8px; border: 1px solid #ede6d8; flex-shrink: 0;" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
                            <div style="width: 40px; height: 40px; border-radius: 8px; background: #fdfaf5; border: 1px dashed #c8bba8; display: none; align-items: center; justify-content: center; flex-shrink: 0;">
                                <i data-lucide="package" style="width:16px; height:16px; color:#c8bba8;"></i>
                            </div>`
