@@ -38,22 +38,24 @@ const PersonalizadosComponent = {
             } else {
                 this.productos.forEach(p => {
                     const fotoImg = p.foto_ruta 
-                        ? `<img src="${getFullImageUrl(p.foto_ruta)}" alt="${p.nombre}" style="width: 100%; height: 160px; object-fit: contain; background: var(--color-gray-light); border-bottom: 1px solid rgba(0,0,0,0.05);">` 
-                        : `<div style="width: 100%; height: 160px; background: #f5f5f5; display: flex; align-items: center; justify-content: center; color: #8c8270; font-size: 13px; font-style: italic; border-bottom: 1px solid rgba(0,0,0,0.05);">Sin imagen de muestra</div>`;
+                        ? `<div style="width: 100%; height: 180px; background: linear-gradient(135deg, #fdfbf7 0%, #f5f0e6 100%); border-bottom: 1px solid rgba(237, 230, 216, 0.5); overflow: hidden; position: relative; display: flex; align-items: center; justify-content: center;">
+                            <img src="${getFullImageUrl(p.foto_ruta)}" alt="${p.nombre}" style="width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);">
+                           </div>` 
+                        : `<div style="width: 100%; height: 180px; background: linear-gradient(135deg, #fbfbfb 0%, #f0f0f0 100%); display: flex; align-items: center; justify-content: center; color: #ac9f8a; font-size: 12.5px; font-style: italic; border-bottom: 1px solid rgba(237, 230, 216, 0.5); gap: 6px;"><i data-lucide="image" style="width:18px; height:18px; opacity:0.6;"></i>Sin imagen de muestra</div>`;
 
                     cardsHtml += `
-                        <div class="card custom-prod-card" style="display: flex; flex-direction: column; padding: 0; background: white; border-radius: var(--radius-lg); overflow: hidden; transition: all 0.3s ease; box-shadow: var(--shadow-sm); border: 1px solid rgba(237, 230, 216, 0.6); position: relative;">
+                        <div class="card custom-prod-card" style="display: flex; flex-direction: column; padding: 0; background: white; border-radius: var(--radius-lg); overflow: hidden; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); box-shadow: var(--shadow-sm); border: 1px solid rgba(237, 230, 216, 0.6); position: relative; height: 395px;">
                             <div style="position: absolute; top: 12px; left: 12px; z-index: 2;">
-                                <span class="badge" style="background-color: var(--color-terracotta); color: white; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 4px; box-shadow: 0 2px 6px rgba(198, 95, 47, 0.25);">
+                                <span class="badge" style="background: linear-gradient(135deg, var(--color-terracotta), #e27c4c); color: white; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 4px; box-shadow: 0 4px 10px rgba(198, 95, 47, 0.25);">
                                     <i data-lucide="sparkles" style="width:10px;height:10px;"></i> Personalizable
                                 </span>
                             </div>
                             ${fotoImg}
-                            <div style="padding: 16px; display: flex; flex-direction: column; justify-content: space-between; flex: 1;">
-                                <div style="margin-bottom: 12px;">
-                                    <h4 style="font-family: var(--font-primary); font-size: 15px; font-weight: 600; color: var(--color-moss-green); margin: 0 0 6px 0;">${p.nombre}</h4>
-                                    <span style="font-size: 11px; color: #8c8270; display: block; margin-bottom: 8px;">SKU: ${p.sku}</span>
-                                    <p style="font-size: 12.5px; color: #736b5c; margin: 0; line-height: 1.4; font-style: italic;">
+                            <div style="padding: 16px; display: flex; flex-direction: column; justify-content: space-between; flex: 1; box-sizing: border-box;">
+                                <div style="margin-bottom: 8px;">
+                                    <h4 style="font-family: var(--font-primary); font-size: 15px; font-weight: 600; color: var(--color-moss-green); margin: 0 0 4px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${p.nombre}">${p.nombre}</h4>
+                                    <span style="font-size: 11px; color: #8c8270; display: block; margin-bottom: 6px;">SKU: ${p.sku}</span>
+                                    <p style="font-size: 12.5px; color: #736b5c; margin: 0; line-height: 1.4; font-style: italic; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; text-overflow: ellipsis; height: 35px;">
                                         ${p.shopify_descripcion || 'Permite grabado de nombres, fechas y logotipos en materiales seleccionados.'}
                                     </p>
                                 </div>
@@ -62,7 +64,7 @@ const PersonalizadosComponent = {
                                         <span style="font-size: 11px; color:#8c8270; font-weight:500;">Precio Base Cotización:</span>
                                         <span style="font-weight: 700; color: var(--color-moss-green); font-size: 15px;">$${(p.precio_final || p.precio_sugerido || 0.0).toFixed(2)}</span>
                                     </div>
-                                    <button class="btn btn-primary btn-config-custom" data-id="${p.id}" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 6px; background-color: var(--color-moss-green); border-color: var(--color-moss-green);">
+                                    <button class="btn btn-primary btn-config-custom" data-id="${p.id}" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 6px; background-color: var(--color-moss-green); border-color: var(--color-moss-green); font-weight: 600; font-size: 13px; padding: 10px; border-radius: 8px;">
                                         <i data-lucide="sliders"></i> Diseñar & Cotizar
                                     </button>
                                 </div>
@@ -113,6 +115,23 @@ const PersonalizadosComponent = {
                 const id = parseInt(btn.getAttribute('data-id'));
                 const prod = this.productos.find(p => p.id === id);
                 if (prod) this.openSimuladorModal(prod);
+            });
+        });
+
+        // Hover animations para custom-prod-card
+        document.querySelectorAll('.custom-prod-card').forEach(card => {
+            const img = card.querySelector('img');
+            card.addEventListener('mouseenter', () => {
+                card.style.transform = 'translateY(-6px)';
+                card.style.boxShadow = '0 12px 30px rgba(95, 120, 48, 0.12)';
+                card.style.borderColor = 'var(--color-moss-green)';
+                if (img) img.style.transform = 'scale(1.08)';
+            });
+            card.addEventListener('mouseleave', () => {
+                card.style.transform = 'translateY(0)';
+                card.style.boxShadow = 'var(--shadow-sm)';
+                card.style.borderColor = 'rgba(237, 230, 216, 0.6)';
+                if (img) img.style.transform = 'scale(1)';
             });
         });
     },

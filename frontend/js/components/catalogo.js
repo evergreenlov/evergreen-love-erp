@@ -216,22 +216,34 @@ const CatalogoComponent = {
 
         const cardHtml = filteredProds.map(p => {
             const adminOverlayHtml = !isPublic ? `
-                <div style="position: absolute; top: 8px; right: 8px; display: flex; gap: 6px; z-index: 10;">
-                    <button onclick="event.stopPropagation(); CatalogoComponent.openEditModal(${p.id})" style="background: rgba(255,255,255,0.95); border: 1px solid var(--color-gray-border); width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--color-soft-black); box-shadow: var(--shadow-sm); transition: transform 0.2s; padding:0; outline: none;" onmouseover="this.style.transform='scale(1.15)'" onmouseout="this.style.transform='scale(1)'" title="Editar Producto">
-                        <i data-lucide="pencil" style="width: 13px; height: 13px;"></i>
+                <div style="position: absolute; top: 10px; right: 10px; display: flex; gap: 6px; z-index: 10;">
+                    <button onclick="event.stopPropagation(); CatalogoComponent.openEditModal(${p.id})" style="background: rgba(255,255,255,0.8); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1px solid rgba(255, 255, 255, 0.4); width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--color-soft-black); box-shadow: 0 4px 12px rgba(0,0,0,0.08); transition: transform 0.2s; padding:0; outline: none;" onmouseover="this.style.transform='scale(1.15)'" onmouseout="this.style.transform='scale(1)'" title="Editar Producto">
+                        <i data-lucide="pencil" style="width: 14px; height: 14px;"></i>
                     </button>
-                    <button onclick="event.stopPropagation(); CatalogoComponent.deleteProduct(${p.id})" style="background: rgba(255,255,255,0.95); border: 1px solid #fee2e2; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--color-danger); box-shadow: var(--shadow-sm); transition: transform 0.2s; padding:0; outline: none;" onmouseover="this.style.transform='scale(1.15)'" onmouseout="this.style.transform='scale(1)'" title="Eliminar Producto">
-                        <i data-lucide="trash-2" style="width: 13px; height: 13px;"></i>
+                    <button onclick="event.stopPropagation(); CatalogoComponent.deleteProduct(${p.id})" style="background: rgba(255,255,255,0.8); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1px solid rgba(255, 255, 255, 0.4); width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--color-danger); box-shadow: 0 4px 12px rgba(0,0,0,0.08); transition: transform 0.2s; padding:0; outline: none;" onmouseover="this.style.transform='scale(1.15)'" onmouseout="this.style.transform='scale(1)'" title="Eliminar Producto">
+                        <i data-lucide="trash-2" style="width: 14px; height: 14px;"></i>
                     </button>
                 </div>
             ` : '';
 
+            // Badge elegante para productos personalizables
+            const customBadgeHtml = Number(p.personalizado) === 1 ? `
+                <div style="position: absolute; top: 10px; left: 10px; z-index: 9;">
+                    <span style="background: linear-gradient(135deg, var(--color-terracotta), #e27c4c); color: white; font-size: 10px; font-weight: 700; padding: 4px 8px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.5px; display: inline-flex; align-items: center; gap: 4px; box-shadow: 0 4px 10px rgba(198, 95, 47, 0.25);">
+                        <i data-lucide="sparkles" style="width:10px;height:10px;"></i> Personalizar
+                    </span>
+                </div>
+            ` : '';
+
             const fotoImg = p.foto_ruta 
-                ? `<div style="width:100%; height:130px; background:var(--color-gray-light); display:flex; align-items:center; justify-content:center; border-bottom: 1px solid rgba(0,0,0,0.05); overflow:hidden; position:relative;">
-                    <img src="${getFullImageUrl(p.foto_ruta)}" alt="${p.nombre}" style="max-width:100%; max-height:100%; object-fit:contain; display:block;">
+                ? `<div style="width:100%; height:175px; background: linear-gradient(135deg, #fdfbf7 0%, #f5f0e6 100%); display:flex; align-items:center; justify-content:center; border-bottom: 1px solid rgba(237, 230, 216, 0.5); overflow:hidden; position:relative;">
+                    ${customBadgeHtml}
+                    <img src="${getFullImageUrl(p.foto_ruta)}" alt="${p.nombre}" style="width:100%; height:100%; object-fit:cover; display:block; transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);">
                     ${adminOverlayHtml}
                    </div>` 
-                : `<div style="width:100%; height:130px; background:#f5f5f5; display:flex; align-items:center; justify-content:center; color:#999; font-size:13px; border-bottom: 1px solid rgba(0,0,0,0.05); position:relative;">
+                : `<div style="width:100%; height:175px; background: linear-gradient(135deg, #fbfbfb 0%, #f0f0f0 100%); display:flex; align-items:center; justify-content:center; color:#ac9f8a; font-size:12.5px; font-style: italic; border-bottom: 1px solid rgba(237, 230, 216, 0.5); position:relative; gap: 6px;">
+                    ${customBadgeHtml}
+                    <i data-lucide="image" style="width:18px; height:18px; opacity:0.6;"></i>
                     Sin foto disponible
                     ${adminOverlayHtml}
                    </div>`;
@@ -252,14 +264,14 @@ const CatalogoComponent = {
 
             const actionBtn = Number(p.personalizado) === 1 
                 ? `<button onclick="CatalogoComponent.personalizarProducto(${p.id})" style="width:100%; background: var(--color-terracotta); color: white; border:none; padding:10px; border-radius:8px; cursor:pointer; font-family: var(--font-primary); font-weight: 600; font-size: 13px; display:flex; align-items:center; justify-content:center; gap: 8px; transition: all 0.2s; box-shadow: 0 2px 8px rgba(198, 95, 47, 0.15);">
-                        <i data-lucide="sparkles" style="width:14px; height:14px;"></i> Personalizar & Pedir
+                        <i data-lucide="sparkles" style="width:14px; height:14px;"></i> Personalizar & Cotizar
                    </button>`
                 : `<button onclick="Carrito.agregar(${p.id})" style="width:100%; background: var(--color-moss-green); color: white; border:none; padding:10px; border-radius:8px; cursor:pointer; font-family: var(--font-primary); font-weight: 600; font-size: 13px; display:flex; align-items:center; justify-content:center; gap: 8px; transition: all 0.2s; box-shadow: 0 2px 8px rgba(95, 120, 48, 0.15);">
                         <i data-lucide="shopping-cart" style="width:14px; height:14px;"></i> Añadir al pedido
                    </button>`;
 
             return `
-                <div class="card catalog-card" style="display: flex; flex-direction: column; width: 100%; padding: 0; background: #ffffff; border-radius: var(--radius-lg); overflow:hidden; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); box-shadow: 0 4px 16px rgba(0,0,0,0.04); border: 1px solid rgba(237, 230, 216, 0.6); position: relative; height: 345px;">
+                <div class="card catalog-card" style="display: flex; flex-direction: column; width: 100%; padding: 0; background: #ffffff; border-radius: var(--radius-lg); overflow:hidden; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); box-shadow: 0 4px 16px rgba(0,0,0,0.04); border: 1px solid rgba(237, 230, 216, 0.6); position: relative; height: 380px;">
                     ${fotoImg}
                     <div style="padding:16px; text-align:center; display: flex; flex-direction: column; flex: 1; justify-content: space-between; box-sizing: border-box;">
                         <div style="display: flex; flex-direction: column; gap: 4px;">
@@ -283,15 +295,18 @@ const CatalogoComponent = {
         // hover animation
         const cards = cardsDiv.querySelectorAll('.catalog-card');
         cards.forEach(c => {
+            const img = c.querySelector('img');
             c.addEventListener('mouseenter', () => {
                 c.style.transform = 'translateY(-6px)';
                 c.style.boxShadow = '0 12px 30px rgba(95, 120, 48, 0.12)';
                 c.style.borderColor = 'var(--color-moss-green)';
+                if (img) img.style.transform = 'scale(1.08)';
             });
             c.addEventListener('mouseleave', () => {
                 c.style.transform = 'translateY(0)';
                 c.style.boxShadow = '0 4px 16px rgba(0,0,0,0.04)';
                 c.style.borderColor = 'rgba(237, 230, 216, 0.6)';
+                if (img) img.style.transform = 'scale(1)';
             });
         });
     },
