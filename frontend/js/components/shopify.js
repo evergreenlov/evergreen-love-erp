@@ -180,8 +180,8 @@ const ShopifyComponent = {
                         <input type="file" style="display:none;" accept="image/*" onchange="ShopifyComponent.uploadPhoto(${p.id}, this)">
                     </label>
                 </td>
-            `;
             tbody.appendChild(tr);
+        });
     },
 
     renderClientCatalog(catalogo) {
