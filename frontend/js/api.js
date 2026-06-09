@@ -23,7 +23,7 @@ function getFullImageUrl(path) {
     let offlineMode = false;
     let initialized = false;
 
-    const OFFLINE_DB_VERSION = "2026-06-08-v3";
+    const OFFLINE_DB_VERSION = "2026-06-08-v4";
     const SEED_DATA = {
         "materiales": [
                 {
@@ -1470,24 +1470,66 @@ function getFullImageUrl(path) {
         ]
 };
 
+    // Emulador robusto de almacenamiento (con fallback en memoria si localStorage está bloqueado o lleno)
+    const StorageEmulation = {
+        memory: {},
+        isSupported: null,
+        
+        init() {
+            if (this.isSupported !== null) return;
+            try {
+                localStorage.setItem('__test_ls__', '1');
+                localStorage.removeItem('__test_ls__');
+                this.isSupported = true;
+            } catch (e) {
+                console.warn("⚠️ LocalStorage no está disponible o tiene cuota excedida. Usando base de datos en memoria para esta sesión.");
+                this.isSupported = false;
+            }
+        },
+        
+        getItem(key) {
+            this.init();
+            if (this.isSupported) {
+                try {
+                    return localStorage.getItem(key);
+                } catch (e) {}
+            }
+            return this.memory[key] || null;
+        },
+        
+        setItem(key, value) {
+            this.init();
+            if (this.isSupported) {
+                try {
+                    localStorage.setItem(key, value);
+                    return;
+                } catch (e) {
+                    console.warn("⚠️ Error al escribir en LocalStorage. Migrando a memoria.", e);
+                    this.isSupported = false;
+                }
+            }
+            this.memory[key] = value;
+        }
+    };
+
     function initDB() {
         if (initialized) return;
         
         // Control de versiones para la base de datos offline emulada
-        const currentVersion = localStorage.getItem('ev_db_version');
+        const currentVersion = StorageEmulation.getItem('ev_db_version');
         const targetVersion = typeof OFFLINE_DB_VERSION !== 'undefined' ? OFFLINE_DB_VERSION : '1.0';
         
         if (currentVersion !== targetVersion) {
             console.log(`🔄 Actualizando base de datos offline a la versión: ${targetVersion}`);
             for (const [key, val] of Object.entries(SEED_DATA)) {
-                localStorage.setItem(`ev_db_${key}`, JSON.stringify(val));
+                StorageEmulation.setItem(`ev_db_${key}`, JSON.stringify(val));
             }
-            localStorage.setItem('ev_db_version', targetVersion);
+            StorageEmulation.setItem('ev_db_version', targetVersion);
         } else {
             for (const [key, val] of Object.entries(SEED_DATA)) {
                 const lsKey = `ev_db_${key}`;
-                if (!localStorage.getItem(lsKey)) {
-                    localStorage.setItem(lsKey, JSON.stringify(val));
+                if (!StorageEmulation.getItem(lsKey)) {
+                    StorageEmulation.setItem(lsKey, JSON.stringify(val));
                 }
             }
         }
@@ -1496,11 +1538,11 @@ function getFullImageUrl(path) {
 
     function getTable(name) {
         initDB();
-        return JSON.parse(localStorage.getItem(`ev_db_${name}`) || '[]');
+        return JSON.parse(StorageEmulation.getItem(`ev_db_${name}`) || '[]');
     }
 
     function saveTable(name, data) {
-        localStorage.setItem(`ev_db_${name}`, JSON.stringify(data));
+        StorageEmulation.setItem(`ev_db_${name}`, JSON.stringify(data));
     }
 
     function mockResponse(data, status = 200) {
