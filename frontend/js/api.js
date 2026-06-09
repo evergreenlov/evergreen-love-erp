@@ -23,7 +23,7 @@ function getFullImageUrl(path) {
     let offlineMode = false;
     let initialized = false;
 
-    const OFFLINE_DB_VERSION = "2026-06-08-v5";
+    const OFFLINE_DB_VERSION = "2026-06-09-v2";
     const SEED_DATA = {
         "materiales": [
                 {
@@ -1512,6 +1512,19 @@ function getFullImageUrl(path) {
         }
     };
 
+    function processSeedData(key, val) {
+        if (key === 'productos' && Array.isArray(val)) {
+            return val.map(p => {
+                if (p.sku && !p.foto_ruta) {
+                    const ext = p.sku === 'SKU-GAR-LLAV-01' ? 'jpg' : 'jpeg';
+                    p.foto_ruta = `/fotos_import/${p.sku}_referencia.${ext}`;
+                }
+                return p;
+            });
+        }
+        return val;
+    }
+
     function initDB() {
         if (initialized) return;
         
@@ -1522,14 +1535,16 @@ function getFullImageUrl(path) {
         if (currentVersion !== targetVersion) {
             console.log(`🔄 Actualizando base de datos offline a la versión: ${targetVersion}`);
             for (const [key, val] of Object.entries(SEED_DATA)) {
-                StorageEmulation.setItem(`ev_db_${key}`, JSON.stringify(val));
+                const processed = processSeedData(key, val);
+                StorageEmulation.setItem(`ev_db_${key}`, JSON.stringify(processed));
             }
             StorageEmulation.setItem('ev_db_version', targetVersion);
         } else {
             for (const [key, val] of Object.entries(SEED_DATA)) {
                 const lsKey = `ev_db_${key}`;
                 if (!StorageEmulation.getItem(lsKey)) {
-                    StorageEmulation.setItem(lsKey, JSON.stringify(val));
+                    const processed = processSeedData(key, val);
+                    StorageEmulation.setItem(lsKey, JSON.stringify(processed));
                 }
             }
         }
