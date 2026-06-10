@@ -1690,7 +1690,27 @@ function getFullImageUrl(path) {
         }
 
         if (!offlineMode) {
-            // Conexión activa, proceder normalmente
+            // Inyectar token de admin si existe y la llamada no trae ya Authorization
+            const adminToken = localStorage.getItem('ev_token');
+            const existingAuth = options.headers?.['Authorization'] ||
+                                 (options.headers?.get ? options.headers.get('Authorization') : null);
+            if (adminToken && !existingAuth) {
+                const authOptions = {
+                    ...options,
+                    headers: { ...options.headers, 'Authorization': `Bearer ${adminToken}` }
+                };
+                const res = await originalFetch(urlStr, authOptions);
+                if (res.status === 401) {
+                    localStorage.removeItem('ev_token');
+                    localStorage.removeItem('ev_role');
+                    localStorage.removeItem('ev_user_nombre');
+                    localStorage.removeItem('ev_user_email');
+                    if (typeof AdminAuth !== 'undefined') {
+                        AdminAuth.showLogin('Tu sesión expiró. Inicia sesión nuevamente.');
+                    }
+                }
+                return res;
+            }
             return originalFetch.apply(this, arguments);
         }
 
