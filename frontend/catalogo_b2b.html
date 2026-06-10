@@ -679,14 +679,16 @@
             <i data-lucide="lock" style="width:28px;height:28px;color:var(--color-moss-green);"></i>
         </div>
         <h2>Acceso al Catálogo</h2>
-        <p>Ingresa tu código de cliente B2B para ver tu catálogo personalizado con precios especiales.</p>
+        <p>Ingresa tu código de cliente y PIN de acceso para ver tu catálogo personalizado.</p>
         <label for="input-cliente-id">Código de Cliente (ID)</label>
         <input type="number" id="input-cliente-id" placeholder="Ej. 1" min="1">
+        <label for="input-pin">PIN de Acceso</label>
+        <input type="password" id="input-pin" placeholder="XXXX-XXXX" maxlength="9" autocomplete="current-password">
         <button id="btn-login">
             <i data-lucide="log-in" style="width:16px;height:16px;display:inline;"></i>
             Acceder a mi Catálogo
         </button>
-        <p id="login-error">❌ Código de cliente no encontrado. Verifica tu número de cliente.</p>
+        <p id="login-error">❌ Código de cliente o PIN incorrecto.</p>
     </div>
 
     <!-- CATALOG -->
@@ -805,49 +807,109 @@
     let isB2BExempt = false;
     let isB2BSummaryExpanded = false;
 
+    /* ── SESIÓN B2B ───────────────────────────── */
+    const B2B_TOKEN_KEY    = 'ev_b2b_token';
+    const B2B_CLIENTE_KEY  = 'ev_b2b_cliente_id';
+    const B2B_NOMBRE_KEY   = 'ev_b2b_nombre';
+
+    function getB2BToken() { return localStorage.getItem(B2B_TOKEN_KEY); }
+
+    function saveB2BSession(token, cId, nombre) {
+        localStorage.setItem(B2B_TOKEN_KEY,   token);
+        localStorage.setItem(B2B_CLIENTE_KEY, cId);
+        localStorage.setItem(B2B_NOMBRE_KEY,  nombre);
+        clienteId     = cId;
+        clienteNombre = nombre;
+    }
+
+    function clearB2BSession() {
+        localStorage.removeItem(B2B_TOKEN_KEY);
+        localStorage.removeItem(B2B_CLIENTE_KEY);
+        localStorage.removeItem(B2B_NOMBRE_KEY);
+        clienteId     = null;
+        clienteNombre = '';
+    }
+
+    function b2bAuthHeaders() {
+        const token = getB2BToken();
+        return token ? { 'Authorization': `Bearer ${token}` } : {};
+    }
+
+    function showCatalog(nombre) {
+        document.getElementById('welcome-name').textContent = `👋 Hola, ${nombre}`;
+        document.getElementById('login-screen').style.display  = 'none';
+        document.getElementById('catalog-screen').style.display = 'block';
+        document.getElementById('btn-carrito').style.display   = 'flex';
+        document.getElementById('login-error').style.display   = 'none';
+    }
+
+    function showLoginScreen(errMsg) {
+        clearB2BSession();
+        cart = [];
+        updateCartUI();
+        document.getElementById('catalog-screen').style.display = 'none';
+        document.getElementById('success-screen').style.display = 'none';
+        document.getElementById('login-screen').style.display  = 'block';
+        document.getElementById('btn-carrito').style.display   = 'none';
+        document.getElementById('input-cliente-id').value = '';
+        document.getElementById('input-pin').value = '';
+        if (errMsg) {
+            const el = document.getElementById('login-error');
+            el.textContent = `❌ ${errMsg}`;
+            el.style.display = 'block';
+        }
+    }
+
     /* ── LOGIN ────────────────────────────────── */
     document.getElementById('btn-login').addEventListener('click', async () => {
-        const id = parseInt(document.getElementById('input-cliente-id').value);
-        if (!id || id < 1) return;
+        const id  = parseInt(document.getElementById('input-cliente-id').value);
+        const pin = document.getElementById('input-pin').value.trim();
+
+        if (!id || id < 1) {
+            document.getElementById('input-cliente-id').focus();
+            return;
+        }
+        if (!pin) {
+            document.getElementById('input-pin').focus();
+            return;
+        }
 
         const btn = document.getElementById('btn-login');
         btn.textContent = 'Verificando...';
         btn.disabled = true;
+        document.getElementById('login-error').style.display = 'none';
 
         try {
-            const res = await fetch(`${API}/clientes/${id}/info`);
-            if (!res.ok) throw new Error('not found');
+            const res = await fetch(`${API}/auth/b2b/login`, {
+                method:  'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body:    JSON.stringify({ cliente_id: id, pin }),
+            });
             const data = await res.json();
+            if (!res.ok) throw new Error(data.detail || 'Acceso denegado');
 
-            clienteId = id;
-            clienteNombre = data.data.nombre;
-            document.getElementById('welcome-name').textContent = `👋 Hola, ${clienteNombre}`;
-
+            saveB2BSession(data.access_token, data.cliente_id, data.nombre);
             await loadCatalog();
-            document.getElementById('login-screen').style.display = 'none';
-            document.getElementById('catalog-screen').style.display = 'block';
-            document.getElementById('btn-carrito').style.display = 'flex';
-            document.getElementById('login-error').style.display = 'none';
+            showCatalog(data.nombre);
         } catch (e) {
-            document.getElementById('login-error').style.display = 'block';
+            const el = document.getElementById('login-error');
+            el.textContent = `❌ ${e.message || 'Código de cliente o PIN incorrecto.'}`;
+            el.style.display = 'block';
         } finally {
             btn.textContent = 'Acceder a mi Catálogo';
             btn.disabled = false;
         }
     });
 
-    document.getElementById('input-cliente-id').addEventListener('keydown', e => {
+    document.getElementById('input-pin').addEventListener('keydown', e => {
         if (e.key === 'Enter') document.getElementById('btn-login').click();
+    });
+    document.getElementById('input-cliente-id').addEventListener('keydown', e => {
+        if (e.key === 'Enter') document.getElementById('input-pin').focus();
     });
 
     function logout() {
-        clienteId = null;
-        cart = [];
-        updateCartUI();
-        document.getElementById('catalog-screen').style.display = 'none';
-        document.getElementById('login-screen').style.display = 'block';
-        document.getElementById('btn-carrito').style.display = 'none';
-        document.getElementById('input-cliente-id').value = '';
+        showLoginScreen();
     }
 
     /* ── CATALOG ──────────────────────────────── */
@@ -855,7 +917,10 @@
         const grid = document.getElementById('products-grid');
         grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:60px 0;color:#c8bba8;"><div class="spinner"></div><p>Cargando...</p></div>`;
 
-        const res = await fetch(`${API}/clientes/${clienteId}/catalogo`);
+        const res = await fetch(`${API}/clientes/${clienteId}/catalogo`, {
+            headers: b2bAuthHeaders()
+        });
+        if (res.status === 401) { showLoginScreen('Sesión expirada. Ingresa de nuevo.'); return; }
         const data = await res.json();
         const items = data.data || [];
 
@@ -1196,7 +1261,7 @@
         try {
             const res = await fetch(`${API}/clientes/${clienteId}/pedido`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', ...b2bAuthHeaders() },
                 body: JSON.stringify(payload)
             });
             const data = await res.json();
@@ -1239,14 +1304,37 @@
         }
     }
 
-    // Init — auto-login si viene ?cliente=ID en la URL
-    document.addEventListener('DOMContentLoaded', () => {
+    // Init — restaurar sesión desde localStorage o auto-login por ?cliente=ID en la URL
+    document.addEventListener('DOMContentLoaded', async () => {
         lucide.createIcons();
+
+        // Intentar restaurar sesión previa
+        const savedToken  = localStorage.getItem(B2B_TOKEN_KEY);
+        const savedId     = parseInt(localStorage.getItem(B2B_CLIENTE_KEY));
+        const savedNombre = localStorage.getItem(B2B_NOMBRE_KEY) || '';
+
+        if (savedToken && savedId) {
+            // Verificar que el token sigue vigente
+            try {
+                const check = await fetch(`${API}/auth/me`, {
+                    headers: { 'Authorization': `Bearer ${savedToken}` }
+                });
+                if (check.ok) {
+                    saveB2BSession(savedToken, savedId, savedNombre);
+                    await loadCatalog();
+                    showCatalog(savedNombre);
+                    return;
+                }
+            } catch (_) { /* red caída — mostrar login */ }
+            clearB2BSession();
+        }
+
+        // Fallback: auto-login por parámetro URL (sin PIN — solo rellena el campo)
         const params = new URLSearchParams(window.location.search);
         const clienteParam = params.get('cliente');
         if (clienteParam) {
             document.getElementById('input-cliente-id').value = clienteParam;
-            document.getElementById('btn-login').click();
+            document.getElementById('input-pin').focus();
         }
     });
 </script>
