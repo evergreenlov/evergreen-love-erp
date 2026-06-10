@@ -5,8 +5,9 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 import sqlite3
 
-from database import get_db_connection, init_db
+from database import get_db_connection, init_db, bootstrap_admin
 from utils.photo_scanner import scan_and_index_photos
+from utils.backup import create_backup
 from routes import materiales
 from routes import costos
 from routes import produccion
@@ -16,6 +17,8 @@ from routes import shopify
 from routes import carrito
 from routes import clientes
 from routes import facturas
+from routes import auth
+from routes import backups
 
 
 app = FastAPI(
@@ -24,6 +27,8 @@ app = FastAPI(
     version="1.0.0"
 )
 
+app.include_router(auth.router)
+app.include_router(backups.router)
 app.include_router(materiales.router)
 app.include_router(costos.router)
 app.include_router(produccion.router)
@@ -47,6 +52,12 @@ app.add_middleware(
 @app.on_event("startup")
 def startup_event():
     init_db()
+    bootstrap_admin()
+    try:
+        backup_path = create_backup()
+        print(f"✅ Respaldo automático creado: {os.path.basename(backup_path)}")
+    except Exception as e:
+        print(f"⚠️ Error al crear respaldo automático: {str(e)}")
     # Copiar fotos semilla desde frontend/fotos_import a data/fotos_import en el disco persistente
     try:
         import shutil

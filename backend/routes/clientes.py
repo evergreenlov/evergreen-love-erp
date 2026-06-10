@@ -1,10 +1,14 @@
-from fastapi import APIRouter, HTTPException, status, BackgroundTasks
+import random
+import string
+
+from fastapi import APIRouter, HTTPException, status, BackgroundTasks, Depends
 from pydantic import BaseModel
 from typing import Optional, List
 import sqlite3
 
 from database import get_db_connection
 from utils.email_helper import send_receipt_email
+from auth import get_current_admin, hash_password
 
 router = APIRouter(
     prefix="/api",
@@ -340,6 +344,44 @@ def crear_pedido_b2b(cliente_id: int, pedido: PedidoB2BSchema, background_tasks:
         raise he
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/clientes/{cliente_id}/generar-pin")
+def generar_pin_cliente(cliente_id: int, current_user: dict = Depends(get_current_admin)):
+    """
+    Genera un PIN de acceso B2B para el cliente. Solo accesible por admins.
+    El PIN se devuelve en texto claro UNA SOLA VEZ — el admin debe entregárselo al cliente.
+    En la BD solo se guarda el hash.
+    """
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, nombre FROM clientes WHERE id = ?", (cliente_id,))
+    cliente = cursor.fetchone()
+    if not cliente:
+        conn.close()
+        raise HTTPException(status_code=404, detail="Cliente no encontrado")
+
+    # Caracteres sin ambiguos: sin 0/O, 1/I/l
+    charset = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"
+    part1 = "".join(random.choices(charset, k=4))
+    part2 = "".join(random.choices(charset, k=4))
+    pin_plain = f"{part1}-{part2}"
+
+    pin_hash = hash_password(pin_plain)
+
+    cursor.execute(
+        "UPDATE clientes SET pin_hash = ?, pin_display = ? WHERE id = ?",
+        (pin_hash, pin_plain, cliente_id)
+    )
+    conn.commit()
+    conn.close()
+
+    return {
+        "status": "success",
+        "cliente": cliente["nombre"],
+        "pin": pin_plain,
+        "message": "Entrega este PIN al cliente. No se volverá a mostrar desde este endpoint.",
+    }
+
 
 @router.get("/clientes/{cliente_id}/info")
 def get_cliente_info(cliente_id: int):

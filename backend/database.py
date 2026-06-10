@@ -275,6 +275,20 @@ def init_db(force_reset=False):
         notas TEXT
     );
     """)
+
+    # 15. Tabla de Usuarios Administradores
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS usuarios (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        email TEXT UNIQUE NOT NULL,
+        nombre TEXT NOT NULL,
+        rol TEXT CHECK(rol IN ('admin', 'superadmin')) NOT NULL DEFAULT 'admin',
+        password_hash TEXT NOT NULL,
+        activo INTEGER NOT NULL DEFAULT 1,
+        fecha_creacion TEXT DEFAULT (datetime('now', 'localtime')),
+        ultimo_acceso TEXT
+    );
+    """)
     
     # Insertar datos semilla si la base de datos está vacía o solo contiene los dos productos de prueba
     cursor.execute("SELECT COUNT(*) FROM productos")
@@ -335,6 +349,19 @@ def init_db(force_reset=False):
     except Exception:
         pass  # Ya existe
 
+    # Migración segura: agregar columnas PIN a clientes si no existen
+    try:
+        cursor.execute("ALTER TABLE clientes ADD COLUMN pin_hash TEXT")
+        print("Columna 'pin_hash' añadida a clientes.")
+    except Exception:
+        pass
+
+    try:
+        cursor.execute("ALTER TABLE clientes ADD COLUMN pin_display TEXT")
+        print("Columna 'pin_display' añadida a clientes.")
+    except Exception:
+        pass
+
     # Migración segura: agregar columna monto_pagado a facturas si no existe
     try:
         cursor.execute("ALTER TABLE facturas ADD COLUMN monto_pagado REAL")
@@ -359,6 +386,43 @@ def init_db(force_reset=False):
     conn.commit()
     conn.close()
     print("Base de datos reconstruida exitosamente con las unidades en pulgadas y desglose de componentes.")
+
+def bootstrap_admin():
+    """
+    Crea el primer superadmin desde variables de entorno si la tabla usuarios está vacía.
+    Solo se ejecuta una vez. Después de crear el primer admin, las vars de entorno
+    ADMIN_EMAIL y ADMIN_PASSWORD pueden eliminarse del servidor.
+    """
+    import os
+    import bcrypt as _bcrypt
+
+    email = os.environ.get("ADMIN_EMAIL", "").strip()
+    password = os.environ.get("ADMIN_PASSWORD", "").strip()
+
+    if not email or not password:
+        return
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT COUNT(*) FROM usuarios")
+    count = cursor.fetchone()[0]
+
+    if count == 0:
+        password_hash = _bcrypt.hashpw(password.encode("utf-8"), _bcrypt.gensalt()).decode("utf-8")
+        try:
+            cursor.execute(
+                "INSERT INTO usuarios (email, nombre, rol, password_hash) VALUES (?, ?, 'superadmin', ?)",
+                (email, "Administrador", password_hash)
+            )
+            conn.commit()
+            print(f"✅ Primer superadmin creado: {email}")
+        except Exception as e:
+            print(f"⚠️ Error al crear superadmin bootstrap: {str(e)}")
+    else:
+        print(f"ℹ️ Tabla usuarios ya tiene {count} registro(s). Bootstrap omitido.")
+
+    conn.close()
+
 
 if __name__ == "__main__":
     init_db(force_reset=True)
