@@ -39,13 +39,19 @@ app.include_router(carrito.router)
 app.include_router(clientes.router)
 app.include_router(facturas.router)
 
-# Configurar CORS para permitir peticiones desde el frontend en desarrollo
+# Orígenes permitidos: leer desde variable de entorno, con fallback para desarrollo local
+_raw_origins = os.environ.get(
+    "ALLOWED_ORIGINS",
+    "http://localhost:8000,http://127.0.0.1:8000"
+)
+ALLOWED_ORIGINS = [o.strip() for o in _raw_origins.split(",") if o.strip()]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=False,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=ALLOWED_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE"],
+    allow_headers=["Authorization", "Content-Type"],
 )
 
 # Inicializar base de datos al arrancar
