@@ -2,9 +2,143 @@
  * Enrutador interactivo SPA (Single Page Application)
  */
 
+// =============================================================
+// MÓDULO DE AUTENTICACIÓN DE ADMINISTRADOR
+// =============================================================
+const AdminAuth = (() => {
+    const TOKEN_KEY   = 'ev_token';
+    const ROLE_KEY    = 'ev_role';
+    const NOMBRE_KEY  = 'ev_user_nombre';
+    const EMAIL_KEY   = 'ev_user_email';
+
+    function getToken()  { return localStorage.getItem(TOKEN_KEY); }
+    function getRole()   { return localStorage.getItem(ROLE_KEY); }
+    function getNombre() { return localStorage.getItem(NOMBRE_KEY); }
+
+    function saveSession(data) {
+        localStorage.setItem(TOKEN_KEY,  data.access_token);
+        localStorage.setItem(ROLE_KEY,   data.role);
+        localStorage.setItem(NOMBRE_KEY, data.nombre || '');
+        localStorage.setItem(EMAIL_KEY,  data.email  || '');
+    }
+
+    function clearSession() {
+        [TOKEN_KEY, ROLE_KEY, NOMBRE_KEY, EMAIL_KEY].forEach(k => localStorage.removeItem(k));
+    }
+
+    function showApp() {
+        document.getElementById('login-screen').style.display  = 'none';
+        document.getElementById('app-container').style.display = '';
+        const el = document.getElementById('session-user');
+        if (el) el.textContent = getNombre() || getRole();
+        lucide.createIcons();
+    }
+
+    function showLogin(msg) {
+        clearSession();
+        document.getElementById('app-container').style.display  = 'none';
+        document.getElementById('login-screen').style.display   = 'flex';
+        if (msg) showError(msg);
+    }
+
+    function showError(msg) {
+        const el = document.getElementById('login-error');
+        if (!el) return;
+        el.textContent = msg;
+        el.style.display = 'block';
+    }
+
+    function hideError() {
+        const el = document.getElementById('login-error');
+        if (el) el.style.display = 'none';
+    }
+
+    async function verifyToken() {
+        const token = getToken();
+        if (!token) return false;
+        try {
+            const res = await fetch(`${API_BASE_URL}/auth/me`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            return res.ok;
+        } catch {
+            return false;
+        }
+    }
+
+    async function init() {
+        const valid = await verifyToken();
+        if (valid && ['admin','superadmin'].includes(getRole())) {
+            showApp();
+        } else {
+            showLogin();
+        }
+    }
+
+    async function login(email, password) {
+        hideError();
+        const btn = document.getElementById('login-btn');
+        btn.disabled    = true;
+        btn.textContent = 'Verificando...';
+        try {
+            const res = await fetch(`${API_BASE_URL}/auth/admin/login`, {
+                method:  'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body:    JSON.stringify({ email, password }),
+            });
+            const data = await res.json();
+            if (!res.ok) {
+                showError(data.detail || 'Credenciales incorrectas.');
+                return;
+            }
+            if (!['admin','superadmin'].includes(data.role)) {
+                showError('Tu cuenta no tiene permisos de administrador.');
+                return;
+            }
+            saveSession(data);
+            showApp();
+        } catch {
+            showError('No se pudo conectar con el servidor. Verifica tu conexión.');
+        } finally {
+            btn.disabled    = false;
+            btn.textContent = 'Iniciar sesión';
+        }
+    }
+
+    function logout() {
+        if (!confirm('¿Cerrar sesión?')) return;
+        clearSession();
+        showLogin();
+    }
+
+    return { init, login, logout, getToken, getRole, getNombre, showLogin };
+})();
+
+// Hacer el token disponible globalmente para que api.js lo incluya en los headers
+function getAdminAuthHeaders() {
+    const token = AdminAuth.getToken();
+    return token ? { 'Authorization': `Bearer ${token}` } : {};
+}
+
+// =============================================================
+
 document.addEventListener('DOMContentLoaded', () => {
     // Inicializar iconos de Lucide
     lucide.createIcons();
+
+    // --- Inicializar autenticación antes de mostrar el dashboard ---
+    AdminAuth.init();
+
+    // Manejar envío del formulario de login
+    const loginForm = document.getElementById('login-form');
+    if (loginForm) {
+        loginForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const email    = document.getElementById('login-email').value.trim();
+            const password = document.getElementById('login-password').value;
+            AdminAuth.login(email, password);
+        });
+    }
 
     // Inicializar Carrito para inyectar su DOM y listeners
     if (typeof Carrito !== 'undefined') {

@@ -17,7 +17,134 @@
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-    <div class="app-container">
+
+    <!-- =====================================================
+         PANTALLA DE LOGIN — se oculta tras autenticación
+         ===================================================== -->
+    <div id="login-screen" style="
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        background-color: #f5f0e8;
+        font-family: 'Outfit', sans-serif;
+    ">
+        <div style="
+            background: #ffffff;
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(62,62,62,0.12);
+            padding: 48px 40px 40px;
+            width: 100%;
+            max-width: 400px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 24px;
+        ">
+            <!-- Logo -->
+            <div style="display:flex; flex-direction:column; align-items:center; gap:8px; margin-bottom:4px;">
+                <div style="width:120px; border-radius:12px; overflow:hidden; border:1px solid #e0d8cc; background:#fdfaf5; padding:10px;">
+                    <img src="img/logo.jpg" alt="Evergreen Love" style="width:100%; height:auto; display:block; object-fit:contain;">
+                </div>
+                <span style="font-size:10px; text-transform:uppercase; letter-spacing:2.5px; color:#c0694a; font-weight:600; margin-top:4px;">Panel de Administración</span>
+            </div>
+
+            <!-- Título -->
+            <div style="text-align:center;">
+                <h1 style="font-family:'Playfair Display',serif; font-size:22px; font-weight:600; color:#2d2d2d; margin:0 0 6px;">Bienvenida</h1>
+                <p style="font-size:13px; color:#8c8270; margin:0;">Ingresa tus credenciales para continuar</p>
+            </div>
+
+            <!-- Formulario -->
+            <form id="login-form" style="width:100%; display:flex; flex-direction:column; gap:16px;">
+                <div style="display:flex; flex-direction:column; gap:6px;">
+                    <label for="login-email" style="font-size:12px; font-weight:600; color:#5a5245; text-transform:uppercase; letter-spacing:0.5px;">Correo electrónico</label>
+                    <input
+                        id="login-email"
+                        type="email"
+                        autocomplete="email"
+                        placeholder="tu@email.com"
+                        required
+                        style="
+                            padding: 10px 14px;
+                            border: 1px solid #d5cfc4;
+                            border-radius: 8px;
+                            font-size: 14px;
+                            font-family: 'Outfit', sans-serif;
+                            color: #2d2d2d;
+                            background: #fdfaf5;
+                            outline: none;
+                            transition: border-color 0.2s;
+                        "
+                        onfocus="this.style.borderColor='#5f7a45'"
+                        onblur="this.style.borderColor='#d5cfc4'"
+                    >
+                </div>
+
+                <div style="display:flex; flex-direction:column; gap:6px;">
+                    <label for="login-password" style="font-size:12px; font-weight:600; color:#5a5245; text-transform:uppercase; letter-spacing:0.5px;">Contraseña</label>
+                    <input
+                        id="login-password"
+                        type="password"
+                        autocomplete="current-password"
+                        placeholder="••••••••"
+                        required
+                        style="
+                            padding: 10px 14px;
+                            border: 1px solid #d5cfc4;
+                            border-radius: 8px;
+                            font-size: 14px;
+                            font-family: 'Outfit', sans-serif;
+                            color: #2d2d2d;
+                            background: #fdfaf5;
+                            outline: none;
+                            transition: border-color 0.2s;
+                        "
+                        onfocus="this.style.borderColor='#5f7a45'"
+                        onblur="this.style.borderColor='#d5cfc4'"
+                    >
+                </div>
+
+                <!-- Mensaje de error -->
+                <div id="login-error" style="
+                    display: none;
+                    background: #fdf0ec;
+                    border: 1px solid #f5c6b8;
+                    border-radius: 8px;
+                    padding: 10px 14px;
+                    font-size: 13px;
+                    color: #c0694a;
+                "></div>
+
+                <!-- Botón -->
+                <button
+                    type="submit"
+                    id="login-btn"
+                    style="
+                        padding: 12px;
+                        background: #5f7a45;
+                        color: white;
+                        border: none;
+                        border-radius: 8px;
+                        font-size: 14px;
+                        font-weight: 600;
+                        font-family: 'Outfit', sans-serif;
+                        cursor: pointer;
+                        letter-spacing: 0.3px;
+                        transition: background 0.2s, opacity 0.2s;
+                        margin-top: 4px;
+                    "
+                    onmouseover="this.style.background='#4e6638'"
+                    onmouseout="this.style.background='#5f7a45'"
+                >
+                    Iniciar sesión
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- App principal — oculta hasta que el login sea exitoso -->
+    <div class="app-container" id="app-container" style="display:none;">
         
         <!-- Barra de Navegación Lateral (Sidebar) -->
         <aside class="sidebar">
@@ -96,6 +223,24 @@
                 <div class="api-status">
                     <span class="status-indicator online"></span>
                     <span class="status-text">API Conectada</span>
+                </div>
+                <div id="session-info" style="margin-top:10px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.1); display:flex; flex-direction:column; gap:6px;">
+                    <span id="session-user" style="font-size:11px; color:rgba(255,255,255,0.55); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"></span>
+                    <button id="btn-logout" onclick="AdminAuth.logout()" style="
+                        display:flex; align-items:center; gap:6px;
+                        background:none; border:1px solid rgba(255,255,255,0.18);
+                        border-radius:6px; color:rgba(255,255,255,0.65);
+                        font-size:11px; font-family:'Outfit',sans-serif;
+                        padding:5px 10px; cursor:pointer;
+                        transition:background 0.15s, color 0.15s;
+                        width:100%;
+                    "
+                    onmouseover="this.style.background='rgba(255,255,255,0.1)';this.style.color='white'"
+                    onmouseout="this.style.background='none';this.style.color='rgba(255,255,255,0.65)'"
+                    >
+                        <i data-lucide="log-out" style="width:12px;height:12px;"></i>
+                        Cerrar sesión
+                    </button>
                 </div>
             </div>
         </aside>
