@@ -680,8 +680,8 @@
         </div>
         <h2>Acceso al Catálogo</h2>
         <p>Ingresa tu código de cliente y PIN de acceso para ver tu catálogo personalizado.</p>
-        <label for="input-cliente-id">Código de Cliente (ID)</label>
-        <input type="number" id="input-cliente-id" placeholder="Ej. 1" min="1">
+        <label for="input-codigo-b2b">Código de Cliente</label>
+        <input type="text" id="input-codigo-b2b" placeholder="Ej. FLORERIA-BCN" autocomplete="username" style="text-transform:uppercase;">
         <label for="input-pin">PIN de Acceso</label>
         <input type="password" id="input-pin" placeholder="XXXX-XXXX" maxlength="9" autocomplete="current-password">
         <button id="btn-login">
@@ -797,7 +797,7 @@
     </div>
 </div>
 
-<script src="js/api.js?v=50"></script>
+<script src="js/api.js?v=52"></script>
 <script src="js/components/personalizados.js?v=50"></script>
 <script>
     const API = API_BASE_URL;
@@ -851,7 +851,7 @@
         document.getElementById('success-screen').style.display = 'none';
         document.getElementById('login-screen').style.display  = 'block';
         document.getElementById('btn-carrito').style.display   = 'none';
-        document.getElementById('input-cliente-id').value = '';
+        document.getElementById('input-codigo-b2b').value = '';
         document.getElementById('input-pin').value = '';
         if (errMsg) {
             const el = document.getElementById('login-error');
@@ -862,11 +862,11 @@
 
     /* ── LOGIN ────────────────────────────────── */
     document.getElementById('btn-login').addEventListener('click', async () => {
-        const id  = parseInt(document.getElementById('input-cliente-id').value);
-        const pin = document.getElementById('input-pin').value.trim();
+        const codigo = document.getElementById('input-codigo-b2b').value.trim().toUpperCase();
+        const pin    = document.getElementById('input-pin').value.trim();
 
-        if (!id || id < 1) {
-            document.getElementById('input-cliente-id').focus();
+        if (!codigo) {
+            document.getElementById('input-codigo-b2b').focus();
             return;
         }
         if (!pin) {
@@ -883,7 +883,7 @@
             const res = await fetch(`${API}/auth/b2b/login`, {
                 method:  'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body:    JSON.stringify({ cliente_id: id, pin }),
+                body:    JSON.stringify({ codigo_b2b: codigo, pin }),
             });
             const data = await res.json();
             if (!res.ok) throw new Error(data.detail || 'Acceso denegado');
@@ -893,7 +893,7 @@
             showCatalog(data.nombre);
         } catch (e) {
             const el = document.getElementById('login-error');
-            el.textContent = `❌ ${e.message || 'Código de cliente o PIN incorrecto.'}`;
+            el.textContent = `❌ ${e.message || 'Código o PIN incorrecto.'}`;
             el.style.display = 'block';
         } finally {
             btn.textContent = 'Acceder a mi Catálogo';
@@ -904,7 +904,7 @@
     document.getElementById('input-pin').addEventListener('keydown', e => {
         if (e.key === 'Enter') document.getElementById('btn-login').click();
     });
-    document.getElementById('input-cliente-id').addEventListener('keydown', e => {
+    document.getElementById('input-codigo-b2b').addEventListener('keydown', e => {
         if (e.key === 'Enter') document.getElementById('input-pin').focus();
     });
 
@@ -1329,11 +1329,11 @@
             clearB2BSession();
         }
 
-        // Fallback: auto-login por parámetro URL (sin PIN — solo rellena el campo)
+        // Pre-rellenar código si viene por URL (?codigo=FLORERIA-BCN)
         const params = new URLSearchParams(window.location.search);
-        const clienteParam = params.get('cliente');
-        if (clienteParam) {
-            document.getElementById('input-cliente-id').value = clienteParam;
+        const codigoParam = params.get('codigo');
+        if (codigoParam) {
+            document.getElementById('input-codigo-b2b').value = codigoParam.toUpperCase();
             document.getElementById('input-pin').focus();
         }
     });

@@ -24,7 +24,8 @@ class AdminLoginRequest(BaseModel):
     password: str
 
 class B2BLoginRequest(BaseModel):
-    cliente_id: int
+    codigo_b2b: Optional[str] = None   # preferido
+    cliente_id: Optional[int] = None   # compatibilidad temporal
     pin: str
 
 class UsuarioCreate(BaseModel):
@@ -94,12 +95,23 @@ def admin_login(body: AdminLoginRequest):
 
 @router.post("/b2b/login")
 def b2b_login(body: B2BLoginRequest):
+    if not body.codigo_b2b and not body.cliente_id:
+        raise HTTPException(status_code=400, detail="Proporciona codigo_b2b o cliente_id.")
+
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute(
-        "SELECT id, nombre, pin_hash FROM clientes WHERE id = ?",
-        (body.cliente_id,)
-    )
+
+    if body.codigo_b2b:
+        cursor.execute(
+            "SELECT id, nombre, pin_hash FROM clientes WHERE UPPER(codigo_b2b) = UPPER(?)",
+            (body.codigo_b2b.strip(),)
+        )
+    else:
+        cursor.execute(
+            "SELECT id, nombre, pin_hash FROM clientes WHERE id = ?",
+            (body.cliente_id,)
+        )
+
     cliente = cursor.fetchone()
     conn.close()
 

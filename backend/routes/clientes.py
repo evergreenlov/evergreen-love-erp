@@ -30,6 +30,9 @@ class CatalogoClienteSchema(BaseModel):
     precio_especial: float
     notas: Optional[str] = None
 
+class CodigoB2BSchema(BaseModel):
+    codigo_b2b: str
+
 # --- ENDPOINTS CLIENTES B2B ---
 
 @router.get("/clientes")
@@ -345,6 +348,36 @@ def crear_pedido_b2b(cliente_id: int, pedido: PedidoB2BSchema, background_tasks:
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.put("/clientes/{cliente_id}/codigo-b2b")
+def set_codigo_b2b(cliente_id: int, body: CodigoB2BSchema, current_user: dict = Depends(get_current_admin)):
+    import re
+    RESERVED = {"ADMIN", "ROOT", "TEST", "DEMO", "API", "SUPPORT"}
+    codigo = body.codigo_b2b.strip().upper()
+    if not codigo:
+        raise HTTPException(status_code=400, detail="El código no puede estar vacío.")
+    if len(codigo) < 3 or len(codigo) > 20:
+        raise HTTPException(status_code=400, detail="El código debe tener entre 3 y 20 caracteres.")
+    if not re.match(r'^[A-Z0-9\-]+$', codigo):
+        raise HTTPException(status_code=400, detail="Solo se permiten letras, números y guiones.")
+    if codigo in RESERVED:
+        raise HTTPException(status_code=400, detail=f"El código '{codigo}' está reservado.")
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT id FROM clientes WHERE id = ?", (cliente_id,))
+    if not cursor.fetchone():
+        conn.close()
+        raise HTTPException(status_code=404, detail="Cliente no encontrado.")
+    try:
+        cursor.execute("UPDATE clientes SET codigo_b2b = ? WHERE id = ?", (codigo, cliente_id))
+        conn.commit()
+    except sqlite3.IntegrityError:
+        conn.close()
+        raise HTTPException(status_code=409, detail="Ese código ya está en uso por otro cliente.")
+    conn.close()
+    return {"status": "success", "codigo_b2b": codigo}
+
+
 @router.post("/clientes/{cliente_id}/generar-pin")
 def generar_pin_cliente(cliente_id: int, current_user: dict = Depends(get_current_admin)):
     """
@@ -369,8 +402,8 @@ def generar_pin_cliente(cliente_id: int, current_user: dict = Depends(get_curren
     pin_hash = hash_password(pin_plain)
 
     cursor.execute(
-        "UPDATE clientes SET pin_hash = ?, pin_display = ? WHERE id = ?",
-        (pin_hash, pin_plain, cliente_id)
+        "UPDATE clientes SET pin_hash = ?, pin_display = NULL WHERE id = ?",
+        (pin_hash, cliente_id)
     )
     conn.commit()
     conn.close()

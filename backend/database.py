@@ -362,6 +362,12 @@ def init_db(force_reset=False):
     except Exception:
         pass
 
+    try:
+        cursor.execute("ALTER TABLE clientes ADD COLUMN codigo_b2b TEXT UNIQUE")
+        print("Columna 'codigo_b2b' añadida a clientes.")
+    except Exception:
+        pass
+
     # Migración segura: agregar columna monto_pagado a facturas si no existe
     try:
         cursor.execute("ALTER TABLE facturas ADD COLUMN monto_pagado REAL")

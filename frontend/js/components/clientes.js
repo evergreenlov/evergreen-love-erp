@@ -214,6 +214,23 @@ const ClientesComponent = {
                     </form>
                 </div>
             </div>
+
+            <!-- MODAL: PIN GENERADO — mostrar una vez -->
+            <div id="pin-reveal-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.55); z-index:4000; align-items:center; justify-content:center;">
+                <div style="background:white; border-radius:16px; padding:32px 28px 24px; max-width:400px; width:90%; box-shadow:0 12px 40px rgba(0,0,0,0.2); text-align:center;">
+                    <div style="width:52px;height:52px;background:#e8f5e2;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;">
+                        <i data-lucide="key-round" style="width:24px;height:24px;color:#3d7a30;"></i>
+                    </div>
+                    <h3 style="font-size:16px;color:#2d2d2d;margin:0 0 6px;">PIN Generado</h3>
+                    <p style="font-size:12.5px;color:#8c8270;margin:0 0 18px;">Copia este PIN y compártelo con el cliente.<br><strong style="color:#c0694a;">No podrás verlo de nuevo.</strong></p>
+                    <div id="pin-reveal-value" style="font-family:monospace;font-size:26px;font-weight:700;letter-spacing:6px;color:#2d5a27;background:#e8f5e2;border:2px dashed #a8d898;border-radius:10px;padding:16px;margin-bottom:18px;"></div>
+                    <div style="display:flex;align-items:center;gap:8px;justify-content:center;margin-bottom:18px;">
+                        <input type="checkbox" id="pin-confirm-check" style="width:16px;height:16px;cursor:pointer;accent-color:#5f7a45;">
+                        <label for="pin-confirm-check" style="font-size:13px;color:#5a5245;cursor:pointer;">Confirmo que lo anoté</label>
+                    </div>
+                    <button id="btn-close-pin-modal" disabled style="padding:10px 28px;background:#5f7a45;color:white;border:none;border-radius:8px;font-size:14px;font-weight:600;font-family:var(--font-primary);cursor:not-allowed;opacity:0.45;transition:opacity 0.2s;">Cerrar</button>
+                </div>
+            </div>
         `;
         
         lucide.createIcons();
@@ -258,7 +275,8 @@ const ClientesComponent = {
             div.innerHTML = `
                 <div>
                     <strong style="display:block; font-size:14.5px;">${c.nombre}</strong>
-                    <span style="font-size:12px; opacity:0.85; display:block; margin-top:2px;">${c.contacto || 'Sin contacto directo'}</span>
+                    <span style="font-family:monospace; font-size:11px; display:block; margin-top:1px; opacity:0.75;">${c.codigo_b2b || '<em style="font-family:var(--font-primary); font-style:italic;">sin código</em>'}</span>
+                    <span style="font-size:12px; opacity:0.7; display:block; margin-top:1px;">${c.contacto || 'Sin contacto directo'}</span>
                 </div>
                 <button class="btn btn-delete-cliente" style="padding: 4px; border: none; background: none; box-shadow: none; color: ${this.selectedClienteId === c.id ? 'var(--color-white)' : 'var(--color-danger)'};" data-id="${c.id}">
                     <i data-lucide="trash-2" style="width:16px; height:16px;"></i>
@@ -335,19 +353,51 @@ const ClientesComponent = {
         const cliente = this.clientes.find(c => c.id === this.selectedClienteId);
         if (!cliente) return;
 
-        // Mostrar botones de acción y títulos
         document.getElementById('btn-asociar-producto-b2b').style.display = 'inline-flex';
         document.getElementById('btn-portal-b2b').style.display = 'inline-flex';
         document.getElementById('client-catalog-title').innerText = `Catálogo de ${cliente.nombre}`;
         document.getElementById('client-catalog-subtitle').innerText = `Productos asignados con precios especiales mayoristas.`;
 
         const container = document.getElementById('catalog-details-container');
+        const pinActivo = !!cliente.pin_hash;
+
         container.innerHTML = `
-            <div class="loading-state">
-                <div class="spinner"></div>
-                <p>Cargando catálogo del cliente...</p>
+            <div style="background:#f5f9f0;border:1.5px solid #c8ddb8;border-radius:10px;padding:14px 16px;margin-bottom:18px;">
+                <div style="font-size:12px;font-weight:600;color:#2d5a27;margin-bottom:10px;display:flex;align-items:center;gap:5px;">
+                    <i data-lucide="key-round" style="width:13px;height:13px;"></i> Acceso Portal B2B
+                </div>
+                <div style="display:flex;flex-wrap:wrap;gap:16px;">
+                    <div style="flex:1;min-width:150px;">
+                        <div style="font-size:10px;color:#5d7a4d;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px;">Código de acceso</div>
+                        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                            <span id="b2b-codigo-display" style="font-family:monospace;font-size:13px;font-weight:700;color:${cliente.codigo_b2b ? '#2d5a27' : '#a89880'};background:${cliente.codigo_b2b ? '#dff0d8' : '#f5f0e8'};padding:3px 10px;border-radius:6px;border:1px solid ${cliente.codigo_b2b ? '#c8ddb8' : '#e0d8cc'};">${cliente.codigo_b2b || 'Sin asignar'}</span>
+                            <button id="btn-edit-codigo-b2b" style="font-size:11px;padding:3px 10px;border:1px solid #c8ddb8;border-radius:6px;background:white;color:#3d7a30;cursor:pointer;font-family:var(--font-primary);">${cliente.codigo_b2b ? 'Cambiar' : 'Asignar'}</button>
+                        </div>
+                        <div id="codigo-b2b-form" style="display:none;margin-top:8px;gap:6px;align-items:center;flex-wrap:wrap;">
+                            <input id="input-nuevo-codigo" type="text" placeholder="Ej. FLORERIA-BCN" maxlength="20"
+                                style="padding:5px 10px;border:1px solid #c8ddb8;border-radius:6px;font-size:12px;font-family:monospace;text-transform:uppercase;width:150px;">
+                            <button id="btn-guardar-codigo" style="font-size:11px;padding:4px 12px;background:#5f7a45;color:white;border:none;border-radius:6px;cursor:pointer;font-family:var(--font-primary);">Guardar</button>
+                            <button id="btn-cancelar-codigo" style="font-size:11px;padding:4px 10px;background:none;border:1px solid #ddd;border-radius:6px;cursor:pointer;font-family:var(--font-primary);">✕</button>
+                        </div>
+                        <div id="codigo-b2b-error" style="display:none;font-size:11px;color:#c0694a;margin-top:4px;"></div>
+                    </div>
+                    <div style="flex:1;min-width:150px;">
+                        <div style="font-size:10px;color:#5d7a4d;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px;">PIN de acceso</div>
+                        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                            <span style="font-size:12px;font-weight:600;color:${pinActivo ? '#27ae60' : '#e67e22'};">${pinActivo ? '✓ PIN activo' : 'Sin PIN'}</span>
+                            <button id="btn-generar-pin-cliente" style="font-size:11px;padding:3px 10px;border:1px solid #c8ddb8;border-radius:6px;background:white;color:#3d7a30;cursor:pointer;font-family:var(--font-primary);">${pinActivo ? 'Resetear PIN' : 'Generar PIN'}</button>
+                        </div>
+                        <p style="font-size:10px;color:#a89880;margin:4px 0 0;">Se muestra una sola vez al generarlo.</p>
+                    </div>
+                </div>
+            </div>
+            <div id="catalog-items-container">
+                <div class="loading-state"><div class="spinner"></div><p>Cargando catálogo...</p></div>
             </div>
         `;
+
+        lucide.createIcons();
+        this.setupB2BAccessListeners(cliente);
 
         try {
             const res = await EvergreenAPI.getCatalogoCliente(this.selectedClienteId);
@@ -357,12 +407,13 @@ const ClientesComponent = {
             }
         } catch (error) {
             console.error("Error al cargar catálogo de cliente:", error);
-            container.innerHTML = `<div style="color:var(--color-danger); text-align:center; padding:20px;">Error al obtener catálogo.</div>`;
+            const ic = document.getElementById('catalog-items-container');
+            if (ic) ic.innerHTML = `<div style="color:var(--color-danger);text-align:center;padding:20px;">Error al obtener catálogo.</div>`;
         }
     },
 
     renderCatalogList() {
-        const container = document.getElementById('catalog-details-container');
+        const container = document.getElementById('catalog-items-container') || document.getElementById('catalog-details-container');
         if (this.catalogo.length === 0) {
             container.innerHTML = `
                 <div style="text-align: center; color: #8c8c8c; padding: 40px 20px; font-style: italic; border: 1px dashed var(--color-gray-border); border-radius: var(--radius-sm); background-color: var(--color-gray-light);">
@@ -449,6 +500,116 @@ const ClientesComponent = {
         });
 
         lucide.createIcons();
+    },
+
+    setupB2BAccessListeners(cliente) {
+        // ── Código B2B ──────────────────────────────────────────
+        const btnEdit   = document.getElementById('btn-edit-codigo-b2b');
+        const form      = document.getElementById('codigo-b2b-form');
+        const inputCod  = document.getElementById('input-nuevo-codigo');
+        const btnGuard  = document.getElementById('btn-guardar-codigo');
+        const btnCan    = document.getElementById('btn-cancelar-codigo');
+        const errorEl   = document.getElementById('codigo-b2b-error');
+        const display   = document.getElementById('b2b-codigo-display');
+
+        btnEdit.addEventListener('click', () => {
+            inputCod.value = cliente.codigo_b2b || '';
+            form.style.display = 'flex';
+            btnEdit.style.display = 'none';
+            inputCod.focus();
+        });
+        btnCan.addEventListener('click', () => {
+            form.style.display = 'none';
+            btnEdit.style.display = '';
+            errorEl.style.display = 'none';
+        });
+        btnGuard.addEventListener('click', async () => {
+            const codigo = inputCod.value.trim().toUpperCase();
+            if (!codigo) return;
+            btnGuard.textContent = 'Guardando...';
+            btnGuard.disabled = true;
+            errorEl.style.display = 'none';
+            try {
+                const res = await fetch(`${API_BASE_URL}/clientes/${cliente.id}/codigo-b2b`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ codigo_b2b: codigo }),
+                });
+                const data = await res.json();
+                if (!res.ok) {
+                    errorEl.textContent = data.detail || 'Error al guardar el código.';
+                    errorEl.style.display = 'block';
+                    return;
+                }
+                cliente.codigo_b2b = data.codigo_b2b;
+                display.textContent = data.codigo_b2b;
+                display.style.color = '#2d5a27';
+                display.style.background = '#dff0d8';
+                display.style.borderColor = '#c8ddb8';
+                btnEdit.textContent = 'Cambiar';
+                form.style.display = 'none';
+                btnEdit.style.display = '';
+                // Actualizar el cliente en la lista local para que renderClientesList refleje el cambio
+                const idx = this.clientes.findIndex(c => c.id === cliente.id);
+                if (idx !== -1) this.clientes[idx].codigo_b2b = data.codigo_b2b;
+                this.renderClientesList();
+            } catch {
+                errorEl.textContent = 'No se pudo conectar con el servidor.';
+                errorEl.style.display = 'block';
+            } finally {
+                btnGuard.textContent = 'Guardar';
+                btnGuard.disabled = false;
+            }
+        });
+
+        // ── PIN ─────────────────────────────────────────────────
+        const btnPin = document.getElementById('btn-generar-pin-cliente');
+        btnPin.addEventListener('click', async () => {
+            if (!confirm(`¿Generar un nuevo PIN para ${cliente.nombre}? El PIN anterior dejará de funcionar.`)) return;
+            btnPin.textContent = 'Generando...';
+            btnPin.disabled = true;
+            try {
+                const res = await fetch(`${API_BASE_URL}/clientes/${cliente.id}/generar-pin`, {
+                    method: 'POST',
+                });
+                const data = await res.json();
+                if (!res.ok) {
+                    alert(data.detail || 'Error al generar PIN.');
+                    return;
+                }
+                // Actualizar estado local
+                cliente.pin_hash = 'set';
+                const idx = this.clientes.findIndex(c => c.id === cliente.id);
+                if (idx !== -1) this.clientes[idx].pin_hash = 'set';
+
+                // Mostrar modal PIN una sola vez
+                const modal = document.getElementById('pin-reveal-modal');
+                document.getElementById('pin-reveal-value').textContent = data.pin;
+                const check = document.getElementById('pin-confirm-check');
+                const closeBtn = document.getElementById('btn-close-pin-modal');
+                check.checked = false;
+                closeBtn.disabled = true;
+                closeBtn.style.opacity = '0.45';
+                closeBtn.style.cursor = 'not-allowed';
+                check.onchange = () => {
+                    closeBtn.disabled = !check.checked;
+                    closeBtn.style.opacity = check.checked ? '1' : '0.45';
+                    closeBtn.style.cursor = check.checked ? 'pointer' : 'not-allowed';
+                };
+                closeBtn.onclick = () => {
+                    modal.style.display = 'none';
+                    // Refrescar sección B2B para mostrar "PIN activo"
+                    this.loadClienteCatalog();
+                };
+                modal.style.display = 'flex';
+                lucide.createIcons();
+            } catch {
+                alert('No se pudo conectar con el servidor.');
+            } finally {
+                btnPin.textContent = 'Resetear PIN';
+                btnPin.disabled = false;
+            }
+        });
     },
 
     setupListeners() {
@@ -552,9 +713,11 @@ const ClientesComponent = {
 function abrirPortalB2B() {
     const id = ClientesComponent.selectedClienteId;
     if (!id) return;
-    // Usar la IP local de la red para que funcione desde teléfonos en el mismo WiFi
-    const serverBase = 'http://192.168.86.30:8000';
-    const url = `${serverBase}/catalogo_b2b.html?cliente=${id}`;
+    const cliente = ClientesComponent.clientes.find(c => c.id === id);
+    const serverBase = window.location.origin || 'http://192.168.86.30:8000';
+    const url = cliente && cliente.codigo_b2b
+        ? `${serverBase}/b2b?codigo=${encodeURIComponent(cliente.codigo_b2b)}`
+        : `${serverBase}/b2b`;
     document.getElementById('b2b-link-url').value = url;
     document.getElementById('b2b-link-open').href = url;
     const modal = document.getElementById('b2b-link-modal');
