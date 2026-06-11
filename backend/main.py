@@ -3,6 +3,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
+from fastapi.openapi.utils import get_openapi
 import sqlite3
 
 from database import get_db_connection, init_db, bootstrap_admin
@@ -227,6 +228,33 @@ def read_catalogo_b2b():
     if os.path.exists(path):
         return FileResponse(path)
     return {"message": "catalogo_b2b.html no encontrado"}
+
+def custom_openapi():
+    if app.openapi_schema:
+        return app.openapi_schema
+    schema = get_openapi(
+        title=app.title,
+        version=app.version,
+        description=app.description,
+        routes=app.routes,
+    )
+    # Reemplaza OAuth2 por BearerAuth simple para que Swagger acepte pegar el token
+    schema["components"]["securitySchemes"] = {
+        "BearerAuth": {
+            "type": "http",
+            "scheme": "bearer",
+            "bearerFormat": "JWT",
+            "description": "Pega aquí el token obtenido de POST /api/auth/admin/login (sin el prefijo 'Bearer')",
+        }
+    }
+    for path in schema.get("paths", {}).values():
+        for operation in path.values():
+            if "security" in operation:
+                operation["security"] = [{"BearerAuth": []}]
+    app.openapi_schema = schema
+    return schema
+
+app.openapi = custom_openapi
 
 if __name__ == "__main__":
     import uvicorn

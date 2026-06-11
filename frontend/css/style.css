@@ -134,6 +134,10 @@ ul {
 
 .sidebar-nav {
     flex: 1;
+    overflow-y: auto;
+    min-height: 0;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(242,233,222,0.2) transparent;
 }
 
 .nav-list {

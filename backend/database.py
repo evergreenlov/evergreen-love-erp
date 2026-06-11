@@ -363,8 +363,13 @@ def init_db(force_reset=False):
         pass
 
     try:
-        cursor.execute("ALTER TABLE clientes ADD COLUMN codigo_b2b TEXT UNIQUE")
+        cursor.execute("ALTER TABLE clientes ADD COLUMN codigo_b2b TEXT")
         print("Columna 'codigo_b2b' añadida a clientes.")
+    except Exception:
+        pass
+    try:
+        cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_clientes_codigo_b2b ON clientes(codigo_b2b)")
+        print("Índice único 'codigo_b2b' creado.")
     except Exception:
         pass
 
