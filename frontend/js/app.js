@@ -111,7 +111,67 @@ const AdminAuth = (() => {
         showLogin();
     }
 
-    return { init, login, logout, getToken, getRole, getNombre, showLogin };
+    function openChangePassword() {
+        const modal = document.getElementById('change-password-modal');
+        if (modal) {
+            document.getElementById('cp-current').value = '';
+            document.getElementById('cp-new').value = '';
+            document.getElementById('cp-confirm').value = '';
+            document.getElementById('cp-error').style.display = 'none';
+            modal.style.display = 'flex';
+        }
+    }
+
+    function closeChangePassword() {
+        const modal = document.getElementById('change-password-modal');
+        if (modal) modal.style.display = 'none';
+    }
+
+    async function submitChangePassword() {
+        const currentPwd = document.getElementById('cp-current').value;
+        const newPwd     = document.getElementById('cp-new').value;
+        const confirmPwd = document.getElementById('cp-confirm').value;
+        const errorEl    = document.getElementById('cp-error');
+        const saveBtn    = document.getElementById('cp-save-btn');
+
+        errorEl.style.display = 'none';
+
+        if (newPwd !== confirmPwd) {
+            errorEl.textContent = 'Las contraseñas nuevas no coinciden.';
+            errorEl.style.display = 'block';
+            return;
+        }
+
+        saveBtn.disabled = true;
+        saveBtn.textContent = 'Guardando...';
+        try {
+            const res = await fetch(`${API_BASE_URL}/auth/change-password`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getToken()}` },
+                body: JSON.stringify({
+                    current_password: currentPwd,
+                    new_password:     newPwd,
+                    confirm_password: confirmPwd,
+                }),
+            });
+            const data = await res.json();
+            if (!res.ok) {
+                errorEl.textContent = data.detail || 'Error al cambiar la contraseña.';
+                errorEl.style.display = 'block';
+                return;
+            }
+            closeChangePassword();
+            showLogin('Contraseña actualizada. Inicia sesión nuevamente.');
+        } catch {
+            errorEl.textContent = 'No se pudo conectar con el servidor.';
+            errorEl.style.display = 'block';
+        } finally {
+            saveBtn.disabled = false;
+            saveBtn.textContent = 'Guardar';
+        }
+    }
+
+    return { init, login, logout, getToken, getRole, getNombre, showLogin, openChangePassword, closeChangePassword, submitChangePassword };
 })();
 
 // Hacer el token disponible globalmente para que api.js lo incluya en los headers

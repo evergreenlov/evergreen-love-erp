@@ -39,6 +39,11 @@ class UsuarioUpdate(BaseModel):
     activo: Optional[int] = None
     password: Optional[str] = None
 
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str
+    confirm_password: str
+
 # ---------------------------------------------------------------------------
 # Login administrador
 # ---------------------------------------------------------------------------
@@ -145,6 +150,35 @@ def get_me(current_user: dict = Depends(get_current_user)):
 @router.post("/logout")
 def logout(current_user: dict = Depends(get_current_user)):
     return {"message": "Sesión cerrada. Elimina el token del cliente."}
+
+# ---------------------------------------------------------------------------
+# Cambio de contraseña (cualquier admin autenticado, sobre su propia cuenta)
+# ---------------------------------------------------------------------------
+
+@router.post("/change-password")
+def change_password(body: ChangePasswordRequest, current_user: dict = Depends(get_current_admin)):
+    if body.new_password != body.confirm_password:
+        raise HTTPException(status_code=400, detail="Las contraseñas nuevas no coinciden.")
+    if len(body.new_password) < 8:
+        raise HTTPException(status_code=400, detail="La contraseña debe tener al menos 8 caracteres.")
+
+    usuario_id = current_user.get("usuario_id")
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT password_hash FROM usuarios WHERE id = ? AND activo = 1", (usuario_id,))
+    row = cursor.fetchone()
+
+    if not row or not verify_password(body.current_password, row["password_hash"]):
+        conn.close()
+        raise HTTPException(status_code=400, detail="Contraseña actual incorrecta.")
+
+    cursor.execute(
+        "UPDATE usuarios SET password_hash = ? WHERE id = ?",
+        (hash_password(body.new_password), usuario_id)
+    )
+    conn.commit()
+    conn.close()
+    return {"status": "ok", "message": "Contraseña actualizada. Inicia sesión nuevamente."}
 
 # ---------------------------------------------------------------------------
 # Gestión de usuarios administradores (solo superadmin)
