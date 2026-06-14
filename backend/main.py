@@ -153,10 +153,16 @@ COTIZACIONES_IMGS_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), 
 os.makedirs(COTIZACIONES_IMGS_DIR, exist_ok=True)
 app.mount("/cotizaciones_imgs", StaticFiles(directory=COTIZACIONES_IMGS_DIR), name="cotizaciones_imgs")
 
-# Fotos con fondo removido (rembg) — disco externo
-CATALOGO_TRANSPARENTE_DIR = "/Volumes/MYRIAM SEAG/evergreen-love/data/catalogo_transparente"
+# Fotos con fondo removido (rembg)
+if os.path.exists("/Volumes/MYRIAM SEAG/evergreen-love"):
+    CATALOGO_TRANSPARENTE_DIR = "/Volumes/MYRIAM SEAG/evergreen-love/data/catalogo_transparente"
+    REMBG_MODELS_DIR = "/Volumes/MYRIAM SEAG/rembg_models"
+else:
+    CATALOGO_TRANSPARENTE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "catalogo_transparente"))
+    REMBG_MODELS_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "rembg_models"))
+
 os.makedirs(CATALOGO_TRANSPARENTE_DIR, exist_ok=True)
-os.makedirs("/Volumes/MYRIAM SEAG/rembg_models", exist_ok=True)
+os.makedirs(REMBG_MODELS_DIR, exist_ok=True)
 app.mount("/catalogo_transparente", StaticFiles(directory=CATALOGO_TRANSPARENTE_DIR), name="catalogo_transparente")
 
 # Servir el index.html principal en la ruta raíz y también como /index.html

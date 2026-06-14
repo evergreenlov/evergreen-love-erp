@@ -164,8 +164,13 @@ def trigger_escanear_fotos(current_user: dict = Depends(get_current_admin)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-CATALOGO_TRANSPARENTE_DIR = "/Volumes/MYRIAM SEAG/evergreen-love/data/catalogo_transparente"
-REMBG_MODELS_DIR = "/Volumes/MYRIAM SEAG/rembg_models"
+# Fotos con fondo removido (rembg)
+if os.path.exists("/Volumes/MYRIAM SEAG/evergreen-love"):
+    CATALOGO_TRANSPARENTE_DIR = "/Volumes/MYRIAM SEAG/evergreen-love/data/catalogo_transparente"
+    REMBG_MODELS_DIR = "/Volumes/MYRIAM SEAG/rembg_models"
+else:
+    CATALOGO_TRANSPARENTE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "catalogo_transparente"))
+    REMBG_MODELS_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "rembg_models"))
 
 @router.post("/fotos/productos/{producto_id}/remover-fondo")
 def remover_fondo_producto(
@@ -212,12 +217,21 @@ def remover_fondo_producto(
     # Procesar con rembg (importar aquí para respetar U2NET_HOME)
     try:
         from PIL import Image
-        import rembg
+        try:
+            import rembg
+        except ImportError:
+            conn.close()
+            raise HTTPException(
+                status_code=501, 
+                detail="La eliminación de fondo no está disponible en el servidor (rembg no instalado). Ejecútelo localmente."
+            )
         with open(foto_path, "rb") as f:
             input_bytes = f.read()
         output_bytes = rembg.remove(input_bytes)
         with open(output_path, "wb") as f:
             f.write(output_bytes)
+    except HTTPException as he:
+        raise he
     except Exception as e:
         conn.close()
         raise HTTPException(status_code=500, detail=f"Error al procesar imagen con rembg: {str(e)}")
