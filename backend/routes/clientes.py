@@ -33,6 +33,11 @@ class CatalogoClienteSchema(BaseModel):
 class CodigoB2BSchema(BaseModel):
     codigo_b2b: str
 
+class NivelPrecioSchema(BaseModel):
+    nivel_precio_b2b: str
+
+NIVELES_VALIDOS = {"retail", "wholesale_12", "wholesale_24", "wholesale_50"}
+
 # --- ENDPOINTS CLIENTES B2B ---
 
 @router.get("/clientes")
@@ -96,6 +101,25 @@ def delete_cliente(cliente_id: int, current_user: dict = Depends(get_current_adm
 
 # --- ENDPOINTS CATÁLOGO POR CLIENTE ---
 
+def _calcular_precio_b2b(row: dict, nivel: str) -> tuple:
+    """Devuelve (precio_b2b, etiqueta_precio) según nivel del cliente y override manual."""
+    override = row.get('precio_especial') or 0
+    if override > 0:
+        return override, "Precio Especial"
+    precio_final = row.get('precio_retail') or row.get('precio_final') or 0
+    if nivel == 'wholesale_12':
+        precio = row.get('precio_wholesale_12') or precio_final
+        return precio, "Precio B2B 12+"
+    elif nivel == 'wholesale_24':
+        precio = row.get('precio_wholesale_24') or precio_final
+        return precio, "Precio B2B 24+"
+    elif nivel == 'wholesale_50':
+        precio = row.get('precio_wholesale_50') or precio_final
+        return precio, "Precio Distribuidor 50+"
+    else:  # retail
+        return precio_final, "Precio Retail"
+
+
 @router.get("/clientes/{cliente_id}/catalogo")
 def get_catalogo_cliente(cliente_id: int, current_user: dict = Depends(get_current_user)):
     # Admin puede ver cualquier catálogo; B2B solo el suyo
@@ -104,13 +128,20 @@ def get_catalogo_cliente(cliente_id: int, current_user: dict = Depends(get_curre
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
-        
+
+        # Obtener nivel de precio del cliente
+        cursor.execute("SELECT nivel_precio_b2b FROM clientes WHERE id = ?", (cliente_id,))
+        cl = cursor.fetchone()
+        nivel = (cl['nivel_precio_b2b'] if cl and cl['nivel_precio_b2b'] else 'retail')
+
         # Consultar productos del catálogo de este cliente específico
         cursor.execute("""
-            SELECT cc.*, p.nombre as producto_nombre, p.sku as producto_sku, 
+            SELECT cc.id, cc.cliente_id, cc.producto_id, cc.precio_especial, cc.notas,
+                   p.nombre as producto_nombre, p.sku as producto_sku,
                    p.costo_total, p.precio_final as precio_retail, p.personalizado,
-                   (SELECT f.nombre_archivo FROM fotos_asociadas f 
-                    WHERE f.producto_id = p.id AND f.tipo_foto = 'referencia' 
+                   p.precio_wholesale_12, p.precio_wholesale_24, p.precio_wholesale_50,
+                   (SELECT f.nombre_archivo FROM fotos_asociadas f
+                    WHERE f.producto_id = p.id AND f.tipo_foto = 'referencia'
                     ORDER BY f.id DESC LIMIT 1) as foto_nombre
             FROM catalogo_cliente cc
             JOIN productos p ON cc.producto_id = p.id
@@ -143,18 +174,19 @@ def get_catalogo_cliente(cliente_id: int, current_user: dict = Depends(get_curre
                 nombre = fr['nombre_archivo']
                 if not nombre:
                     continue
-                if tipo == 'transparente':
-                    ruta = f"/catalogo_transparente/{nombre}"
-                else:
-                    ruta = f"/fotos_import/{nombre}"
+                ruta = f"/catalogo_transparente/{nombre}" if tipo == 'transparente' else f"/fotos_import/{nombre}"
                 if ruta not in fotos:
                     fotos.append(ruta)
 
-            # foto_ruta principal: primera de la lista (transparente si existe, sino referencia)
             d['fotos'] = fotos
             d['foto_ruta'] = fotos[0] if fotos else (
                 f"/fotos_import/{d['foto_nombre']}" if d.get('foto_nombre') else None
             )
+
+            precio_b2b, etiqueta = _calcular_precio_b2b(d, nivel)
+            d['precio_b2b']      = precio_b2b
+            d['etiqueta_precio'] = etiqueta
+            d['nivel_precio_b2b'] = nivel
             catalogo.append(d)
         conn.close()
         return {"status": "success", "data": catalogo}
@@ -455,6 +487,29 @@ def generar_pin_cliente(cliente_id: int, current_user: dict = Depends(get_curren
         "pin": pin_plain,
         "message": "Entrega este PIN al cliente. No se volverá a mostrar desde este endpoint.",
     }
+
+
+@router.put("/clientes/{cliente_id}/nivel-precio")
+def actualizar_nivel_precio(
+    cliente_id: int,
+    payload: NivelPrecioSchema,
+    current_user: dict = Depends(get_current_admin),
+):
+    if payload.nivel_precio_b2b not in NIVELES_VALIDOS:
+        raise HTTPException(status_code=400, detail=f"Nivel inválido. Opciones: {', '.join(NIVELES_VALIDOS)}")
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT id FROM clientes WHERE id = ?", (cliente_id,))
+    if not cursor.fetchone():
+        conn.close()
+        raise HTTPException(status_code=404, detail="Cliente no encontrado")
+    cursor.execute(
+        "UPDATE clientes SET nivel_precio_b2b = ? WHERE id = ?",
+        (payload.nivel_precio_b2b, cliente_id)
+    )
+    conn.commit()
+    conn.close()
+    return {"status": "success", "nivel_precio_b2b": payload.nivel_precio_b2b}
 
 
 @router.get("/clientes/{cliente_id}/info")

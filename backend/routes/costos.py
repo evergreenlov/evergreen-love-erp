@@ -42,6 +42,10 @@ class ProductoSchema(BaseModel):
     shopify_tags: Optional[str] = None
     shopify_alt_text: Optional[str] = None
     componentes: List[ComponenteSchema]
+    # Precios Wholesale
+    precio_wholesale_12: Optional[float] = None
+    precio_wholesale_24: Optional[float] = None
+    precio_wholesale_50: Optional[float] = None
     # Motor de Costeo Inteligente
     tipo_producto: Optional[str] = None
     capas: Optional[int] = 1
@@ -66,6 +70,10 @@ class ProductoUpdateSchema(BaseModel):
     shopify_alt_text: Optional[str] = None
     cliente_id: Optional[int] = None
     b2b_precio: Optional[float] = None
+    # Precios Wholesale
+    precio_wholesale_12: Optional[float] = None
+    precio_wholesale_24: Optional[float] = None
+    precio_wholesale_50: Optional[float] = None
     # Campos de costeo — opcionales para edición desde calculadora
     ancho: Optional[float] = None
     alto: Optional[float] = None
@@ -242,10 +250,11 @@ def create_producto(producto: ProductoSchema, current_user: dict = Depends(get_c
                 costo_maquina, costo_mano_obra, costo_total, margen_ganancia,
                 precio_sugerido, precio_final, personalizado,
                 shopify_titulo, shopify_descripcion, shopify_tags, shopify_alt_text,
+                precio_wholesale_12, precio_wholesale_24, precio_wholesale_50,
                 tipo_producto, capas, complejidad, tiempo_pintura, tiempo_ensamblaje,
                 usa_resina, cantidad_resina_ml, costo_resina_por_ml,
                 tiempo_resina_activo_min, tiempo_resina_curado_min
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             producto.sku, producto.nombre, producto.diseno_id,
             producto.ancho, producto.alto,
@@ -253,6 +262,7 @@ def create_producto(producto: ProductoSchema, current_user: dict = Depends(get_c
             producto.costo_maquina, producto.costo_mano_obra, producto.costo_total, producto.margen_ganancia,
             producto.precio_sugerido, producto.precio_final, producto.personalizado,
             producto.shopify_titulo, producto.shopify_descripcion, producto.shopify_tags, producto.shopify_alt_text,
+            producto.precio_wholesale_12, producto.precio_wholesale_24, producto.precio_wholesale_50,
             producto.tipo_producto, producto.capas or 1, producto.complejidad or 'simple',
             producto.tiempo_pintura or 0.0, producto.tiempo_ensamblaje or 0.0,
             producto.usa_resina or 0, producto.cantidad_resina_ml or 0.0,
@@ -372,6 +382,9 @@ def update_producto(producto_id: int, item: ProductoUpdateSchema, current_user: 
         costo_resina_por_ml = item.costo_resina_por_ml if item.costo_resina_por_ml is not None else (existing.get('costo_resina_por_ml') or 0.0)
         tiempo_resina_activo_min = item.tiempo_resina_activo_min if item.tiempo_resina_activo_min is not None else (existing.get('tiempo_resina_activo_min') or 0.0)
         tiempo_resina_curado_min = item.tiempo_resina_curado_min if item.tiempo_resina_curado_min is not None else (existing.get('tiempo_resina_curado_min') or 0.0)
+        precio_wholesale_12 = item.precio_wholesale_12 if item.precio_wholesale_12 is not None else existing.get('precio_wholesale_12')
+        precio_wholesale_24 = item.precio_wholesale_24 if item.precio_wholesale_24 is not None else existing.get('precio_wholesale_24')
+        precio_wholesale_50 = item.precio_wholesale_50 if item.precio_wholesale_50 is not None else existing.get('precio_wholesale_50')
 
         cursor.execute(
             """
@@ -381,6 +394,7 @@ def update_producto(producto_id: int, item: ProductoUpdateSchema, current_user: 
                 ancho = ?, alto = ?, tiempo_corte = ?, tiempo_grabado = ?,
                 costo_maquina = ?, costo_mano_obra = ?, costo_total = ?,
                 margen_ganancia = ?, precio_sugerido = ?,
+                precio_wholesale_12 = ?, precio_wholesale_24 = ?, precio_wholesale_50 = ?,
                 tipo_producto = ?, capas = ?, complejidad = ?,
                 tiempo_pintura = ?, tiempo_ensamblaje = ?,
                 usa_resina = ?, cantidad_resina_ml = ?, costo_resina_por_ml = ?,
@@ -392,6 +406,7 @@ def update_producto(producto_id: int, item: ProductoUpdateSchema, current_user: 
              ancho, alto, tiempo_corte, tiempo_grabado,
              costo_maquina, costo_mano_obra, costo_total,
              margen_ganancia, precio_sugerido,
+             precio_wholesale_12, precio_wholesale_24, precio_wholesale_50,
              tipo_producto, capas, complejidad, tiempo_pintura, tiempo_ensamblaje,
              usa_resina, cantidad_resina_ml, costo_resina_por_ml,
              tiempo_resina_activo_min, tiempo_resina_curado_min,

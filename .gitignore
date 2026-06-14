@@ -13,7 +13,12 @@ env/
 data/evergreen.db
 data/evergreen.db.bak
 data/*.db
+data/*.db-wal
+data/*.db-shm
 data/*.bak
+
+# Fotos de catálogo transparente (rembg, pesadas)
+data/catalogo_transparente/
 
 # Respaldos (nunca deben ir a git)
 data/backups/

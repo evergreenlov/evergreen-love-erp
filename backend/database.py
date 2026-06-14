@@ -569,6 +569,24 @@ def init_db(force_reset=False):
     except Exception:
         pass
 
+    # Migraciones Niveles de Precio B2B
+    for col, defn in [
+        ("precio_wholesale_12", "REAL"),
+        ("precio_wholesale_24", "REAL"),
+        ("precio_wholesale_50", "REAL"),
+    ]:
+        try:
+            cursor.execute(f"ALTER TABLE productos ADD COLUMN {col} {defn}")
+            print(f"Columna '{col}' añadida a productos.")
+        except Exception:
+            pass
+
+    try:
+        cursor.execute("ALTER TABLE clientes ADD COLUMN nivel_precio_b2b TEXT DEFAULT 'retail'")
+        print("Columna 'nivel_precio_b2b' añadida a clientes.")
+    except Exception:
+        pass
+
     # Crear carpeta de recibos si no existe
     import os as _os
     _recibos_dir = _os.path.abspath(_os.path.join(_os.path.dirname(__file__), "..", "data", "recibos_gastos"))

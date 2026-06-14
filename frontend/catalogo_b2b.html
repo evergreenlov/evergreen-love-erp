@@ -1488,7 +1488,7 @@
                         producto_id: item.producto_id,
                         nombre:      enCatalogo.producto_nombre,
                         sku:         enCatalogo.producto_sku || '',
-                        precio:      enCatalogo.precio_especial,
+                        precio:      enCatalogo.precio_b2b,
                         cantidad:    item.cantidad,
                         foto:        enCatalogo.foto_ruta || null,
                     });
@@ -1673,7 +1673,7 @@
                         Personalizar & Pedir
                     </button>`
                 : `<button class="btn-agregar" id="btn-add-${item.producto_id}"
-                            onclick="addToCart(${item.producto_id}, '${item.producto_nombre.replace(/'/g,"\\'")}', '${item.producto_sku}', ${item.precio_especial}, '${item.foto_ruta || ''}')">
+                            onclick="addToCart(${item.producto_id}, '${item.producto_nombre.replace(/'/g,"\\'")}', '${item.producto_sku}', ${item.precio_b2b}, '${item.foto_ruta || ''}')">
                         <i data-lucide="plus" style="width:14px;height:14px;"></i>
                         Agregar al Pedido
                     </button>`;
@@ -1688,8 +1688,9 @@
                     <div class="product-name">${item.producto_nombre}</div>
                     <div class="product-sku">SKU: ${item.producto_sku}</div>
                     <div class="product-price-row">
-                        <div class="price-b2b">$${item.precio_especial.toFixed(2)}</div>
+                        <div class="price-b2b">$${item.precio_b2b.toFixed(2)}</div>
                         <div class="price-retail">Retail $${item.precio_retail.toFixed(2)}</div>
+                        ${item.etiqueta_precio ? `<div style="font-size:10px;color:#1976d2;font-weight:600;margin-top:2px;">${item.etiqueta_precio}</div>` : ''}
                     </div>
                     <div class="qty-row">
                         <button class="qty-btn" onclick="changeQty(${item.producto_id}, -1)">−</button>
@@ -1715,7 +1716,7 @@
             CotizacionModal.open({
                 productoId: item ? item.producto_id : productoId,
                 productoNombre: item ? item.producto_nombre : null,
-                precioFinal: item ? item.precio_especial : null,
+                precioFinal: item ? item.precio_b2b : null,
                 fuente: 'b2b',
                 clienteB2bId: clienteId || null
             });
@@ -2165,7 +2166,7 @@
             // Texto
             nombre.textContent  = item.producto_nombre;
             sku.textContent     = 'SKU: ' + item.producto_sku;
-            pB2b.textContent    = '$' + item.precio_especial.toFixed(2);
+            pB2b.textContent    = '$' + item.precio_b2b.toFixed(2);
             pRetail.textContent = 'Retail $' + item.precio_retail.toFixed(2);
 
             // Descripción
@@ -2212,7 +2213,7 @@
             if (rel.length > 0) {
                 relGrid.innerHTML = rel.map((r, idx) => {
                     const foto   = (r.fotos && r.fotos.length > 0) ? r.fotos[0] : r.foto_ruta;
-                    const precio = r.precio_especial || r.precio_retail || 0;
+                    const precio = r.precio_b2b || r.precio_retail || 0;
                     return `<div class="qv-rel-card" data-rel-idx="${idx}">
                         <div class="qv-rel-img-wrap">
                             ${foto ? `<img src="${getFullImageUrl(foto)}" alt="${r.producto_nombre}" onerror="this.style.display='none'">` : ''}
@@ -2270,7 +2271,7 @@
                     _currentItem.producto_id,
                     _currentItem.producto_nombre,
                     _currentItem.producto_sku,
-                    _currentItem.precio_especial,
+                    _currentItem.precio_b2b,
                     _currentItem.foto_ruta || ''
                 );
                 closeQV();

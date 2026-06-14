@@ -55,6 +55,7 @@ const CotizacionesComponent = {
             { key: 'rechazada',   label: 'Rechazadas',   icon: 'x-circle',  color: '#f44336' },
         ];
 
+        container.dataset.view = 'lista';
         container.innerHTML = `
         <div style="display:flex;flex-direction:column;gap:20px;">
 
@@ -125,10 +126,21 @@ const CotizacionesComponent = {
                                 ${c.total_imagenes > 0 ? `📎 ${c.total_imagenes}` : '—'}
                             </td>
                             <td style="padding:10px 14px;">${this._estadoBadge(c.estado)}</td>
-                            <td style="padding:10px 14px;">
+                            <td style="padding:10px 14px;white-space:nowrap;">
                                 <button onclick="CotizacionesComponent.abrirDetalle(${c.id})"
-                                    class="btn btn-secondary" style="padding:5px 12px;font-size:12px;">
-                                    Ver
+                                    class="btn btn-secondary" style="padding:5px 10px;font-size:11px;"
+                                    title="Ver detalle">
+                                    <i data-lucide="eye" style="width:12px;height:12px;"></i>
+                                </button>
+                                <button onclick="CotizacionesComponent._abrirModalEdicionDesdeTabla(${c.id})"
+                                    class="btn btn-secondary" style="padding:5px 10px;font-size:11px;margin-left:4px;"
+                                    title="Editar">
+                                    <i data-lucide="pencil" style="width:12px;height:12px;"></i>
+                                </button>
+                                <button onclick="CotizacionesComponent._borrarCotizacion(${c.id}, ${c.orden_produccion_id || 'null'})"
+                                    class="btn" style="padding:5px 10px;font-size:11px;margin-left:4px;background:#fee2e2;border:1px solid #fca5a5;color:#b91c1c;border-radius:6px;cursor:pointer;"
+                                    title="Eliminar">
+                                    <i data-lucide="trash-2" style="width:12px;height:12px;"></i>
                                 </button>
                             </td>
                         </tr>`).join('')}
@@ -163,6 +175,7 @@ const CotizacionesComponent = {
         const estados = ['nueva','en_revision','cotizada','aprobada','rechazada'];
         const etiquetas = { nueva:'Nueva', en_revision:'En revisión', cotizada:'Cotizada', aprobada:'Aprobada', rechazada:'Rechazada' };
 
+        container.dataset.view = 'detalle';
         container.innerHTML = `
         <div style="display:flex;flex-direction:column;gap:16px;">
             <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
@@ -172,7 +185,11 @@ const CotizacionesComponent = {
                 </button>
                 <h3 style="margin:0;font-size:17px;">Cotización #${c.id}</h3>
                 ${this._estadoBadge(c.estado)}
-                <span style="font-size:12px;color:#aaa;margin-left:auto;">${(c.fecha_creacion||'').slice(0,16)}</span>
+                <button onclick="CotizacionesComponent._abrirModalEdicion(${c.id})"
+                    class="btn btn-secondary" style="padding:6px 14px;font-size:13px;display:flex;align-items:center;gap:6px;margin-left:auto;">
+                    <i data-lucide="pencil" style="width:13px;height:13px;"></i> Editar Cotización
+                </button>
+                <span style="font-size:12px;color:#aaa;">${(c.fecha_creacion||'').slice(0,16)}</span>
             </div>
 
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
@@ -359,6 +376,167 @@ const CotizacionesComponent = {
             btn.disabled = false;
             btn.innerHTML = '<i data-lucide="zap" style="width:14px;height:14px;"></i> Enviar a Producción';
             lucide.createIcons();
+        }
+    },
+
+    async _abrirModalEdicionDesdeTabla(cotizacionId) {
+        // Carga el detalle completo antes de abrir el modal
+        try {
+            const res = await EvergreenAPI.getDetalleCotizacion(cotizacionId);
+            this._detalle = res.data;
+        } catch (e) {
+            alert('Error al cargar cotización: ' + e.message);
+            return;
+        }
+        this._abrirModalEdicion(cotizacionId);
+    },
+
+    async _borrarCotizacion(cotizacionId, ordenProduccionId) {
+        if (ordenProduccionId) {
+            alert('No se puede borrar una cotización ya enviada a producción.');
+            return;
+        }
+        if (!confirm('¿Seguro que deseas eliminar esta cotización?\n\nEsta acción no se puede deshacer.')) return;
+        try {
+            await EvergreenAPI.eliminarCotizacion(cotizacionId);
+            await this.render('cotizaciones-container');
+        } catch (e) {
+            alert('Error al eliminar: ' + e.message);
+        }
+    },
+
+    _abrirModalEdicion(cotizacionId) {
+        const c = this._detalle || {};
+        const estados = ['nueva','en_revision','cotizada','aprobada','rechazada'];
+        const etiquetas = { nueva:'Nueva', en_revision:'En revisión', cotizada:'Cotizada', aprobada:'Aprobada', rechazada:'Rechazada' };
+
+        const existing = document.getElementById('cotiz-editar-overlay');
+        if (existing) existing.remove();
+
+        const overlay = document.createElement('div');
+        overlay.id = 'cotiz-editar-overlay';
+        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;display:flex;align-items:center;justify-content:center;padding:16px;';
+
+        overlay.innerHTML = `
+        <div style="background:white;border-radius:14px;padding:28px;max-width:640px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.25);">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+                <h3 style="margin:0;font-size:16px;font-weight:700;">Editar Cotización #${cotizacionId}</h3>
+                <button onclick="document.getElementById('cotiz-editar-overlay').remove()"
+                    style="background:none;border:none;font-size:20px;cursor:pointer;color:#888;line-height:1;">✕</button>
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                <div>
+                    <label style="font-size:11px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:0.4px;">Nombre cliente</label>
+                    <input id="edit-nombre" type="text" value="${c.nombre_cliente || ''}"
+                        style="width:100%;margin-top:4px;padding:8px 10px;border:1px solid #ddd;border-radius:7px;font-size:13px;font-family:var(--font-primary);box-sizing:border-box;">
+                </div>
+                <div>
+                    <label style="font-size:11px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:0.4px;">Email</label>
+                    <input id="edit-email" type="email" value="${c.email || ''}"
+                        style="width:100%;margin-top:4px;padding:8px 10px;border:1px solid #ddd;border-radius:7px;font-size:13px;font-family:var(--font-primary);box-sizing:border-box;">
+                </div>
+                <div>
+                    <label style="font-size:11px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:0.4px;">Teléfono</label>
+                    <input id="edit-telefono" type="text" value="${c.telefono || ''}"
+                        style="width:100%;margin-top:4px;padding:8px 10px;border:1px solid #ddd;border-radius:7px;font-size:13px;font-family:var(--font-primary);box-sizing:border-box;">
+                </div>
+                <div>
+                    <label style="font-size:11px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:0.4px;">Presupuesto aprox.</label>
+                    <input id="edit-presupuesto" type="number" step="0.01" value="${c.presupuesto_aprox || ''}"
+                        style="width:100%;margin-top:4px;padding:8px 10px;border:1px solid #ddd;border-radius:7px;font-size:13px;font-family:var(--font-primary);box-sizing:border-box;">
+                </div>
+                <div>
+                    <label style="font-size:11px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:0.4px;">Estado</label>
+                    <select id="edit-estado" style="width:100%;margin-top:4px;padding:8px 10px;border:1px solid #ddd;border-radius:7px;font-size:13px;font-family:var(--font-primary);box-sizing:border-box;">
+                        ${estados.map(s => `<option value="${s}" ${c.estado===s?'selected':''}>${etiquetas[s]}</option>`).join('')}
+                    </select>
+                </div>
+                <div>
+                    <label style="font-size:11px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:0.4px;">Costo estimado ($)</label>
+                    <input id="edit-costo" type="number" step="0.01" value="${c.costo_estimado || ''}"
+                        style="width:100%;margin-top:4px;padding:8px 10px;border:1px solid #ddd;border-radius:7px;font-size:13px;font-family:var(--font-primary);box-sizing:border-box;">
+                </div>
+                <div>
+                    <label style="font-size:11px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:0.4px;">Precio estimado ($)</label>
+                    <input id="edit-precio" type="number" step="0.01" value="${c.precio_estimado || ''}"
+                        style="width:100%;margin-top:4px;padding:8px 10px;border:1px solid #ddd;border-radius:7px;font-size:13px;font-family:var(--font-primary);box-sizing:border-box;">
+                </div>
+                <div>
+                    <label style="font-size:11px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:0.4px;">Margen objetivo (%)</label>
+                    <input id="edit-margen" type="number" step="1" min="0" max="100" value="${c.margen_estimado != null ? Math.round(c.margen_estimado * 100) : ''}"
+                        style="width:100%;margin-top:4px;padding:8px 10px;border:1px solid #ddd;border-radius:7px;font-size:13px;font-family:var(--font-primary);box-sizing:border-box;">
+                </div>
+            </div>
+
+            <div style="margin-top:12px;">
+                <label style="font-size:11px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:0.4px;">Descripción del proyecto</label>
+                <textarea id="edit-descripcion" rows="3"
+                    style="width:100%;margin-top:4px;padding:8px 10px;border:1px solid #ddd;border-radius:7px;font-size:13px;font-family:var(--font-primary);resize:vertical;box-sizing:border-box;">${c.descripcion || ''}</textarea>
+            </div>
+            <div style="margin-top:12px;">
+                <label style="font-size:11px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:0.4px;">Notas internas</label>
+                <textarea id="edit-notas-internas" rows="2"
+                    style="width:100%;margin-top:4px;padding:8px 10px;border:1px solid #ddd;border-radius:7px;font-size:13px;font-family:var(--font-primary);resize:vertical;box-sizing:border-box;">${c.notas_internas || ''}</textarea>
+            </div>
+            <div style="margin-top:12px;">
+                <label style="font-size:11px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:0.4px;">Notas de estimación</label>
+                <textarea id="edit-notas-estimacion" rows="2"
+                    style="width:100%;margin-top:4px;padding:8px 10px;border:1px solid #ddd;border-radius:7px;font-size:13px;font-family:var(--font-primary);resize:vertical;box-sizing:border-box;">${c.notas_estimacion || ''}</textarea>
+            </div>
+
+            <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;">
+                <button onclick="document.getElementById('cotiz-editar-overlay').remove()"
+                    class="btn btn-secondary" style="padding:9px 20px;font-size:13px;">Cancelar</button>
+                <button id="btn-guardar-edicion" onclick="CotizacionesComponent._guardarEdicion(${cotizacionId})"
+                    class="btn btn-primary" style="padding:9px 22px;font-size:13px;background:#5f7830;border-color:#4a5e24;">
+                    <i data-lucide="save" style="width:13px;height:13px;"></i> Guardar Cambios
+                </button>
+            </div>
+        </div>`;
+
+        document.body.appendChild(overlay);
+        lucide.createIcons();
+    },
+
+    async _guardarEdicion(cotizacionId) {
+        const btn = document.getElementById('btn-guardar-edicion');
+        if (btn) { btn.disabled = true; btn.textContent = 'Guardando…'; }
+
+        const margenRaw = parseFloat(document.getElementById('edit-margen')?.value);
+        const costoRaw  = parseFloat(document.getElementById('edit-costo')?.value);
+        const precioRaw = parseFloat(document.getElementById('edit-precio')?.value);
+        const presupRaw = parseFloat(document.getElementById('edit-presupuesto')?.value);
+
+        const data = {
+            nombre_cliente:   document.getElementById('edit-nombre')?.value.trim() || null,
+            email:            document.getElementById('edit-email')?.value.trim() || null,
+            telefono:         document.getElementById('edit-telefono')?.value.trim() || null,
+            descripcion:      document.getElementById('edit-descripcion')?.value.trim() || null,
+            presupuesto_aprox: isNaN(presupRaw) ? null : presupRaw,
+            estado:           document.getElementById('edit-estado')?.value || null,
+            notas_internas:   document.getElementById('edit-notas-internas')?.value.trim() || null,
+            costo_estimado:   isNaN(costoRaw)  ? null : costoRaw,
+            precio_estimado:  isNaN(precioRaw) ? null : precioRaw,
+            margen_estimado:  isNaN(margenRaw) ? null : margenRaw / 100,
+            notas_estimacion: document.getElementById('edit-notas-estimacion')?.value.trim() || null,
+        };
+
+        // Limpiar nulos para que el backend no sobreescriba campos no editados
+        Object.keys(data).forEach(k => { if (data[k] === null || data[k] === '') delete data[k]; });
+
+        try {
+            await EvergreenAPI.editarCotizacion(cotizacionId, data);
+            document.getElementById('cotiz-editar-overlay')?.remove();
+            const container = document.getElementById('cotizaciones-container');
+            if (container && container.dataset.view === 'detalle') {
+                await this.abrirDetalle(cotizacionId);
+            } else {
+                await this.render('cotizaciones-container');
+            }
+        } catch (e) {
+            alert('Error al guardar: ' + e.message);
+            if (btn) { btn.disabled = false; btn.textContent = 'Guardar Cambios'; }
         }
     },
 
@@ -621,12 +799,14 @@ const CotizacionesComponent = {
         if (btn) { btn.disabled = true; btn.textContent = 'Guardando…'; }
 
         try {
-            await EvergreenAPI.guardarEstimacionCotizacion(cotizacionId, {
+            const payload = {
                 costo_estimado:  Math.round(est.costoTotal    * 100) / 100,
                 precio_estimado: Math.round(est.precioSugerido * 100) / 100,
                 margen_estimado: est.margen / 100,
                 notas_estimacion: notas || null,
-            });
+            };
+            console.log('[guardarEstimacion] cotizacionId:', cotizacionId, 'payload:', payload);
+            await EvergreenAPI.guardarEstimacionCotizacion(cotizacionId, payload);
             document.getElementById('cotiz-estimar-overlay')?.remove();
             await this.abrirDetalle(cotizacionId);
         } catch (e) {

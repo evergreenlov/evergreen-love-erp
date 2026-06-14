@@ -3037,6 +3037,28 @@ const EvergreenAPI = {
         }
     },
 
+    async eliminarCotizacion(id) {
+        const response = await fetch(`${API_BASE_URL}/cotizaciones/${id}`, { method: 'DELETE' });
+        if (!response.ok) {
+            const err = await response.json().catch(() => ({}));
+            throw new Error(err.detail || `Error ${response.status}`);
+        }
+        return await response.json();
+    },
+
+    async editarCotizacion(id, data) {
+        const response = await fetch(`${API_BASE_URL}/cotizaciones/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        if (!response.ok) {
+            const err = await response.json().catch(() => ({}));
+            throw new Error(err.detail || `Error ${response.status}`);
+        }
+        return await response.json();
+    },
+
     async guardarEstimacionCotizacion(id, data) {
         const token = localStorage.getItem('ev_token') || '';
         const response = await fetch(`${API_BASE_URL}/cotizaciones/${id}/estimacion`, {
@@ -3197,6 +3219,19 @@ const EvergreenAPI = {
             console.error("getCatalogoCliente error:", error);
             throw error;
         }
+    },
+
+    async actualizarNivelPrecioCliente(clienteId, nivel) {
+        const response = await fetch(`${API_BASE_URL}/clientes/${clienteId}/nivel-precio`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ nivel_precio_b2b: nivel })
+        });
+        if (!response.ok) {
+            const err = await response.json().catch(() => ({}));
+            throw new Error(err.detail || `Error ${response.status}`);
+        }
+        return await response.json();
     },
 
     async addProductoCatalogoCliente(itemData) {

@@ -974,7 +974,10 @@ const CostosComponent = {
         const defPersonal = editingProd ? editingProd.personalizado : 0;
         const defShTitulo = editingProd ? _esc(editingProd.shopify_titulo || '') : '';
         const defShTags   = editingProd ? _esc(editingProd.shopify_tags || '') : '';
-        const defB2bPrecio = editingProd && editingProd.b2b_precio ? editingProd.b2b_precio.toFixed(2) : '';
+        const defB2bPrecio   = editingProd && editingProd.b2b_precio ? editingProd.b2b_precio.toFixed(2) : '';
+        const defWholesale12 = editingProd && editingProd.precio_wholesale_12 ? editingProd.precio_wholesale_12.toFixed(2) : '';
+        const defWholesale24 = editingProd && editingProd.precio_wholesale_24 ? editingProd.precio_wholesale_24.toFixed(2) : '';
+        const defWholesale50 = editingProd && editingProd.precio_wholesale_50 ? editingProd.precio_wholesale_50.toFixed(2) : '';
 
         modal.innerHTML = `
             <div class="modal-card card" style="max-width: 500px; width: 90%; margin: 60px auto; position: relative;">
@@ -1058,21 +1061,41 @@ const CostosComponent = {
                         </div>
                     </div>
 
-                    <!-- Asignación Opcional a Cliente B2B -->
+                    <!-- Asignación Opcional a Cliente B2B + Precios Wholesale -->
                     <div style="background-color: var(--color-gray-light); padding: 12px; border-radius: var(--radius-md); border: 1px solid var(--color-gray-border); margin-top: 2px;">
                         <h4 style="font-size: 13px; font-weight: 600; color: var(--color-moss-green); margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
-                            <i data-lucide="users" style="width: 14px; height: 14px;"></i> Asignar a Cliente B2B (Opcional)
+                            <i data-lucide="users" style="width: 14px; height: 14px;"></i> Precios B2B / Wholesale (Opcional)
                         </h4>
-                        <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 12px; font-size: 12px;">
+                        <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 12px; font-size: 12px; margin-bottom:10px;">
                             <div style="display: flex; flex-direction: column; gap: 3px;">
-                                <label style="font-weight: 500;">Seleccionar Cliente</label>
+                                <label style="font-weight: 500;">Asignar a Cliente (precio especial)</label>
                                 <select id="prod-b2b-cliente-id" style="padding: 6px 10px; border-radius: var(--radius-sm); border: 1px solid var(--color-gray-border); font-size: 12px; cursor:pointer; background-color: var(--color-white);">
                                     ${b2bOptions}
                                 </select>
                             </div>
                             <div style="display: flex; flex-direction: column; gap: 3px;">
-                                <label style="font-weight: 500;">Precio Pactado B2B ($)</label>
+                                <label style="font-weight: 500;">Precio Especial ($) <span style="color:#aaa;font-weight:400;">override</span></label>
                                 <input type="number" step="0.01" id="prod-b2b-precio" placeholder="0.00" value="${defB2bPrecio}" style="padding: 6px 10px; border-radius: var(--radius-sm); border: 1px solid var(--color-gray-border); font-size: 12px;">
+                            </div>
+                        </div>
+                        <div style="border-top:1px solid #e0d8cc;padding-top:10px;">
+                            <div style="font-size:11px;font-weight:600;color:#6a7d52;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.4px;">Precios por Nivel (aplican automáticamente)</div>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; font-size: 12px;">
+                                <div style="display: flex; flex-direction: column; gap: 3px;">
+                                    <label style="font-weight: 500; color:#2d6a9f;">Precio B2B 12+ ($)</label>
+                                    <input type="number" step="0.01" id="prod-wholesale-12" placeholder="0.00" value="${defWholesale12}"
+                                        style="padding: 6px 10px; border-radius: var(--radius-sm); border: 1px solid #b8d4f0; font-size: 12px; background:#f5f9ff;">
+                                </div>
+                                <div style="display: flex; flex-direction: column; gap: 3px;">
+                                    <label style="font-weight: 500; color:#1a5276;">Precio B2B 24+ ($)</label>
+                                    <input type="number" step="0.01" id="prod-wholesale-24" placeholder="0.00" value="${defWholesale24}"
+                                        style="padding: 6px 10px; border-radius: var(--radius-sm); border: 1px solid #a9c5e8; font-size: 12px; background:#eef5fb;">
+                                </div>
+                                <div style="display: flex; flex-direction: column; gap: 3px;">
+                                    <label style="font-weight: 500; color:#154360;">Precio Distribuidor 50+ ($)</label>
+                                    <input type="number" step="0.01" id="prod-wholesale-50" placeholder="0.00" value="${defWholesale50}"
+                                        style="padding: 6px 10px; border-radius: var(--radius-sm); border: 1px solid #85b4d4; font-size: 12px; background:#e8f2f9;">
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1198,8 +1221,11 @@ const CostosComponent = {
             const anchoActual = parseFloat(document.getElementById('prod-ancho')?.value) || 2.0;
             const altoActual  = parseFloat(document.getElementById('prod-alto')?.value)  || 2.0;
 
-            const b2bClienteId = document.getElementById('prod-b2b-cliente-id').value;
-            const b2bPrecio = parseFloat(document.getElementById('prod-b2b-precio').value);
+            const b2bClienteId   = document.getElementById('prod-b2b-cliente-id').value;
+            const b2bPrecio      = parseFloat(document.getElementById('prod-b2b-precio').value);
+            const wholesale12Val = parseFloat(document.getElementById('prod-wholesale-12').value) || null;
+            const wholesale24Val = parseFloat(document.getElementById('prod-wholesale-24').value) || null;
+            const wholesale50Val = parseFloat(document.getElementById('prod-wholesale-50').value) || null;
 
             if (isEditing) {
                 // --- MODO EDICIÓN: actualizar producto existente ---
@@ -1234,6 +1260,9 @@ const CostosComponent = {
                         costo_resina_por_ml: this.ultimoCalculo.costo_resina_por_ml,
                         tiempo_resina_activo_min: this.ultimoCalculo.tiempo_resina_activo_min,
                         tiempo_resina_curado_min: this.ultimoCalculo.tiempo_resina_curado_min,
+                        precio_wholesale_12: wholesale12Val,
+                        precio_wholesale_24: wholesale24Val,
+                        precio_wholesale_50: wholesale50Val,
                     });
 
                     // Reemplazar foto si se seleccionó una nueva
@@ -1277,7 +1306,11 @@ const CostosComponent = {
                     usa_resina: this.ultimoCalculo.usa_resina,
                     cantidad_resina_ml: this.ultimoCalculo.cantidad_resina_ml,
                     costo_resina_por_ml: this.ultimoCalculo.costo_resina_por_ml,
-                    tiempo_resina_min: this.ultimoCalculo.tiempo_resina_min,
+                    tiempo_resina_activo_min: this.ultimoCalculo.tiempo_resina_activo_min,
+                    tiempo_resina_curado_min: this.ultimoCalculo.tiempo_resina_curado_min,
+                    precio_wholesale_12: wholesale12Val,
+                    precio_wholesale_24: wholesale24Val,
+                    precio_wholesale_50: wholesale50Val,
                 };
 
                 try {

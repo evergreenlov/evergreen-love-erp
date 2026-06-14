@@ -67,6 +67,9 @@ app.add_middleware(
 def startup_event():
     init_db()
     bootstrap_admin()
+    # Diagnóstico: imprimir rutas de cotizaciones registradas
+    cotiz_routes = [(r.path, list(getattr(r, 'methods', []))) for r in app.routes if 'cotizacion' in r.path]
+    print("📋 Rutas cotizaciones registradas:", cotiz_routes)
     try:
         backup_path = create_backup()
         print(f"✅ Respaldo automático creado: {os.path.basename(backup_path)}")

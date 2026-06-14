@@ -14,6 +14,21 @@ class EstimacionSchema(BaseModel):
     margen_estimado: float
     notas_estimacion: Optional[str] = None
 
+
+class CotizacionEditSchema(BaseModel):
+    nombre_cliente: Optional[str] = None
+    email: Optional[str] = None
+    telefono: Optional[str] = None
+    descripcion: Optional[str] = None
+    presupuesto_aprox: Optional[float] = None
+    estado: Optional[str] = None
+    notas_internas: Optional[str] = None
+    costo_estimado: Optional[float] = None
+    precio_estimado: Optional[float] = None
+    margen_estimado: Optional[float] = None
+    notas_estimacion: Optional[str] = None
+
+
 router = APIRouter(prefix="/api", tags=["cotizaciones"])
 
 COTIZACIONES_DIR = os.path.abspath(
@@ -190,6 +205,7 @@ def detalle_cotizacion(
 
 
 @router.put("/cotizaciones/{cotizacion_id}/estimacion")
+@router.put("/cotizaciones/{cotizacion_id}/estimacion/")
 def guardar_estimacion(
     cotizacion_id: int,
     estimacion: EstimacionSchema,
@@ -219,6 +235,49 @@ def guardar_estimacion(
         ))
         conn.commit()
         return {"status": "success", "message": "Estimación guardada", "estado": nuevo_estado}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
+
+
+@router.put("/cotizaciones/{cotizacion_id}")
+def editar_cotizacion(
+    cotizacion_id: int,
+    payload: CotizacionEditSchema,
+    current_user: dict = Depends(get_current_admin),
+):
+    estados_validos = {"nueva", "en_revision", "cotizada", "aprobada", "rechazada"}
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT id FROM cotizaciones WHERE id = ?", (cotizacion_id,))
+        if not cursor.fetchone():
+            raise HTTPException(status_code=404, detail="Cotización no encontrada")
+
+        if payload.estado is not None and payload.estado not in estados_validos:
+            raise HTTPException(status_code=400, detail=f"Estado inválido: {payload.estado}")
+
+        fields, values = [], []
+        for col in ("nombre_cliente", "email", "telefono", "descripcion",
+                    "presupuesto_aprox", "estado", "notas_internas",
+                    "costo_estimado", "precio_estimado", "margen_estimado",
+                    "notas_estimacion"):
+            val = getattr(payload, col)
+            if val is not None:
+                fields.append(f"{col} = ?")
+                values.append(val)
+
+        if not fields:
+            return {"status": "success", "message": "Sin cambios"}
+
+        fields.append("fecha_actualizado = datetime('now','localtime')")
+        values.append(cotizacion_id)
+        cursor.execute(f"UPDATE cotizaciones SET {', '.join(fields)} WHERE id = ?", values)
+        conn.commit()
+        return {"status": "success", "message": "Cotización actualizada"}
     except HTTPException:
         raise
     except Exception as e:
@@ -369,6 +428,50 @@ def listar_imagenes_cotizacion(
             imagenes.append(i)
         return {"status": "success", "data": imagenes}
     except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
+
+
+@router.delete("/cotizaciones/{cotizacion_id}")
+def eliminar_cotizacion(
+    cotizacion_id: int,
+    current_user: dict = Depends(get_current_admin),
+):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT id, orden_produccion_id FROM cotizaciones WHERE id = ?", (cotizacion_id,))
+        row = cursor.fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="Cotización no encontrada")
+        if row["orden_produccion_id"]:
+            raise HTTPException(
+                status_code=409,
+                detail="No se puede borrar una cotización ya enviada a producción."
+            )
+
+        # Borrar archivos físicos de imágenes
+        cursor.execute(
+            "SELECT nombre_archivo FROM cotizacion_imagenes WHERE cotizacion_id = ?",
+            (cotizacion_id,)
+        )
+        for img in cursor.fetchall():
+            ruta = os.path.join(COTIZACIONES_DIR, img["nombre_archivo"])
+            try:
+                if os.path.exists(ruta):
+                    os.remove(ruta)
+            except Exception:
+                pass
+
+        cursor.execute("DELETE FROM cotizacion_imagenes WHERE cotizacion_id = ?", (cotizacion_id,))
+        cursor.execute("DELETE FROM cotizaciones WHERE id = ?", (cotizacion_id,))
+        conn.commit()
+        return {"status": "success", "message": f"Cotización #{cotizacion_id} eliminada"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        conn.rollback()
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         conn.close()

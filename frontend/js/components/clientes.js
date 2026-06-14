@@ -391,6 +391,21 @@ const ClientesComponent = {
                     </div>
                 </div>
             </div>
+            <div style="background:#f0f4ff;border:1.5px solid #b8c8dd;border-radius:10px;padding:14px 16px;margin-bottom:18px;">
+                <div style="font-size:12px;font-weight:600;color:#1d3a6e;margin-bottom:10px;display:flex;align-items:center;gap:5px;">
+                    <i data-lucide="tag" style="width:13px;height:13px;"></i> Nivel de Precios B2B
+                </div>
+                <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                    <select id="select-nivel-precio" style="padding:6px 12px;border:1px solid #b8c8dd;border-radius:6px;font-size:13px;font-family:var(--font-primary);background:white;color:#1d3a6e;cursor:pointer;">
+                        <option value="retail" ${(cliente.nivel_precio_b2b || 'retail') === 'retail' ? 'selected' : ''}>Retail</option>
+                        <option value="wholesale_12" ${(cliente.nivel_precio_b2b || '') === 'wholesale_12' ? 'selected' : ''}>Mayoreo 12+</option>
+                        <option value="wholesale_24" ${(cliente.nivel_precio_b2b || '') === 'wholesale_24' ? 'selected' : ''}>Mayoreo 24+</option>
+                        <option value="wholesale_50" ${(cliente.nivel_precio_b2b || '') === 'wholesale_50' ? 'selected' : ''}>Distribuidor 50+</option>
+                    </select>
+                    <button id="btn-guardar-nivel" style="font-size:11px;padding:5px 14px;background:#1976d2;color:white;border:none;border-radius:6px;cursor:pointer;font-family:var(--font-primary);">Guardar Nivel</button>
+                    <span id="nivel-guardado-msg" style="display:none;font-size:11px;color:#27ae60;font-weight:600;">✓ Guardado</span>
+                </div>
+            </div>
             <div id="catalog-items-container">
                 <div class="loading-state"><div class="spinner"></div><p>Cargando catálogo...</p></div>
             </div>
@@ -398,6 +413,20 @@ const ClientesComponent = {
 
         lucide.createIcons();
         this.setupB2BAccessListeners(cliente);
+
+        const btnGuardarNivel = document.getElementById('btn-guardar-nivel');
+        if (btnGuardarNivel) {
+            btnGuardarNivel.addEventListener('click', async () => {
+                const nivel = document.getElementById('select-nivel-precio').value;
+                try {
+                    await EvergreenAPI.actualizarNivelPrecioCliente(this.selectedClienteId, nivel);
+                    const msg = document.getElementById('nivel-guardado-msg');
+                    if (msg) { msg.style.display = 'inline'; setTimeout(() => { msg.style.display = 'none'; }, 2500); }
+                } catch (err) {
+                    alert('Error al guardar nivel: ' + err.message);
+                }
+            });
+        }
 
         try {
             const res = await EvergreenAPI.getCatalogoCliente(this.selectedClienteId);
