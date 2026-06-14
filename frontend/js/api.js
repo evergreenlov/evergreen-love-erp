@@ -20,7 +20,8 @@ function getFullImageUrl(path) {
 // SISTEMA OFFLINE EMULADO CON LOCALSTORAGE
 // ==========================================
 (function() {
-    let offlineMode = false;
+    let offlineMode = null;  // null=sin verificar, false=online, true=offline
+    let healthCheckPromise = null;  // evita health checks concurrentes
     let initialized = false;
 
     const OFFLINE_DB_VERSION = "2026-06-09-v3";
@@ -1669,24 +1670,28 @@ function getFullImageUrl(path) {
             return originalFetch.apply(this, arguments);
         }
 
-        // Si el estado de conexión no ha sido determinado, probarlo
-        if (offlineMode === false) {
-            try {
-                // Hacer una llamada rápida con timeout
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 45000);
-                const check = await originalFetch(`${API_BASE_URL}/health`, { signal: controller.signal });
-                clearTimeout(timeoutId);
-                if (!check.ok) throw new Error();
-                
-                // Validar que la respuesta sea JSON real y no HTML de redirección de hosting
-                const health = await check.json();
-                if (!health || health.status !== 'healthy') throw new Error();
-            } catch (e) {
-                console.warn("⚠️ Backend no disponible. Activando modo emulación offline en localStorage.");
-                offlineMode = true;
-                initDB();
+        // Verificar conectividad una sola vez por sesión de página
+        // healthCheckPromise evita que llamadas concurrentes lancen múltiples health checks
+        if (offlineMode === null) {
+            if (!healthCheckPromise) {
+                healthCheckPromise = (async () => {
+                    try {
+                        const controller = new AbortController();
+                        const timeoutId = setTimeout(() => controller.abort(), 3000);  // 3s máximo
+                        const check = await originalFetch(`${API_BASE_URL}/health`, { signal: controller.signal });
+                        clearTimeout(timeoutId);
+                        if (!check.ok) throw new Error();
+                        const health = await check.json();
+                        if (!health || health.status !== 'healthy') throw new Error();
+                        offlineMode = false;  // backend confirmado online
+                    } catch (e) {
+                        console.warn("⚠️ Backend no disponible. Activando modo emulación offline en localStorage.");
+                        offlineMode = true;
+                        initDB();
+                    }
+                })();
             }
+            await healthCheckPromise;
         }
 
         if (!offlineMode) {
@@ -1803,7 +1808,7 @@ function getFullImageUrl(path) {
                 saveTable('gastos', table);
                 return mockResponse(newGasto);
             }
-            if (path.startsWith('/gastos/') && method === 'DELETE') {
+            if (path.startsWith('/gastos/') && method === 'DELETE' && !path.endsWith('/recibo')) {
                 const id = parseInt(path.split('/')[2]);
                 const table = getTable('gastos');
                 const idx = table.findIndex(g => g.id === id);
@@ -1811,6 +1816,49 @@ function getFullImageUrl(path) {
                 table.splice(idx, 1);
                 saveTable('gastos', table);
                 return mockResponse({ status: "success", message: "Gasto eliminado" });
+            }
+            // PUT /gastos/{id} — actualizar campos de un gasto
+            if (path.match(/^\/gastos\/\d+$/) && method === 'PUT') {
+                const id = parseInt(path.split('/')[2]);
+                const table = getTable('gastos');
+                const idx = table.findIndex(g => g.id === id);
+                if (idx === -1) return mockResponse({ detail: "Gasto no encontrado" }, 404);
+                const updates = JSON.parse(options.body || '{}');
+                table[idx] = { ...table[idx], ...updates };
+                saveTable('gastos', table);
+                return mockResponse({ status: "success", message: "Gasto actualizado correctamente" });
+            }
+            // POST /gastos/{id}/recibo — offline: no puede guardar archivos, retorna éxito simulado
+            if (path.match(/^\/gastos\/\d+\/recibo$/) && method === 'POST') {
+                const id = parseInt(path.split('/')[2]);
+                const table = getTable('gastos');
+                const idx = table.findIndex(g => g.id === id);
+                if (idx === -1) return mockResponse({ detail: "Gasto no encontrado" }, 404);
+                table[idx].recibo_ruta = `offline_recibo_${id}`;
+                saveTable('gastos', table);
+                return mockResponse({ status: "success", message: "Recibo registrado (modo offline — archivo no persistido)", recibo_ruta: table[idx].recibo_ruta });
+            }
+            // GET /gastos/{id}/recibo — offline: no puede servir archivos
+            if (path.match(/^\/gastos\/\d+\/recibo$/) && method === 'GET') {
+                return mockResponse({ detail: "Ver recibo no disponible en modo offline" }, 404);
+            }
+            // GET /gastos/exportar — offline: no puede generar Excel real
+            if (path.startsWith('/gastos/exportar') && method === 'GET') {
+                return mockResponse({ detail: "Exportar Excel no disponible en modo offline" }, 503);
+            }
+
+            // POST /fotos/productos/{id}/remover-fondo — offline: requiere backend
+            if (path.match(/^\/fotos\/productos\/\d+\/remover-fondo$/) && method === 'POST') {
+                return mockResponse({ detail: "Remover fondo no disponible en modo offline" }, 503);
+            }
+
+            // DELETE /gastos/{id}/recibo — offline: limpia la referencia en localStorage
+            if (path.match(/^\/gastos\/\d+\/recibo$/) && method === 'DELETE') {
+                const id = parseInt(path.split('/')[2]);
+                const table = getTable('gastos');
+                const idx = table.findIndex(g => g.id === id);
+                if (idx !== -1) { table[idx].recibo_ruta = null; saveTable('gastos', table); }
+                return mockResponse({ status: "success", message: "Recibo eliminado" });
             }
 
             // 4. Productos
@@ -2313,6 +2361,22 @@ function getFullImageUrl(path) {
                 return mockResponse({ status: "success", foto_url: url });
             }
 
+            // Cotizaciones — solo lectura en modo offline (siempre vacío)
+            if (path === '/cotizaciones' && method === 'GET') {
+                return mockResponse({ status: "success", data: [], totales: {} });
+            }
+            // PUT /cotizaciones/{id}/estimacion — persiste en localStorage en modo offline
+            if (method === 'PUT' && /^\/cotizaciones\/\d+\/estimacion$/.test(path)) {
+                const cotizId = parseInt(path.split('/')[2]);
+                const tabla = JSON.parse(localStorage.getItem('offline_cotizaciones') || '[]');
+                const idx = tabla.findIndex(c => c.id === cotizId);
+                if (idx >= 0) {
+                    Object.assign(tabla[idx], body, { estado: tabla[idx].estado === 'nueva' || tabla[idx].estado === 'en_revision' ? 'cotizada' : tabla[idx].estado });
+                    localStorage.setItem('offline_cotizaciones', JSON.stringify(tabla));
+                }
+                return mockResponse({ status: "success", message: "Estimación guardada (modo offline)", estado: "cotizada" });
+            }
+
             return mockResponse({ detail: "Endpoint offline no implementado" }, 404);
 
         } catch (e) {
@@ -2342,6 +2406,20 @@ const EvergreenAPI = {
             return await response.json();
         } catch (error) {
             console.error("DB Status error:", error);
+            throw error;
+        }
+    },
+
+    async getDashboardEjecutivo() {
+        try {
+            const token = localStorage.getItem('ev_token') || '';
+            const response = await fetch(`${API_BASE_URL}/dashboard/ejecutivo`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (!response.ok) throw new Error("Error al cargar dashboard");
+            return await response.json();
+        } catch (error) {
+            console.error("getDashboardEjecutivo error:", error);
             throw error;
         }
     },
@@ -2576,6 +2654,29 @@ const EvergreenAPI = {
             console.error("updateProducto error:", error);
             throw error;
         }
+    },
+
+    async getConfiguracion() {
+        const token = localStorage.getItem('ev_token') || '';
+        const response = await fetch(`${API_BASE_URL}/configuracion`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!response.ok) throw new Error('Error al obtener configuración');
+        return await response.json();
+    },
+
+    async updateConfiguracion(data) {
+        const token = localStorage.getItem('ev_token') || '';
+        const response = await fetch(`${API_BASE_URL}/configuracion`, {
+            method: 'PUT',
+            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        if (!response.ok) {
+            const err = await response.json().catch(() => ({}));
+            throw new Error(err.detail || `Error ${response.status}`);
+        }
+        return await response.json();
     },
 
     // 5. Órdenes de Producción
@@ -2815,6 +2916,188 @@ const EvergreenAPI = {
         }
     },
 
+    async getFotosProducto(productoId) {
+        try {
+            const response = await fetch(`${API_BASE_URL}/fotos/productos/${productoId}`);
+            if (!response.ok) throw new Error("Error al obtener fotos del producto");
+            return await response.json();
+        } catch (error) {
+            console.error("getFotosProducto error:", error);
+            throw error;
+        }
+    },
+
+    async deleteFoto(fotoId) {
+        try {
+            const response = await fetch(`${API_BASE_URL}/fotos/${fotoId}`, { method: 'DELETE' });
+            if (!response.ok) {
+                const err = await response.json();
+                throw new Error(err.detail || "Error al eliminar foto");
+            }
+            return await response.json();
+        } catch (error) {
+            console.error("deleteFoto error:", error);
+            throw error;
+        }
+    },
+
+    async crearCotizacion(formData) {
+        try {
+            const response = await fetch(`${API_BASE_URL}/cotizaciones`, {
+                method: 'POST',
+                body: formData
+            });
+            if (!response.ok) {
+                const err = await response.json();
+                throw new Error(err.detail || "Error al enviar cotización");
+            }
+            return await response.json();
+        } catch (error) {
+            console.error("crearCotizacion error:", error);
+            throw error;
+        }
+    },
+
+    async getCotizaciones(estado) {
+        try {
+            const token = localStorage.getItem('ev_token') || '';
+            const url = estado
+                ? `${API_BASE_URL}/cotizaciones?estado=${encodeURIComponent(estado)}`
+                : `${API_BASE_URL}/cotizaciones`;
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 15000);  // 15s máximo
+            const response = await fetch(url, {
+                headers: { 'Authorization': `Bearer ${token}` },
+                signal: controller.signal
+            });
+            clearTimeout(timeoutId);
+            if (!response.ok) throw new Error(`Error al obtener cotizaciones (${response.status})`);
+            return await response.json();
+        } catch (error) {
+            console.error("getCotizaciones error:", error);
+            throw error;
+        }
+    },
+
+    async getDetalleCotizacion(id) {
+        try {
+            const token = localStorage.getItem('ev_token') || '';
+            const response = await fetch(`${API_BASE_URL}/cotizaciones/${id}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (!response.ok) throw new Error("Error al obtener cotización");
+            return await response.json();
+        } catch (error) {
+            console.error("getDetalleCotizacion error:", error);
+            throw error;
+        }
+    },
+
+    async actualizarEstadoCotizacion(id, estado) {
+        try {
+            const token = localStorage.getItem('ev_token') || '';
+            const response = await fetch(`${API_BASE_URL}/cotizaciones/${id}/estado`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ estado })
+            });
+            if (!response.ok) {
+                const err = await response.json();
+                throw new Error(err.detail || "Error al actualizar estado");
+            }
+            return await response.json();
+        } catch (error) {
+            console.error("actualizarEstadoCotizacion error:", error);
+            throw error;
+        }
+    },
+
+    async actualizarNotasCotizacion(id, notas_internas) {
+        try {
+            const token = localStorage.getItem('ev_token') || '';
+            const response = await fetch(`${API_BASE_URL}/cotizaciones/${id}/notas`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ notas_internas })
+            });
+            if (!response.ok) {
+                const err = await response.json();
+                throw new Error(err.detail || "Error al guardar notas");
+            }
+            return await response.json();
+        } catch (error) {
+            console.error("actualizarNotasCotizacion error:", error);
+            throw error;
+        }
+    },
+
+    async guardarEstimacionCotizacion(id, data) {
+        const token = localStorage.getItem('ev_token') || '';
+        const response = await fetch(`${API_BASE_URL}/cotizaciones/${id}/estimacion`, {
+            method: 'PUT',
+            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        if (!response.ok) {
+            const err = await response.json().catch(() => ({}));
+            throw new Error(err.detail || `Error ${response.status}`);
+        }
+        return await response.json();
+    },
+
+    async convertirCotizacion(cotizacionId) {
+        try {
+            const token = localStorage.getItem('ev_token') || '';
+            const response = await fetch(`${API_BASE_URL}/cotizaciones/${cotizacionId}/convertir`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.detail || "Error al convertir cotización");
+            return data;
+        } catch (error) {
+            console.error("convertirCotizacion error:", error);
+            throw error;
+        }
+    },
+
+    async getFotosCotizacion(cotizacionId) {
+        try {
+            const token = localStorage.getItem('ev_token') || '';
+            const response = await fetch(`${API_BASE_URL}/cotizaciones/${cotizacionId}/imagenes`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (!response.ok) throw new Error("Error al obtener imágenes de cotización");
+            return await response.json();
+        } catch (error) {
+            console.error("getFotosCotizacion error:", error);
+            throw error;
+        }
+    },
+
+    async enviarEmailFactura(facturaId, emailDestino = '') {
+        const token = localStorage.getItem('ev_token') || '';
+        const response = await fetch(`${API_BASE_URL}/facturas/${facturaId}/enviar-email`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ email_destino: emailDestino || null }),
+        });
+        if (!response.ok) {
+            const err = await response.json().catch(() => ({}));
+            throw new Error(err.detail || `Error ${response.status}`);
+        }
+        return await response.json();
+    },
+
     async getFotosOrden(ordenId) {
         try {
             const response = await fetch(`${API_BASE_URL}/fotos/ordenes/${ordenId}`);
@@ -3045,6 +3328,58 @@ const EvergreenAPI = {
             throw error;
         }
     },
+    async getIvuPeriodo(fechaInicio, fechaFin) {
+        try {
+            const params = new URLSearchParams({ fecha_inicio: fechaInicio, fecha_fin: fechaFin });
+            const response = await fetch(`${API_BASE_URL}/contabilidad/ivu-periodo?${params}`);
+            if (!response.ok) throw new Error("Error al calcular IVU por periodo");
+            return await response.json();
+        } catch (error) {
+            console.error("getIvuPeriodo error:", error);
+            throw error;
+        }
+    },
+    async removerFondo(productoId) {
+        const token = localStorage.getItem('ev_token') || '';
+        const response = await fetch(`${API_BASE_URL}/fotos/productos/${productoId}/remover-fondo`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!response.ok) {
+            const err = await response.json().catch(() => ({}));
+            throw new Error(err.detail || 'Error al remover fondo');
+        }
+        return await response.json();
+    },
+    async exportGastosExcel({ desde, hasta, categoria, metodo, recibo } = {}) {
+        const p = new URLSearchParams();
+        if (desde)     p.append('desde', desde);
+        if (hasta)     p.append('hasta', hasta);
+        if (categoria) p.append('categoria', categoria);
+        if (metodo)    p.append('metodo', metodo);
+        if (recibo)    p.append('recibo', recibo);
+        const token = localStorage.getItem('ev_token') || '';
+        const response = await fetch(`${API_BASE_URL}/gastos/exportar?${p}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!response.ok) {
+            const err = await response.json().catch(() => ({}));
+            throw new Error(err.detail || 'Error al generar Excel de gastos');
+        }
+        return await response.blob();
+    },
+    async exportIvuExcel(fechaInicio, fechaFin) {
+        const params = new URLSearchParams({ fecha_inicio: fechaInicio, fecha_fin: fechaFin });
+        const token = localStorage.getItem('ev_token') || '';
+        const response = await fetch(`${API_BASE_URL}/contabilidad/ivu-periodo/exportar?${params}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!response.ok) {
+            const err = await response.json().catch(() => ({}));
+            throw new Error(err.detail || 'Error al generar Excel');
+        }
+        return await response.blob();
+    },
     async getNuevasFacturas() {
         try {
             const response = await fetch(`${API_BASE_URL}/facturas/nuevas`);
@@ -3105,6 +3440,57 @@ const EvergreenAPI = {
             console.error("deleteGasto error:", error);
             throw error;
         }
+    },
+    async actualizarGasto(gastoId, data) {
+        const token = localStorage.getItem('ev_token') || '';
+        const response = await fetch(`${API_BASE_URL}/gastos/${gastoId}`, {
+            method: 'PUT',
+            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        if (!response.ok) {
+            const err = await response.json().catch(() => ({}));
+            throw new Error(err.detail || 'Error al actualizar gasto');
+        }
+        return await response.json();
+    },
+    async subirReciboGasto(gastoId, archivo) {
+        const token = localStorage.getItem('ev_token') || '';
+        const formData = new FormData();
+        formData.append('archivo', archivo);
+        const response = await fetch(`${API_BASE_URL}/gastos/${gastoId}/recibo`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` },
+            body: formData
+        });
+        if (!response.ok) {
+            const err = await response.json().catch(() => ({}));
+            throw new Error(err.detail || 'Error al subir recibo');
+        }
+        return await response.json();
+    },
+    async verReciboGasto(gastoId) {
+        const token = localStorage.getItem('ev_token') || '';
+        const response = await fetch(`${API_BASE_URL}/gastos/${gastoId}/recibo`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!response.ok) throw new Error('Recibo no encontrado');
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        window.open(url, '_blank');
+        setTimeout(() => URL.revokeObjectURL(url), 30000);
+    },
+    async eliminarReciboGasto(gastoId) {
+        const token = localStorage.getItem('ev_token') || '';
+        const response = await fetch(`${API_BASE_URL}/gastos/${gastoId}/recibo`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!response.ok) {
+            const err = await response.json().catch(() => ({}));
+            throw new Error(err.detail || 'Error al eliminar recibo');
+        }
+        return await response.json();
     },
     // Carrito de compras
     async addToCart(sessionId, productoId, cantidad = 1) {

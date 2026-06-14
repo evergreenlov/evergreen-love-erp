@@ -766,6 +766,139 @@ const FacturasComponent = {
                     </div>
                 </div>
 
+                <!-- TARJETAS DE ESTADO DE FACTURAS -->
+                <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(180px, 1fr)); gap:14px; margin-bottom:24px;">
+                    <div class="card" style="padding:18px 20px; border-left:4px solid var(--color-moss-green); display:flex; flex-direction:column; gap:6px;">
+                        <div style="font-size:11px; font-weight:700; color:var(--color-moss-green); text-transform:uppercase; letter-spacing:0.6px; display:flex; align-items:center; gap:6px;">
+                            <i data-lucide="check-circle-2" style="width:14px; height:14px;"></i> Pagadas
+                        </div>
+                        <div id="status-card-pagadas-count" style="font-size:26px; font-weight:800; color:var(--color-soft-black);">0</div>
+                        <div id="status-card-pagadas-total" style="font-size:13px; color:#6c757d; font-weight:600;">$0.00</div>
+                    </div>
+                    <div class="card" style="padding:18px 20px; border-left:4px solid #e8a44a; display:flex; flex-direction:column; gap:6px;">
+                        <div style="font-size:11px; font-weight:700; color:#c88620; text-transform:uppercase; letter-spacing:0.6px; display:flex; align-items:center; gap:6px;">
+                            <i data-lucide="clock" style="width:14px; height:14px;"></i> Pendientes
+                        </div>
+                        <div id="status-card-pendientes-count" style="font-size:26px; font-weight:800; color:var(--color-soft-black);">0</div>
+                        <div id="status-card-pendientes-total" style="font-size:13px; color:#6c757d; font-weight:600;">$0.00</div>
+                    </div>
+                    <div class="card" style="padding:18px 20px; border-left:4px solid var(--color-terracotta); display:flex; flex-direction:column; gap:6px;">
+                        <div style="font-size:11px; font-weight:700; color:var(--color-terracotta); text-transform:uppercase; letter-spacing:0.6px; display:flex; align-items:center; gap:6px;">
+                            <i data-lucide="alert-triangle" style="width:14px; height:14px;"></i> Vencidas
+                        </div>
+                        <div id="status-card-vencidas-count" style="font-size:26px; font-weight:800; color:var(--color-soft-black);">0</div>
+                        <div id="status-card-vencidas-total" style="font-size:13px; color:#6c757d; font-weight:600;">$0.00</div>
+                    </div>
+                    <div class="card" style="padding:18px 20px; border-left:4px solid #adb5bd; display:flex; flex-direction:column; gap:6px;">
+                        <div style="font-size:11px; font-weight:700; color:#6c757d; text-transform:uppercase; letter-spacing:0.6px; display:flex; align-items:center; gap:6px;">
+                            <i data-lucide="x-circle" style="width:14px; height:14px;"></i> Anuladas
+                        </div>
+                        <div id="status-card-anuladas-count" style="font-size:26px; font-weight:800; color:var(--color-soft-black);">0</div>
+                        <div id="status-card-anuladas-total" style="font-size:13px; color:#6c757d; font-weight:600;">$0.00</div>
+                    </div>
+                    <div class="card" id="status-card-sin-recibo" style="padding:18px 20px; border-left:4px solid #6c8ebf; display:flex; flex-direction:column; gap:6px; cursor:pointer;" title="Ver gastos sin recibo">
+                        <div style="font-size:11px; font-weight:700; color:#4a6fa5; text-transform:uppercase; letter-spacing:0.6px; display:flex; align-items:center; gap:6px;">
+                            <i data-lucide="file-x" style="width:14px; height:14px;"></i> Sin Recibo
+                        </div>
+                        <div id="status-card-sinrecibo-count" style="font-size:26px; font-weight:800; color:var(--color-soft-black);">0</div>
+                        <div id="status-card-sinrecibo-total" style="font-size:13px; color:#6c757d; font-weight:600;">$0.00</div>
+                        <div style="font-size:10.5px; color:#4a6fa5; margin-top:2px;">Clic para ver →</div>
+                    </div>
+                </div>
+
+                <!-- GRÁFICAS -->
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:24px;">
+                    <div class="card" style="padding:20px;">
+                        <h3 class="card-title" style="margin-bottom:4px; font-size:14px;">Ventas vs Gastos por Mes</h3>
+                        <p style="font-size:12px; color:#8c8270; margin:0 0 14px;">Comparación mensual de ingresos y gastos deducibles.</p>
+                        <div id="chart-ventas-gastos" style="width:100%; overflow-x:auto;"></div>
+                    </div>
+                    <div class="card" style="padding:20px;">
+                        <h3 class="card-title" style="margin-bottom:4px; font-size:14px;">IVU Devengado por Mes</h3>
+                        <p style="font-size:12px; color:#8c8270; margin:0 0 14px;">Estatal (10.5%) y Municipal (1%) acumulados por mes.</p>
+                        <div id="chart-ivu" style="width:100%; overflow-x:auto;"></div>
+                    </div>
+                </div>
+
+                <!-- DESGLOSE IVU POR PERIODO PERSONALIZADO -->
+                <div class="card" style="margin-bottom:24px;">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:16px; flex-wrap:wrap; gap:12px;">
+                        <div>
+                            <h3 class="card-title" style="margin-bottom:4px; display:flex; align-items:center; gap:8px;">
+                                <i data-lucide="calendar-range" style="color:var(--color-moss-green); width:18px; height:18px;"></i>
+                                Desglose IVU por Periodo
+                            </h3>
+                            <p style="color:#6c757d; font-size:13.5px; margin:0;">
+                                Calcula el IVU devengado para cualquier rango de fechas. Ideal para declaraciones en SURI.
+                            </p>
+                        </div>
+                        <button id="btn-periodo-ivu-actual" class="btn btn-secondary" style="display:inline-flex; align-items:center; gap:6px; padding:8px 14px; font-size:12.5px; white-space:nowrap;">
+                            <i data-lucide="zap" style="width:14px; height:14px;"></i>
+                            Periodo IVU Actual
+                        </button>
+                    </div>
+
+                    <div style="display:flex; align-items:flex-end; gap:12px; flex-wrap:wrap; margin-bottom:20px;">
+                        <div style="display:flex; flex-direction:column; gap:4px;">
+                            <label style="font-size:11px; font-weight:600; color:var(--color-olive-brown); text-transform:uppercase; letter-spacing:0.5px;">Desde</label>
+                            <input type="date" id="ivu-periodo-inicio" style="padding:8px 12px; border:1px solid var(--color-gray-border); border-radius:var(--radius-sm); font-family:var(--font-primary); font-size:13px; background:#fff; outline:none; color:var(--color-soft-black);">
+                        </div>
+                        <div style="display:flex; flex-direction:column; gap:4px;">
+                            <label style="font-size:11px; font-weight:600; color:var(--color-olive-brown); text-transform:uppercase; letter-spacing:0.5px;">Hasta</label>
+                            <input type="date" id="ivu-periodo-fin" style="padding:8px 12px; border:1px solid var(--color-gray-border); border-radius:var(--radius-sm); font-family:var(--font-primary); font-size:13px; background:#fff; outline:none; color:var(--color-soft-black);">
+                        </div>
+                        <button id="btn-calcular-ivu-periodo" class="btn btn-primary" style="display:inline-flex; align-items:center; gap:6px; padding:9px 18px; font-size:13px;">
+                            <i data-lucide="calculator" style="width:15px; height:15px;"></i>
+                            Calcular
+                        </button>
+                        <button id="btn-exportar-ivu-excel" class="btn btn-secondary" style="display:inline-flex; align-items:center; gap:6px; padding:9px 18px; font-size:13px;">
+                            <i data-lucide="file-spreadsheet" style="width:15px; height:15px;"></i>
+                            Exportar Excel
+                        </button>
+                    </div>
+
+                    <div id="ivu-periodo-resultado" style="display:none;">
+                        <div id="ivu-periodo-label" style="font-size:12px; font-weight:600; color:var(--color-olive-brown); text-transform:uppercase; letter-spacing:0.6px; margin-bottom:12px; padding:6px 12px; background:rgba(95,122,69,0.08); border-radius:6px; display:inline-block;"></div>
+                        <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap:12px; margin-top:8px;">
+                            <div style="background:#fdfaf5; border:1px solid #ede6d8; border-radius:10px; padding:16px;">
+                                <div style="font-size:11px; font-weight:600; color:#8c8270; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">Ventas Sujetas a IVU</div>
+                                <div id="ivu-p-ventas" style="font-size:20px; font-weight:700; color:var(--color-soft-black);">$0.00</div>
+                                <div style="font-size:11px; color:#aaa; margin-top:2px;">Subtotal facturas activas</div>
+                            </div>
+                            <div style="background:#fdfaf5; border:1px solid #ede6d8; border-radius:10px; padding:16px;">
+                                <div style="font-size:11px; font-weight:600; color:#8c8270; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">IVU Estatal (10.5%)</div>
+                                <div id="ivu-p-estatal" style="font-size:20px; font-weight:700; color:var(--color-moss-green);">$0.00</div>
+                                <div style="font-size:11px; color:#aaa; margin-top:2px;">SC 2915 — SURI</div>
+                            </div>
+                            <div style="background:#fdfaf5; border:1px solid #ede6d8; border-radius:10px; padding:16px;">
+                                <div style="font-size:11px; font-weight:600; color:#8c8270; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">IVU Municipal (1.0%)</div>
+                                <div id="ivu-p-municipal" style="font-size:20px; font-weight:700; color:var(--color-moss-green);">$0.00</div>
+                                <div style="font-size:11px; color:#aaa; margin-top:2px;">Municipio correspondiente</div>
+                            </div>
+                            <div style="background:#5f7a45; border-radius:10px; padding:16px;">
+                                <div style="font-size:11px; font-weight:600; color:rgba(255,255,255,0.75); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">IVU Total Devengado</div>
+                                <div id="ivu-p-total" style="font-size:20px; font-weight:700; color:#fff;">$0.00</div>
+                                <div style="font-size:11px; color:rgba(255,255,255,0.6); margin-top:2px;">Estatal + Municipal</div>
+                            </div>
+                            <div style="background:#fdfaf5; border:1px solid #ede6d8; border-radius:10px; padding:16px;">
+                                <div style="font-size:11px; font-weight:600; color:#8c8270; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">Total Facturado</div>
+                                <div id="ivu-p-facturado" style="font-size:20px; font-weight:700; color:var(--color-soft-black);">$0.00</div>
+                                <div style="font-size:11px; color:#aaa; margin-top:2px;"><span id="ivu-p-n-facturas">0</span> facturas en el periodo</div>
+                            </div>
+                            <div style="background:#fdfaf5; border:1px solid #ede6d8; border-radius:10px; padding:16px;">
+                                <div style="font-size:11px; font-weight:600; color:#8c8270; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">Pendiente de Cobro</div>
+                                <div id="ivu-p-pendiente" style="font-size:20px; font-weight:700; color:var(--color-terracotta);">$0.00</div>
+                                <div style="font-size:11px; color:#aaa; margin-top:2px;">Facturas no cobradas</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="ivu-periodo-loading" style="display:none; text-align:center; padding:24px; color:#8c8270; font-size:13.5px;">
+                        <i data-lucide="loader-2" style="width:18px; height:18px; animation:spin 1s linear infinite; vertical-align:middle; margin-right:6px;"></i>
+                        Calculando...
+                    </div>
+                    <div id="ivu-periodo-error" style="display:none; background:#fdf0ec; border:1px solid #f5c6b8; border-radius:8px; padding:10px 14px; font-size:13px; color:#c0694a; margin-top:8px;"></div>
+                </div>
+
                 <div class="card" style="margin-bottom:24px;">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
                         <h3 class="card-title" style="margin-bottom:0;">Desglose del IVU Devengado por Mes</h3>
@@ -901,6 +1034,11 @@ const FacturasComponent = {
                                 <label for="exp-notas" style="font-weight:600; font-size:13px; color:var(--color-olive-brown);">Notas Adicionales</label>
                                 <textarea id="exp-notas" placeholder="Detalles de factura, número de cheque..." style="padding:10px; border-radius:var(--radius-sm); border:1px solid var(--color-gray-border); width:100%; min-height:80px; box-sizing:border-box; resize:none;"></textarea>
                             </div>
+                            <div style="display:flex; flex-direction:column; gap:6px;">
+                                <label for="exp-recibo" style="font-weight:600; font-size:13px; color:var(--color-olive-brown);">Recibo (opcional)</label>
+                                <input type="file" id="exp-recibo" accept=".jpg,.jpeg,.png,.pdf" style="padding:8px; border-radius:var(--radius-sm); border:1px solid var(--color-gray-border); width:100%; box-sizing:border-box; font-size:13px; background:#fafaf8;">
+                                <p style="font-size:11.5px; color:#8c8270; margin:0;">Formatos aceptados: JPG, PNG, PDF</p>
+                            </div>
                             <button type="submit" class="btn btn-primary" style="width:100%; display:flex; justify-content:center; align-items:center; gap:8px; padding:12px; margin-top:8px;">
                                 <i data-lucide="check-circle"></i> Guardar Gasto
                             </button>
@@ -909,13 +1047,67 @@ const FacturasComponent = {
 
                     <!-- TABLA DE GASTOS -->
                     <div class="card">
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
                             <h3 class="card-title" style="margin-bottom:0;">Historial de Gastos</h3>
                             <span id="expenses-total-summary" style="font-size:14px; font-weight:700; color:var(--color-terracotta);">Total: $0.00</span>
                         </div>
-                        <p style="color: #6c757d; font-size: 13.5px; margin-top:-8px; margin-bottom:16px;">
-                            Historial completo de gastos registrados en local storage.
-                        </p>
+
+                        <!-- FILTROS -->
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px; padding:14px; background:#faf8f5; border-radius:10px; border:1px solid #ede6d8;">
+                            <div style="display:flex; flex-direction:column; gap:4px;">
+                                <label style="font-size:11px; font-weight:600; color:var(--color-olive-brown); text-transform:uppercase; letter-spacing:0.4px;">Desde</label>
+                                <input type="date" id="filter-gasto-desde" style="padding:7px 10px; border:1px solid var(--color-gray-border); border-radius:7px; font-size:12.5px; font-family:var(--font-primary);">
+                            </div>
+                            <div style="display:flex; flex-direction:column; gap:4px;">
+                                <label style="font-size:11px; font-weight:600; color:var(--color-olive-brown); text-transform:uppercase; letter-spacing:0.4px;">Hasta</label>
+                                <input type="date" id="filter-gasto-hasta" style="padding:7px 10px; border:1px solid var(--color-gray-border); border-radius:7px; font-size:12.5px; font-family:var(--font-primary);">
+                            </div>
+                            <div style="display:flex; flex-direction:column; gap:4px;">
+                                <label style="font-size:11px; font-weight:600; color:var(--color-olive-brown); text-transform:uppercase; letter-spacing:0.4px;">Categoría</label>
+                                <select id="filter-gasto-categoria" style="padding:7px 10px; border:1px solid var(--color-gray-border); border-radius:7px; font-size:12.5px; font-family:var(--font-primary); background:#fff;">
+                                    <option value="">Todas</option>
+                                    <option value="Materiales">Materiales y Suministros</option>
+                                    <option value="Renta">Renta del Local</option>
+                                    <option value="Utilidades">Utilidades (Luz, Agua, Internet)</option>
+                                    <option value="Equipos">Equipos y Herramientas</option>
+                                    <option value="Marketing">Marketing y Publicidad</option>
+                                    <option value="Servicios Profesionales">Servicios Profesionales</option>
+                                    <option value="Otros">Otros Gastos Ordinarios</option>
+                                </select>
+                            </div>
+                            <div style="display:flex; flex-direction:column; gap:4px;">
+                                <label style="font-size:11px; font-weight:600; color:var(--color-olive-brown); text-transform:uppercase; letter-spacing:0.4px;">Método de pago</label>
+                                <select id="filter-gasto-metodo" style="padding:7px 10px; border:1px solid var(--color-gray-border); border-radius:7px; font-size:12.5px; font-family:var(--font-primary); background:#fff;">
+                                    <option value="">Todos</option>
+                                    <option value="Tarjeta de Crédito">Tarjeta de Crédito</option>
+                                    <option value="Tarjeta de Débito">Tarjeta de Débito</option>
+                                    <option value="Cheque">Cheque</option>
+                                    <option value="Transferencia Bancaria">Transferencia Bancaria</option>
+                                    <option value="ATH Móvil">ATH Móvil</option>
+                                    <option value="Efectivo">Efectivo</option>
+                                </select>
+                            </div>
+                            <div style="display:flex; flex-direction:column; gap:4px;">
+                                <label style="font-size:11px; font-weight:600; color:var(--color-olive-brown); text-transform:uppercase; letter-spacing:0.4px;">Recibo</label>
+                                <select id="filter-gasto-recibo" style="padding:7px 10px; border:1px solid var(--color-gray-border); border-radius:7px; font-size:12.5px; font-family:var(--font-primary); background:#fff;">
+                                    <option value="">Todos</option>
+                                    <option value="con">Con recibo</option>
+                                    <option value="sin">Sin recibo</option>
+                                </select>
+                            </div>
+                            <div style="display:flex; align-items:flex-end;">
+                                <button id="btn-limpiar-filtros-gastos" class="btn btn-secondary" style="width:100%; padding:7px 12px; font-size:12.5px; display:inline-flex; align-items:center; justify-content:center; gap:6px;">
+                                    <i data-lucide="x-circle" style="width:13px;height:13px;"></i> Limpiar filtros
+                                </button>
+                            </div>
+                            <div style="display:flex; align-items:flex-end;">
+                                <button id="btn-exportar-gastos-excel" class="btn btn-secondary" style="width:100%; padding:7px 12px; font-size:12.5px; display:inline-flex; align-items:center; justify-content:center; gap:6px; border-color:#5f7a45; color:#5f7a45;">
+                                    <i data-lucide="file-spreadsheet" style="width:13px;height:13px;"></i> Exportar Excel
+                                </button>
+                            </div>
+                        </div>
+                        <div style="font-size:12px; color:#8c8270; margin-bottom:10px;" id="expenses-filter-summary"></div>
+
                         <div class="table-container">
                             <table class="custom-table" id="expenses-table">
                                 <thead>
@@ -925,6 +1117,7 @@ const FacturasComponent = {
                                         <th>Categoría</th>
                                         <th>Método</th>
                                         <th style="text-align:right;">Monto</th>
+                                        <th style="text-align:center;">Recibo</th>
                                         <th style="width:40px;"></th>
                                     </tr>
                                 </thead>
@@ -1037,39 +1230,91 @@ const FacturasComponent = {
         }
     },
 
+    _filtrarGastos() {
+        const desde    = document.getElementById('filter-gasto-desde')?.value || '';
+        const hasta    = document.getElementById('filter-gasto-hasta')?.value || '';
+        const catFilt  = document.getElementById('filter-gasto-categoria')?.value || '';
+        const metFilt  = document.getElementById('filter-gasto-metodo')?.value || '';
+        const recFilt  = document.getElementById('filter-gasto-recibo')?.value || '';
+
+        return (this.gastos || []).filter(g => {
+            if (desde && g.fecha < desde) return false;
+            if (hasta && g.fecha > hasta) return false;
+            if (catFilt && g.categoria !== catFilt) return false;
+            if (metFilt && (g.metodo_pago || '') !== metFilt) return false;
+            if (recFilt === 'con' && !g.recibo_ruta) return false;
+            if (recFilt === 'sin' && g.recibo_ruta) return false;
+            return true;
+        });
+    },
+
     renderExpenses() {
         const tbody = document.getElementById('expenses-table-body');
         if (!tbody) return;
 
         const totalSummary = document.getElementById('expenses-total-summary');
+        const filterSummary = document.getElementById('expenses-filter-summary');
         let totalSum = 0;
 
         if (!this.gastos || this.gastos.length === 0) {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="6" style="text-align: center; color: #8c8c8c; padding: 24px;">
+                    <td colspan="7" style="text-align: center; color: #8c8c8c; padding: 24px;">
                         No hay gastos registrados en la base de datos local.
                     </td>
                 </tr>
             `;
             if (totalSummary) totalSummary.textContent = "Total: $0.00";
+            if (filterSummary) filterSummary.textContent = '';
             return;
         }
 
-        tbody.innerHTML = '';
-        // Sort gastos by date descending
-        const sortedGastos = [...this.gastos].sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+        const filtrados = this._filtrarGastos();
+        // Sort descending by date
+        const sortedGastos = [...filtrados].sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+
+        if (filterSummary) {
+            const total = this.gastos.length;
+            const shown = sortedGastos.length;
+            filterSummary.textContent = shown < total
+                ? `Mostrando ${shown} de ${total} gastos`
+                : `${total} gastos en total`;
+        }
         
+        if (sortedGastos.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:#8c8c8c; padding:24px; font-style:italic;">No hay gastos que coincidan con los filtros aplicados.</td></tr>`;
+            if (totalSummary) totalSummary.textContent = "Total: $0.00";
+            return;
+        }
+
         sortedGastos.forEach(g => {
             totalSum += g.monto;
             const tr = document.createElement('tr');
             tr.className = 'animate-fade-in';
+            const tieneRecibo = !!g.recibo_ruta;
             tr.innerHTML = `
                 <td>${g.fecha}</td>
-                <td><strong>${g.descripcion}</strong>${g.notas ? `<br><small style="color:#8c8270;">${g.notas}</small>` : ''}</td>
+                <td><strong>${g.concepto || g.descripcion || ''}</strong>${g.notas ? `<br><small style="color:#8c8270;">${g.notas}</small>` : ''}</td>
                 <td><span class="badge" style="background:#ede6d8; color:var(--color-olive-brown); padding:3px 8px; border-radius:12px; font-size:11px;">${g.categoria}</span></td>
-                <td>${g.metodo_pago}</td>
+                <td>${g.metodo_pago || '—'}</td>
                 <td style="text-align:right; font-weight:600; color:var(--color-terracotta);">${MONEY.format(g.monto)}</td>
+                <td style="text-align:center; white-space:nowrap;">
+                    ${tieneRecibo
+                        ? `<button class="btn btn-secondary btn-ver-recibo" data-id="${g.id}" title="Ver recibo" style="padding:3px 8px; font-size:11px; display:inline-flex; align-items:center; gap:4px; margin-right:4px;">
+                               <i data-lucide="file-text" style="width:12px;height:12px;"></i> Ver
+                           </button>
+                           <button class="btn btn-secondary btn-analizar-recibo" data-id="${g.id}" data-concepto="${(g.concepto||'').replace(/"/g,'&quot;')}" data-fecha="${g.fecha||''}" data-monto="${g.monto||0}" data-metodo="${(g.metodo_pago||'').replace(/"/g,'&quot;')}" data-categoria="${(g.categoria||'').replace(/"/g,'&quot;')}" data-notas="${(g.notas||'').replace(/"/g,'&quot;')}" data-proveedor="${(g.proveedor||'').replace(/"/g,'&quot;')}" title="Revisar y editar gasto" style="padding:3px 8px; font-size:11px; display:inline-flex; align-items:center; gap:4px; margin-right:4px; background:rgba(95,122,69,0.08); border-color:var(--color-moss-green); color:var(--color-moss-green);">
+                               <i data-lucide="scan-text" style="width:12px;height:12px;"></i> Editar
+                           </button>
+                           <button class="btn btn-secondary btn-del-recibo" data-id="${g.id}" title="Eliminar recibo" style="padding:3px 6px; font-size:11px; color:var(--color-terracotta); border-color:var(--color-terracotta); display:inline-flex; align-items:center;">
+                               <i data-lucide="x" style="width:12px;height:12px;"></i>
+                           </button>`
+                        : `<label class="btn btn-secondary btn-upload-recibo" data-id="${g.id}" title="Subir recibo" style="padding:3px 8px; font-size:11px; display:inline-flex; align-items:center; gap:4px; cursor:pointer; margin:0;">
+                               <i data-lucide="upload" style="width:12px;height:12px;"></i> Subir
+                               <input type="file" accept=".jpg,.jpeg,.png,.pdf" style="display:none;" class="input-recibo-inline" data-id="${g.id}">
+                           </label>`
+                    }
+                </td>
                 <td style="text-align:right;">
                     <button class="btn btn-secondary btn-delete-expense" data-id="${g.id}" style="color:var(--color-terracotta); border-color:var(--color-terracotta); padding: 4px 6px; font-size:11px; display:inline-flex; align-items:center; justify-content:center;">
                         <i data-lucide="trash-2" style="width:13px; height:13px;"></i>
@@ -1093,6 +1338,61 @@ const FacturasComponent = {
                     } catch (err) {
                         alert("Error al eliminar gasto: " + err.message);
                     }
+                }
+            });
+        });
+
+        tbody.querySelectorAll('.btn-ver-recibo').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const id = parseInt(btn.getAttribute('data-id'));
+                try {
+                    await EvergreenAPI.verReciboGasto(id);
+                } catch (err) {
+                    alert("Error al abrir recibo: " + err.message);
+                }
+            });
+        });
+
+        tbody.querySelectorAll('.btn-del-recibo').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const id = parseInt(btn.getAttribute('data-id'));
+                if (confirm("¿Eliminar el recibo asociado a este gasto?")) {
+                    try {
+                        await EvergreenAPI.eliminarReciboGasto(id);
+                        await this.loadData();
+                    } catch (err) {
+                        alert("Error al eliminar recibo: " + err.message);
+                    }
+                }
+            });
+        });
+
+        tbody.querySelectorAll('.btn-analizar-recibo').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const g = {
+                    id:          parseInt(btn.getAttribute('data-id')),
+                    concepto:    btn.getAttribute('data-concepto'),
+                    fecha:       btn.getAttribute('data-fecha'),
+                    monto:       parseFloat(btn.getAttribute('data-monto')) || 0,
+                    metodo_pago: btn.getAttribute('data-metodo'),
+                    categoria:   btn.getAttribute('data-categoria'),
+                    notas:       btn.getAttribute('data-notas'),
+                    proveedor:   btn.getAttribute('data-proveedor'),
+                };
+                this._abrirModalEditarGasto(g);
+            });
+        });
+
+        tbody.querySelectorAll('.input-recibo-inline').forEach(input => {
+            input.addEventListener('change', async () => {
+                const id = parseInt(input.getAttribute('data-id'));
+                const archivo = input.files[0];
+                if (!archivo) return;
+                try {
+                    await EvergreenAPI.subirReciboGasto(id, archivo);
+                    await this.loadData();
+                } catch (err) {
+                    alert("Error al subir recibo: " + err.message);
                 }
             });
         });
@@ -1139,6 +1439,9 @@ const FacturasComponent = {
             }
 
             actionButtons += `
+                <button class="btn btn-secondary btn-email-factura" style="padding:4px; border:none; background:none; box-shadow:none; color:#1565c0;" data-id="${f.id}" data-email="${(f.cliente_email || '').replace(/"/g,'&quot;')}" title="Enviar por Email">
+                    <i data-lucide="mail" style="width:16px; height:16px;"></i>
+                </button>
                 <button class="btn btn-secondary btn-download-pdf" style="padding:4px; border:none; background:none; box-shadow:none; color:var(--color-moss-green);" data-id="${f.id}" title="Descargar Factura PDF">
                     <i data-lucide="download" style="width:16px; height:16px;"></i>
                 </button>
@@ -1155,7 +1458,10 @@ const FacturasComponent = {
                 <td style="text-align:center; cursor:pointer;" class="toggle-detail-btn">
                     <i data-lucide="chevron-right" class="chevron-icon" style="width:16px; height:16px; transition: transform 0.2s;"></i>
                 </td>
-                <td><strong>${f.numero_factura}</strong></td>
+                <td>
+                    <strong>${f.numero_factura}</strong>
+                    ${f.codigo_orden ? `<br><span style="font-size:10.5px;color:#6b7280;font-weight:500;">Orden: <code style="font-size:10px;">${f.codigo_orden}</code></span>` : ''}
+                </td>
                 <td>${parsedCliente.name}</td>
                 <td>${f.fecha_emision}</td>
                 <td>${f.fecha_vencimiento || 'Al recibir'}</td>
@@ -1352,6 +1658,42 @@ const FacturasComponent = {
             });
         });
 
+        // ── Enviar por Email ─────────────────────────────────────────────
+        tbody.querySelectorAll('.btn-email-factura').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const id = parseInt(btn.getAttribute('data-id'));
+                const emailBD = (btn.getAttribute('data-email') || '').trim();
+
+                // Modal sencillo: el admin puede confirmar o cambiar el email
+                const emailIngresado = prompt(
+                    `Enviar factura por email.\n\nEmail del cliente${emailBD ? ' (registrado en BD)' : ''}:`,
+                    emailBD
+                );
+                if (emailIngresado === null) return; // canceló
+                const emailFinal = emailIngresado.trim();
+                if (!emailFinal || !emailFinal.includes('@')) {
+                    alert('Email inválido o vacío. No se envió la factura.');
+                    return;
+                }
+                if (!confirm(`¿Enviar la factura al email:\n${emailFinal}?`)) return;
+
+                const originalHTML = btn.innerHTML;
+                btn.disabled = true;
+                btn.innerHTML = '<span class="spinner" style="width:13px;height:13px;border-width:2px;margin:0;display:inline-block;vertical-align:middle;"></span>';
+                try {
+                    const res = await EvergreenAPI.enviarEmailFactura(id, emailFinal);
+                    alert(`✓ Factura enviada correctamente a:\n${res.email_enviado_a}`);
+                } catch (err) {
+                    alert(`Error al enviar:\n${err.message}`);
+                } finally {
+                    btn.disabled = false;
+                    btn.innerHTML = originalHTML;
+                    lucide.createIcons();
+                }
+            });
+        });
+
         lucide.createIcons();
     },
 
@@ -1377,6 +1719,555 @@ const FacturasComponent = {
             opt.textContent = `${p.nombre} (${p.sku})`;
             select.appendChild(opt);
         });
+    },
+
+    renderStatusCards() {
+        const hoy = new Date();
+        hoy.setHours(0, 0, 0, 0);
+
+        let pagadas = 0, pagadasTotal = 0;
+        let pendientes = 0, pendientesTotal = 0;
+        let vencidas = 0, vencidasTotal = 0;
+        let anuladas = 0, anuladasTotal = 0;
+
+        (this.facturas || []).forEach(f => {
+            const total = parseFloat(f.total) || 0;
+            if (f.estado === 'Anulada') {
+                anuladas++; anuladasTotal += total;
+            } else if (f.estado === 'Pagada') {
+                pagadas++; pagadasTotal += total;
+            } else if (f.estado === 'Pendiente') {
+                const vence = f.fecha_vencimiento ? new Date(f.fecha_vencimiento + 'T00:00:00') : null;
+                if (vence && vence < hoy) {
+                    vencidas++; vencidasTotal += total;
+                } else {
+                    pendientes++; pendientesTotal += total;
+                }
+            }
+        });
+
+        const fmt = (n) => `$${n.toFixed(2)}`;
+        const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+        set('status-card-pagadas-count',    pagadas);
+        set('status-card-pagadas-total',    fmt(pagadasTotal));
+        set('status-card-pendientes-count', pendientes);
+        set('status-card-pendientes-total', fmt(pendientesTotal));
+        set('status-card-vencidas-count',   vencidas);
+        set('status-card-vencidas-total',   fmt(vencidasTotal));
+        set('status-card-anuladas-count',   anuladas);
+        set('status-card-anuladas-total',   fmt(anuladasTotal));
+
+        const sinRecibo = (this.gastos || []).filter(g => !g.recibo_ruta);
+        set('status-card-sinrecibo-count', sinRecibo.length);
+        set('status-card-sinrecibo-total', fmt(sinRecibo.reduce((s, g) => s + (parseFloat(g.monto) || 0), 0)));
+
+        const cardSinRecibo = document.getElementById('status-card-sin-recibo');
+        if (cardSinRecibo) {
+            cardSinRecibo.onclick = () => {
+                document.querySelectorAll('.facturas-nav-tab').forEach(t => t.classList.remove('active'));
+                const tabExp = document.querySelector('[data-tab="expenses"]');
+                if (tabExp) tabExp.classList.add('active');
+                document.querySelectorAll('.factura-section').forEach(s => s.style.display = 'none');
+                const secExp = document.getElementById('view-section-expenses');
+                if (secExp) secExp.style.display = 'block';
+                this.activeTab = 'expenses';
+                const filtroRecibo = document.getElementById('filter-gasto-recibo');
+                if (filtroRecibo) { filtroRecibo.value = 'sin'; this.renderExpenses(); }
+            };
+        }
+    },
+
+    renderCharts(allMonths) {
+        this._renderBarChart({
+            containerId: 'chart-ventas-gastos',
+            months: allMonths,
+            series: [
+                {
+                    label: 'Ventas',
+                    color: '#5f7a45',
+                    values: allMonths.map(m => this.getMonthlyData(m)?.total_facturado || 0)
+                },
+                {
+                    label: 'Gastos',
+                    color: '#c0694a',
+                    values: allMonths.map(m => {
+                        if (!this.gastos) return 0;
+                        const [y, mo] = m.split('-');
+                        return this.gastos
+                            .filter(g => g.fecha && g.fecha.startsWith(`${y}-${mo}`))
+                            .reduce((s, g) => s + (parseFloat(g.monto) || 0), 0);
+                    })
+                }
+            ]
+        });
+
+        this._renderBarChart({
+            containerId: 'chart-ivu',
+            months: allMonths,
+            series: [
+                {
+                    label: 'IVU Estatal',
+                    color: '#5f7a45',
+                    values: allMonths.map(m => this.getMonthlyData(m)?.ivu_estatal || 0)
+                },
+                {
+                    label: 'IVU Municipal',
+                    color: '#8fa86b',
+                    values: allMonths.map(m => this.getMonthlyData(m)?.ivu_municipal || 0)
+                }
+            ]
+        });
+    },
+
+    _renderBarChart({ containerId, months, series }) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+
+        if (!months || months.length === 0) {
+            container.innerHTML = `<p style="text-align:center; color:#aaa; font-size:13px; padding:24px 0;">Sin datos para mostrar.</p>`;
+            return;
+        }
+
+        const BAR_W = 16;
+        const BAR_GAP = 4;
+        const GROUP_GAP = 18;
+        const nSeries = series.length;
+        const groupW = nSeries * BAR_W + (nSeries - 1) * BAR_GAP;
+        const totalW = months.length * (groupW + GROUP_GAP);
+        const H = 160;
+        const BOTTOM = 40;
+        const TOP_PAD = 12;
+        const chartH = H - BOTTOM - TOP_PAD;
+
+        const allValues = series.flatMap(s => s.values);
+        const maxVal = Math.max(...allValues, 1);
+
+        const MESES_CORTOS = ['','ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+        const fmtLabel = (m) => {
+            const parts = m.split('-');
+            return parts.length === 2 ? `${MESES_CORTOS[parseInt(parts[1])] || parts[1]}/${parts[0].slice(2)}` : m;
+        };
+
+        let bars = '';
+        months.forEach((m, gi) => {
+            const x0 = gi * (groupW + GROUP_GAP);
+            series.forEach((s, si) => {
+                const val = s.values[gi] || 0;
+                const barH = Math.max(2, (val / maxVal) * chartH);
+                const bx = x0 + si * (BAR_W + BAR_GAP);
+                const by = TOP_PAD + chartH - barH;
+                const fmtVal = val >= 1000 ? `$${(val/1000).toFixed(1)}k` : `$${val.toFixed(0)}`;
+                bars += `<rect x="${bx}" y="${by}" width="${BAR_W}" height="${barH}" rx="3" fill="${s.color}" opacity="0.88">
+                    <title>${s.label} ${m}: $${val.toFixed(2)}</title>
+                </rect>`;
+                if (val > 0) {
+                    bars += `<text x="${bx + BAR_W/2}" y="${by - 3}" text-anchor="middle" font-size="8" fill="#555" font-family="inherit">${fmtVal}</text>`;
+                }
+            });
+            // Month label
+            const labelX = x0 + groupW / 2;
+            bars += `<text x="${labelX}" y="${H - 6}" text-anchor="middle" font-size="9.5" fill="#8c8270" font-family="inherit">${fmtLabel(m)}</text>`;
+        });
+
+        // Legend
+        const legendItems = series.map((s, i) =>
+            `<g transform="translate(${i * 90}, 0)">
+                <rect width="10" height="10" rx="2" fill="${s.color}" y="-9"/>
+                <text x="14" y="0" font-size="10" fill="#555" font-family="inherit">${s.label}</text>
+            </g>`
+        ).join('');
+
+        const svgW = Math.max(totalW, 260);
+        container.innerHTML = `
+            <svg viewBox="0 0 ${svgW} ${H + 20}" width="100%" style="display:block; min-width:${Math.min(svgW,280)}px;">
+                <g transform="translate(6, 0)">${bars}</g>
+                <g transform="translate(6, ${H + 14})">${legendItems}</g>
+            </svg>`;
+    },
+
+    _abrirModalEditarGasto(g) {
+        const existing = document.getElementById('modal-editar-gasto');
+        if (existing) existing.remove();
+
+        const CATEGORIAS = [
+            'Materiales', 'Renta', 'Utilidades', 'Equipos',
+            'Marketing', 'Servicios Profesionales', 'Otros'
+        ];
+        const catOptions = CATEGORIAS.map(c =>
+            `<option value="${c}" ${g.categoria === c ? 'selected' : ''}>${c === 'Materiales' ? 'Materiales y Suministros' : c === 'Renta' ? 'Renta del Local' : c === 'Utilidades' ? 'Utilidades (Luz, Agua, Internet)' : c === 'Equipos' ? 'Equipos y Herramientas' : c === 'Marketing' ? 'Marketing y Publicidad' : c === 'Servicios Profesionales' ? 'Servicios Profesionales' : 'Otros Gastos Ordinarios'}</option>`
+        ).join('');
+
+        const overlay = document.createElement('div');
+        overlay.id = 'modal-editar-gasto';
+        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;';
+        overlay.innerHTML = `
+            <div style="background:#fff;border-radius:14px;padding:28px 30px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;box-shadow:0 8px 36px rgba(0,0,0,0.18);font-family:var(--font-primary);">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                    <h3 style="margin:0;font-size:16px;font-weight:700;color:var(--color-soft-black);display:flex;align-items:center;gap:8px;">
+                        <i data-lucide="edit-3" style="width:17px;height:17px;color:var(--color-moss-green);"></i>
+                        Revisar y Editar Gasto
+                    </h3>
+                    <button id="modal-gasto-close" style="background:none;border:none;cursor:pointer;color:#8c8270;font-size:20px;line-height:1;padding:2px 6px;">&times;</button>
+                </div>
+                <p style="font-size:12.5px;color:#8c8270;margin:0 0 20px;">
+                    Revisa los datos del gasto y edita lo que necesites antes de guardar.
+                    <!-- FASE 2B: aquí se pre-rellenarán los datos extraídos por IA del recibo -->
+                </p>
+
+                <div style="display:flex;flex-direction:column;gap:13px;">
+                    <div>
+                        <label style="display:block;font-size:11px;font-weight:600;color:var(--color-olive-brown);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px;">Proveedor</label>
+                        <input type="text" id="meg-proveedor" value="${g.proveedor || ''}" placeholder="Nombre del proveedor o tienda"
+                            style="width:100%;box-sizing:border-box;padding:9px 12px;border:1.5px solid var(--color-gray-border);border-radius:8px;font-size:13px;font-family:inherit;color:var(--color-soft-black);">
+                    </div>
+                    <div>
+                        <label style="display:block;font-size:11px;font-weight:600;color:var(--color-olive-brown);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px;">Concepto *</label>
+                        <input type="text" id="meg-concepto" value="${g.concepto || ''}" required
+                            style="width:100%;box-sizing:border-box;padding:9px 12px;border:1.5px solid var(--color-gray-border);border-radius:8px;font-size:13px;font-family:inherit;color:var(--color-soft-black);">
+                    </div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                        <div>
+                            <label style="display:block;font-size:11px;font-weight:600;color:var(--color-olive-brown);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px;">Fecha *</label>
+                            <input type="date" id="meg-fecha" value="${g.fecha || ''}" required
+                                style="width:100%;box-sizing:border-box;padding:9px 12px;border:1.5px solid var(--color-gray-border);border-radius:8px;font-size:13px;font-family:inherit;">
+                        </div>
+                        <div>
+                            <label style="display:block;font-size:11px;font-weight:600;color:var(--color-olive-brown);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px;">Total / Monto *</label>
+                            <input type="number" step="0.01" min="0.01" id="meg-monto" value="${g.monto || ''}" required
+                                style="width:100%;box-sizing:border-box;padding:9px 12px;border:1.5px solid var(--color-gray-border);border-radius:8px;font-size:13px;font-family:inherit;">
+                        </div>
+                    </div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                        <div>
+                            <label style="display:block;font-size:11px;font-weight:600;color:var(--color-olive-brown);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px;">Subtotal</label>
+                            <input type="number" step="0.01" min="0" id="meg-subtotal" placeholder="0.00"
+                                style="width:100%;box-sizing:border-box;padding:9px 12px;border:1.5px solid var(--color-gray-border);border-radius:8px;font-size:13px;font-family:inherit;">
+                            <p style="font-size:10.5px;color:#aaa;margin:3px 0 0;">Se rellenará con IA</p>
+                        </div>
+                        <div>
+                            <label style="display:block;font-size:11px;font-weight:600;color:var(--color-olive-brown);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px;">IVU</label>
+                            <input type="number" step="0.01" min="0" id="meg-ivu" placeholder="0.00"
+                                style="width:100%;box-sizing:border-box;padding:9px 12px;border:1.5px solid var(--color-gray-border);border-radius:8px;font-size:13px;font-family:inherit;">
+                            <p style="font-size:10.5px;color:#aaa;margin:3px 0 0;">Se rellenará con IA</p>
+                        </div>
+                    </div>
+                    <div>
+                        <label style="display:block;font-size:11px;font-weight:600;color:var(--color-olive-brown);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px;">Categoría</label>
+                        <select id="meg-categoria" style="width:100%;box-sizing:border-box;padding:9px 12px;border:1.5px solid var(--color-gray-border);border-radius:8px;font-size:13px;font-family:inherit;background:#fff;">
+                            ${catOptions}
+                        </select>
+                    </div>
+                    <div>
+                        <label style="display:block;font-size:11px;font-weight:600;color:var(--color-olive-brown);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px;">Notas</label>
+                        <textarea id="meg-notas" rows="2" placeholder="Observaciones adicionales..."
+                            style="width:100%;box-sizing:border-box;padding:9px 12px;border:1.5px solid var(--color-gray-border);border-radius:8px;font-size:13px;font-family:inherit;resize:none;">${g.notas || ''}</textarea>
+                    </div>
+                </div>
+
+                <div id="modal-gasto-error" style="display:none;font-size:13px;color:#c0694a;background:#fdf0ec;border:1px solid #f5c6b8;border-radius:7px;padding:8px 12px;margin-top:14px;"></div>
+
+                <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;">
+                    <button id="modal-gasto-cancel" class="btn btn-secondary" style="padding:9px 20px;font-size:13px;">Cancelar</button>
+                    <button id="modal-gasto-confirm" class="btn btn-primary" style="padding:9px 20px;font-size:13px;display:inline-flex;align-items:center;gap:6px;">
+                        <i data-lucide="save" style="width:14px;height:14px;"></i> Guardar cambios
+                    </button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(overlay);
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+
+        const cerrar = () => overlay.remove();
+        document.getElementById('modal-gasto-close').addEventListener('click', cerrar);
+        document.getElementById('modal-gasto-cancel').addEventListener('click', cerrar);
+        overlay.addEventListener('click', (e) => { if (e.target === overlay) cerrar(); });
+
+        document.getElementById('modal-gasto-confirm').addEventListener('click', async () => {
+            const concepto = document.getElementById('meg-concepto').value.trim();
+            const fecha    = document.getElementById('meg-fecha').value;
+            const monto    = parseFloat(document.getElementById('meg-monto').value);
+            const errorDiv = document.getElementById('modal-gasto-error');
+            const btnSave  = document.getElementById('modal-gasto-confirm');
+
+            if (!concepto || !fecha || isNaN(monto) || monto <= 0) {
+                errorDiv.textContent = 'Concepto, Fecha y Monto son obligatorios.';
+                errorDiv.style.display = 'block';
+                return;
+            }
+
+            const payload = {
+                concepto,
+                fecha,
+                monto,
+                categoria:   document.getElementById('meg-categoria').value,
+                metodo_pago: g.metodo_pago || null,
+                notas:       document.getElementById('meg-notas').value.trim() || null,
+                proveedor:   document.getElementById('meg-proveedor').value.trim() || null,
+            };
+
+            errorDiv.style.display = 'none';
+            btnSave.disabled = true;
+            btnSave.innerHTML = '<i data-lucide="loader-2" style="width:14px;height:14px;"></i> Guardando...';
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+
+            try {
+                await EvergreenAPI.actualizarGasto(g.id, payload);
+                overlay.remove();
+                await this.loadData();
+            } catch (err) {
+                errorDiv.textContent = `Error al guardar: ${err.message}`;
+                errorDiv.style.display = 'block';
+                btnSave.disabled = false;
+                btnSave.innerHTML = '<i data-lucide="save" style="width:14px;height:14px;"></i> Guardar cambios';
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+            }
+        });
+    },
+
+    _openAddManualMonthModal() {
+        // Remove existing modal if any
+        const existing = document.getElementById('modal-add-manual-month');
+        if (existing) existing.remove();
+
+        const hoy = new Date();
+        const pad = (n) => String(n).padStart(2, '0');
+
+        const overlay = document.createElement('div');
+        overlay.id = 'modal-add-manual-month';
+        overlay.style.cssText = `
+            position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:9999;
+            display:flex; align-items:center; justify-content:center;
+        `;
+        overlay.innerHTML = `
+            <div style="background:#fff; border-radius:14px; padding:28px 32px; width:100%; max-width:420px; box-shadow:0 8px 32px rgba(0,0,0,0.18); font-family:var(--font-primary);">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                    <h3 style="margin:0; font-size:16px; font-weight:700; color:var(--color-soft-black);">Añadir Período Manual</h3>
+                    <button id="modal-manual-close" style="background:none; border:none; cursor:pointer; color:#8c8270; font-size:20px; line-height:1; padding:2px 6px;">&times;</button>
+                </div>
+
+                <p style="margin:0 0 16px; font-size:13px; color:#6c757d; line-height:1.5;">
+                    Define el rango del período. El mes se tomará de la fecha <strong>Desde</strong>.
+                </p>
+
+                <button id="modal-manual-btn-actual" style="
+                    display:inline-flex; align-items:center; gap:6px; margin-bottom:18px;
+                    background:rgba(95,122,69,0.1); border:1px solid rgba(95,122,69,0.3);
+                    border-radius:8px; padding:7px 14px; font-size:12.5px; font-weight:600;
+                    color:var(--color-moss-green); cursor:pointer;
+                ">
+                    <span>⚡</span> Período IVU Actual
+                </button>
+
+                <div style="display:flex; flex-direction:column; gap:14px; margin-bottom:22px;">
+                    <div>
+                        <label style="display:block; font-size:11px; font-weight:600; color:var(--color-olive-brown); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:5px;">Desde</label>
+                        <input type="date" id="modal-manual-desde" style="width:100%; box-sizing:border-box; padding:9px 12px; border:1.5px solid var(--color-gray-border); border-radius:8px; font-size:13.5px; font-family:var(--font-primary); color:var(--color-soft-black); outline:none;">
+                    </div>
+                    <div>
+                        <label style="display:block; font-size:11px; font-weight:600; color:var(--color-olive-brown); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:5px;">Hasta</label>
+                        <input type="date" id="modal-manual-hasta" style="width:100%; box-sizing:border-box; padding:9px 12px; border:1.5px solid var(--color-gray-border); border-radius:8px; font-size:13.5px; font-family:var(--font-primary); color:var(--color-soft-black); outline:none;">
+                    </div>
+                    <div id="modal-manual-preview" style="font-size:12.5px; color:var(--color-moss-green); font-weight:600; min-height:18px;"></div>
+                </div>
+
+                <div id="modal-manual-error" style="display:none; font-size:13px; color:#c0694a; background:#fdf0ec; border:1px solid #f5c6b8; border-radius:7px; padding:8px 12px; margin-bottom:14px;"></div>
+
+                <div style="display:flex; gap:10px; justify-content:flex-end;">
+                    <button id="modal-manual-cancel" class="btn btn-secondary" style="padding:9px 20px; font-size:13px;">Cancelar</button>
+                    <button id="modal-manual-confirm" class="btn btn-primary" style="padding:9px 20px; font-size:13px;">Añadir Período</button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(overlay);
+
+        const MESES = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+        const fmtDisplay = (yyyy, mm, dd) => `${pad(dd)}/${MESES[parseInt(mm)-1]}/${yyyy}`;
+
+        const updatePreview = () => {
+            const d = document.getElementById('modal-manual-desde').value;
+            const h = document.getElementById('modal-manual-hasta').value;
+            const prev = document.getElementById('modal-manual-preview');
+            if (d && h) {
+                const [dy, dm, dd2] = d.split('-');
+                const [hy, hm, hd] = h.split('-');
+                prev.textContent = `Período: ${fmtDisplay(dy, dm, dd2)} al ${fmtDisplay(hy, hm, hd)}`;
+            } else {
+                prev.textContent = '';
+            }
+        };
+
+        document.getElementById('modal-manual-desde').addEventListener('change', updatePreview);
+        document.getElementById('modal-manual-hasta').addEventListener('change', updatePreview);
+
+        document.getElementById('modal-manual-btn-actual').addEventListener('click', () => {
+            const mes = hoy.getMonth() + 1;
+            const anio = hoy.getFullYear();
+            const mesAnt = mes === 1 ? 12 : mes - 1;
+            const anioAnt = mes === 1 ? anio - 1 : anio;
+            document.getElementById('modal-manual-desde').value = `${anioAnt}-${pad(mesAnt)}-20`;
+            document.getElementById('modal-manual-hasta').value = `${anio}-${pad(mes)}-19`;
+            updatePreview();
+        });
+
+        const cerrar = () => overlay.remove();
+        document.getElementById('modal-manual-close').addEventListener('click', cerrar);
+        document.getElementById('modal-manual-cancel').addEventListener('click', cerrar);
+        overlay.addEventListener('click', (e) => { if (e.target === overlay) cerrar(); });
+
+        document.getElementById('modal-manual-confirm').addEventListener('click', () => {
+            this._confirmAddManualMonth(overlay);
+        });
+    },
+
+    _confirmAddManualMonth(overlay) {
+        const desde = document.getElementById('modal-manual-desde').value;
+        const errorDiv = document.getElementById('modal-manual-error');
+
+        const showError = (msg) => {
+            errorDiv.textContent = msg;
+            errorDiv.style.display = 'block';
+        };
+
+        if (!desde) {
+            showError('Selecciona al menos la fecha de inicio (Desde).');
+            return;
+        }
+
+        // Derive YYYY-MM from the "desde" date
+        const cleanMonth = desde.substring(0, 7); // "YYYY-MM"
+
+        const allMonths = this.getAllMonths();
+        if (allMonths.includes(cleanMonth)) {
+            showError(`El período ${cleanMonth} ya existe en los reportes.`);
+            return;
+        }
+
+        let manualMonths = [];
+        try { manualMonths = JSON.parse(localStorage.getItem('manual_months') || '[]'); } catch (e) {}
+        manualMonths.push(cleanMonth);
+        localStorage.setItem('manual_months', JSON.stringify(manualMonths));
+
+        let overrides = {};
+        try { overrides = JSON.parse(localStorage.getItem('ivu_overrides') || '{}'); } catch (e) {}
+        overrides[cleanMonth] = { ingresos_subtotal: 0.0, ivu_estatal: 0.0, ivu_municipal: 0.0, total_recaudado: 0.0 };
+        localStorage.setItem('ivu_overrides', JSON.stringify(overrides));
+
+        overlay.remove();
+        this.renderReports();
+    },
+
+    async exportarIvuExcel() {
+        const inicio = document.getElementById('ivu-periodo-inicio')?.value;
+        const fin    = document.getElementById('ivu-periodo-fin')?.value;
+        const errorDiv = document.getElementById('ivu-periodo-error');
+        const btn = document.getElementById('btn-exportar-ivu-excel');
+
+        if (!inicio || !fin) {
+            if (errorDiv) { errorDiv.textContent = 'Selecciona el período (Desde y Hasta) antes de exportar.'; errorDiv.style.display = 'block'; }
+            return;
+        }
+        if (errorDiv) errorDiv.style.display = 'none';
+
+        const originalHTML = btn ? btn.innerHTML : '';
+        if (btn) { btn.disabled = true; btn.innerHTML = '<i data-lucide="loader-2" style="width:15px;height:15px;"></i> Generando...'; }
+
+        try {
+            const blob = await EvergreenAPI.exportIvuExcel(inicio, fin);
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `ivu_evergreen_${inicio}_${fin}.xlsx`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(url);
+        } catch (e) {
+            if (errorDiv) { errorDiv.textContent = `Error al exportar: ${e.message}`; errorDiv.style.display = 'block'; }
+        } finally {
+            if (btn) { btn.disabled = false; btn.innerHTML = originalHTML; if (typeof lucide !== 'undefined') lucide.createIcons(); }
+        }
+    },
+
+    async exportarGastosExcel() {
+        const desde    = document.getElementById('filter-gasto-desde')?.value || '';
+        const hasta    = document.getElementById('filter-gasto-hasta')?.value || '';
+        const categoria = document.getElementById('filter-gasto-categoria')?.value || '';
+        const metodo   = document.getElementById('filter-gasto-metodo')?.value || '';
+        const recibo   = document.getElementById('filter-gasto-recibo')?.value || '';
+
+        const btn = document.getElementById('btn-exportar-gastos-excel');
+        const originalHTML = btn ? btn.innerHTML : '';
+        if (btn) { btn.disabled = true; btn.innerHTML = '<i data-lucide="loader-2" style="width:13px;height:13px;"></i> Generando...'; }
+
+        try {
+            const blob = await EvergreenAPI.exportGastosExcel({ desde, hasta, categoria, metodo, recibo });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            const desdeStr = desde ? desde.replace(/-/g, '') : 'inicio';
+            const hastaStr = hasta ? hasta.replace(/-/g, '') : 'hoy';
+            a.download = `gastos_evergreen_${desdeStr}_${hastaStr}.xlsx`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(url);
+        } catch (e) {
+            alert(`Error al exportar gastos: ${e.message}`);
+        } finally {
+            if (btn) { btn.disabled = false; btn.innerHTML = originalHTML; if (typeof lucide !== 'undefined') lucide.createIcons(); }
+        }
+    },
+
+    async calcularIvuPeriodo() {
+        const inicio = document.getElementById('ivu-periodo-inicio')?.value;
+        const fin    = document.getElementById('ivu-periodo-fin')?.value;
+        const resultado = document.getElementById('ivu-periodo-resultado');
+        const loading   = document.getElementById('ivu-periodo-loading');
+        const errorDiv  = document.getElementById('ivu-periodo-error');
+
+        if (!inicio || !fin) {
+            if (errorDiv) { errorDiv.textContent = 'Selecciona fecha de inicio y fecha de fin.'; errorDiv.style.display = 'block'; }
+            return;
+        }
+        if (inicio > fin) {
+            if (errorDiv) { errorDiv.textContent = 'La fecha de inicio no puede ser mayor que la fecha de fin.'; errorDiv.style.display = 'block'; }
+            return;
+        }
+
+        if (errorDiv)  errorDiv.style.display  = 'none';
+        if (resultado) resultado.style.display  = 'none';
+        if (loading)   loading.style.display    = 'block';
+
+        try {
+            const data = await EvergreenAPI.getIvuPeriodo(inicio, fin);
+            this.renderIvuPeriodoResult(data);
+        } catch (e) {
+            if (errorDiv) { errorDiv.textContent = 'Error al calcular IVU. Verifica tu sesión e intenta de nuevo.'; errorDiv.style.display = 'block'; }
+        } finally {
+            if (loading) loading.style.display = 'none';
+        }
+    },
+
+    renderIvuPeriodoResult(data) {
+        const fmt = (n) => `$${(parseFloat(n) || 0).toFixed(2)}`;
+        const label   = document.getElementById('ivu-periodo-label');
+        const res     = document.getElementById('ivu-periodo-resultado');
+
+        if (label) label.textContent = `Periodo: ${data.periodo?.desde} → ${data.periodo?.hasta}`;
+
+        const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+        set('ivu-p-ventas',    fmt(data.ventas_sujetas_ivu));
+        set('ivu-p-estatal',   fmt(data.ivu_estatal));
+        set('ivu-p-municipal', fmt(data.ivu_municipal));
+        set('ivu-p-total',     fmt(data.ivu_total));
+        set('ivu-p-facturado', fmt(data.total_facturado));
+        set('ivu-p-pendiente', fmt(data.total_pendiente));
+        set('ivu-p-n-facturas', data.total_facturas ?? 0);
+
+        if (res) res.style.display = 'block';
+        if (typeof lucide !== 'undefined') lucide.createIcons();
     },
 
     getAllMonths() {
@@ -1473,6 +2364,9 @@ const FacturasComponent = {
         if (repKpiGastos) repKpiGastos.innerText = MONEY.format(sumGastos);
         const repKpiGanancia = document.getElementById('rep-kpi-ganancia');
         if (repKpiGanancia) repKpiGanancia.innerText = MONEY.format(gananciaNeta);
+
+        this.renderStatusCards();
+        this.renderCharts(allMonths);
 
         const tbody = document.getElementById('ivu-report-body');
 
@@ -2021,6 +2915,46 @@ Generado de forma segura por el ERP de Evergreen Love el ${new Date().toLocaleDa
     },
 
     setupListeners() {
+        // Filtros de gastos — reaplican sobre datos ya cargados sin tocar el backend
+        ['filter-gasto-desde', 'filter-gasto-hasta', 'filter-gasto-categoria',
+         'filter-gasto-metodo', 'filter-gasto-recibo'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.addEventListener('change', () => this.renderExpenses());
+        });
+        const btnLimpiar = document.getElementById('btn-limpiar-filtros-gastos');
+        if (btnLimpiar) btnLimpiar.addEventListener('click', () => {
+            ['filter-gasto-desde','filter-gasto-hasta'].forEach(id => {
+                const el = document.getElementById(id); if (el) el.value = '';
+            });
+            ['filter-gasto-categoria','filter-gasto-metodo','filter-gasto-recibo'].forEach(id => {
+                const el = document.getElementById(id); if (el) el.value = '';
+            });
+            this.renderExpenses();
+        });
+
+        // IVU por Periodo
+        const btnCalc = document.getElementById('btn-calcular-ivu-periodo');
+        if (btnCalc) btnCalc.addEventListener('click', () => this.calcularIvuPeriodo());
+
+        const btnExcel = document.getElementById('btn-exportar-ivu-excel');
+        if (btnExcel) btnExcel.addEventListener('click', () => this.exportarIvuExcel());
+
+        const btnExportarGastos = document.getElementById('btn-exportar-gastos-excel');
+        if (btnExportarGastos) btnExportarGastos.addEventListener('click', () => this.exportarGastosExcel());
+
+        const btnActual = document.getElementById('btn-periodo-ivu-actual');
+        if (btnActual) btnActual.addEventListener('click', () => {
+            const hoy = new Date();
+            const anioActual = hoy.getFullYear();
+            const mesActual  = hoy.getMonth() + 1; // 1-based
+            // Ciclo: del 20 del mes anterior al 19 del mes actual
+            const mesAnterior = mesActual === 1 ? 12 : mesActual - 1;
+            const anioAnterior = mesActual === 1 ? anioActual - 1 : anioActual;
+            const pad = (n) => String(n).padStart(2, '0');
+            document.getElementById('ivu-periodo-inicio').value = `${anioAnterior}-${pad(mesAnterior)}-20`;
+            document.getElementById('ivu-periodo-fin').value    = `${anioActual}-${pad(mesActual)}-19`;
+        });
+
         // Tab switching
         const tabs = document.querySelectorAll('.facturas-nav-tab');
         tabs.forEach(tab => {
@@ -2407,48 +3341,7 @@ Generado de forma segura por el ERP de Evergreen Love el ${new Date().toLocaleDa
         const btnAddManualMonth = document.getElementById('btn-add-manual-month');
         if (btnAddManualMonth) {
             btnAddManualMonth.addEventListener('click', () => {
-                const monthInput = prompt("Ingrese el período en formato AAAA-MM (Ejemplo: 2026-05):");
-                if (monthInput === null) return; // Cancelado
-
-                const cleanMonth = monthInput.trim();
-                const periodRegex = /^\d{4}-(0[1-9]|1[0-2])$/;
-                if (!periodRegex.test(cleanMonth)) {
-                    alert("Formato inválido. Debe ser AAAA-MM (Ej. 2026-05) con mes válido (01-12).");
-                    return;
-                }
-
-                // Check if it already exists
-                const allMonths = this.getAllMonths();
-                if (allMonths.includes(cleanMonth)) {
-                    alert("Este período ya existe en los reportes.");
-                    return;
-                }
-
-                // Save to localStorage
-                let manualMonths = [];
-                try {
-                    manualMonths = JSON.parse(localStorage.getItem('manual_months') || '[]');
-                } catch (e) {}
-                
-                manualMonths.push(cleanMonth);
-                localStorage.setItem('manual_months', JSON.stringify(manualMonths));
-
-                // Initialize empty overrides
-                let overrides = {};
-                try {
-                    overrides = JSON.parse(localStorage.getItem('ivu_overrides') || '{}');
-                } catch (e) {}
-                
-                overrides[cleanMonth] = {
-                    ingresos_subtotal: 0.0,
-                    ivu_estatal: 0.0,
-                    ivu_municipal: 0.0,
-                    total_recaudado: 0.0
-                };
-                localStorage.setItem('ivu_overrides', JSON.stringify(overrides));
-
-                alert(`Período manual ${cleanMonth} añadido correctamente.`);
-                this.renderReports();
+                this._openAddManualMonthModal();
             });
         }
 
@@ -2475,21 +3368,31 @@ Generado de forma segura por el ERP de Evergreen Love el ${new Date().toLocaleDa
                 btnSubmit.innerHTML = '<span class="spinner" style="width:14px; height:14px; margin-bottom:0; display:inline-block; vertical-align:middle; border-width:2px;"></span> Registrando...';
                 
                 try {
-                    await EvergreenAPI.createGasto({
-                        descripcion,
+                    const archivoRecibo = document.getElementById('exp-recibo')?.files[0] || null;
+
+                    const resultado = await EvergreenAPI.createGasto({
+                        concepto: descripcion,
                         categoria,
                         monto,
                         fecha,
                         metodo_pago,
                         notas
                     });
-                    
+
+                    if (archivoRecibo && resultado.id) {
+                        try {
+                            await EvergreenAPI.subirReciboGasto(resultado.id, archivoRecibo);
+                        } catch (reciboErr) {
+                            console.warn("Gasto creado pero fallo al subir recibo:", reciboErr.message);
+                        }
+                    }
+
                     // Clear form
                     formExpense.reset();
                     // Set today date as default
                     const todayStr = new Date().toISOString().split('T')[0];
                     document.getElementById('exp-fecha').value = todayStr;
-                    
+
                     // Reload data
                     await this.loadData();
                     alert("¡Gasto registrado con éxito!");

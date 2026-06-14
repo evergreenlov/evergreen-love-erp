@@ -158,7 +158,10 @@ const CatalogoComponent = {
 
     async loadProductos() {
         try {
-            const res = await EvergreenAPI.getProductos();
+            const isAdmin = !!document.querySelector('.sidebar');
+            const res = isAdmin
+                ? await EvergreenAPI.getProductos()
+                : await fetch(`${API_BASE_URL}/productos/publico`).then(r => r.json());
             this.productos = res.data || [];
         } catch (e) {
             console.error('Error cargando productos:', e);
@@ -193,7 +196,14 @@ const CatalogoComponent = {
     },
     personalizarProducto(productoId) {
         const prod = this.productos.find(p => p.id === productoId);
-        if (prod && typeof PersonalizadosComponent !== 'undefined') {
+        if (typeof CotizacionModal !== 'undefined') {
+            CotizacionModal.open({
+                productoId: prod ? prod.id : null,
+                productoNombre: prod ? prod.nombre : null,
+                precioFinal: prod ? prod.precio_final : null,
+                fuente: 'publico'
+            });
+        } else if (prod && typeof PersonalizadosComponent !== 'undefined') {
             PersonalizadosComponent.openSimuladorModal(prod);
         } else {
             alert("El configurador no está disponible en este momento.");
@@ -234,12 +244,13 @@ const CatalogoComponent = {
                     </span>
                 </div>
             ` : '';
-            const fotoImg = p.foto_ruta 
-                ? `<div style="width:100%; height:175px; background: linear-gradient(135deg, #fdfbf7 0%, #f5f0e6 100%); display:flex; align-items:center; justify-content:center; border-bottom: 1px solid rgba(237, 230, 216, 0.5); overflow:hidden; position:relative; padding: 8px; box-sizing: border-box;">
+            const qvData = JSON.stringify(p).replace(/'/g, "\\'");
+            const fotoImg = p.foto_ruta
+                ? `<div style="width:100%; height:175px; background: linear-gradient(135deg, #fdfbf7 0%, #f5f0e6 100%); display:flex; align-items:center; justify-content:center; border-bottom: 1px solid rgba(237, 230, 216, 0.5); overflow:hidden; position:relative; padding: 8px; box-sizing: border-box; cursor:zoom-in;" onclick="CatalogoComponent.openQuickView(${qvData.replace(/"/g,'&quot;')})">
                     ${customBadgeHtml}
                     <img src="${getFullImageUrl(p.foto_ruta)}" alt="${p.nombre}" style="max-width:100%; max-height:100%; object-fit:contain; display:block; transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);">
                     ${adminOverlayHtml}
-                   </div>` 
+                   </div>`
                 : `<div style="width:100%; height:175px; background: linear-gradient(135deg, #fbfbfb 0%, #f0f0f0 100%); display:flex; align-items:center; justify-content:center; color:#ac9f8a; font-size:12.5px; font-style: italic; border-bottom: 1px solid rgba(237, 230, 216, 0.5); position:relative; gap: 6px;">
                     ${customBadgeHtml}
                     <i data-lucide="image" style="width:18px; height:18px; opacity:0.6;"></i>
@@ -281,6 +292,9 @@ const CatalogoComponent = {
                         <div>
                             <p style="margin:0 0 8px 0; font-weight:700; color: var(--color-moss-green); font-size: 17px;">${price}</p>
                             ${actionBtn}
+                            <button class="pub-qv-ver-btn" onclick="CatalogoComponent.openQuickView(${qvData.replace(/"/g,'&quot;')})">
+                                <i data-lucide="eye" style="width:13px;height:13px;"></i> Ver detalles
+                            </button>
                             ${adminActionsHtml}
                         </div>
                     </div>
@@ -372,5 +386,333 @@ const CatalogoComponent = {
             input.select();
             document.execCommand('copy');
         }
+    },
+
+    // ── QUICK VIEW ────────────────────────────────────────────────────────────
+    _qvReady: false,
+
+    _initQuickView() {
+        if (this._qvReady) return;
+        this._qvReady = true;
+
+        // CSS
+        const style = document.createElement('style');
+        style.textContent = `
+            #pub-qv-overlay {
+                display:none; position:fixed; inset:0;
+                background:rgba(0,0,0,0.55); backdrop-filter:blur(6px);
+                z-index:9000; padding:20px; overflow-y:auto;
+                align-items:flex-start; justify-content:center;
+            }
+            #pub-qv-overlay.open { display:flex; }
+            #pub-qv-modal {
+                background:white; border-radius:24px;
+                width:100%; max-width:860px; margin:auto; overflow:hidden;
+                box-shadow:0 24px 80px rgba(0,0,0,0.22);
+                display:grid; grid-template-columns:1fr 1fr; min-height:420px;
+                animation:pub-qv-in 0.25s cubic-bezier(0.34,1.56,0.64,1);
+            }
+            @keyframes pub-qv-in {
+                from{opacity:0;transform:scale(0.93) translateY(20px);}
+                to  {opacity:1;transform:scale(1) translateY(0);}
+            }
+            #pub-qv-img-col {
+                background:linear-gradient(135deg,#f7f3ee,#ede6da);
+                display:flex; flex-direction:column; align-items:center;
+                justify-content:center; padding:32px; position:relative; min-height:340px;
+            }
+            #pub-qv-img { max-width:100%; max-height:320px; object-fit:contain; border-radius:12px; }
+            #pub-qv-img-ph {
+                display:none; flex-direction:column; align-items:center;
+                gap:10px; color:#c8bba8; font-size:13px;
+            }
+            #pub-qv-thumbs {
+                display:flex; gap:8px; flex-wrap:wrap;
+                justify-content:center; margin-top:14px;
+            }
+            .pub-qv-thumb {
+                width:54px; height:54px; object-fit:contain; border-radius:8px;
+                border:2px solid transparent; background:white; cursor:pointer;
+                padding:2px; transition:border-color 0.15s, transform 0.15s;
+            }
+            .pub-qv-thumb:hover { transform:scale(1.08); }
+            .pub-qv-thumb.active { border-color:var(--color-moss-green); }
+            #pub-qv-close {
+                position:absolute; top:14px; right:14px;
+                width:34px; height:34px; background:rgba(255,255,255,0.85);
+                border:none; border-radius:50%; cursor:pointer;
+                display:flex; align-items:center; justify-content:center;
+                font-size:18px; color:#555;
+                box-shadow:0 2px 8px rgba(0,0,0,0.12); transition:background 0.15s; z-index:10;
+            }
+            #pub-qv-close:hover { background:white; color:#222; }
+            #pub-qv-info {
+                padding:36px 32px; display:flex; flex-direction:column; gap:14px; overflow-y:auto;
+            }
+            #pub-qv-badge {
+                display:none; background:var(--color-terracotta,#c0634c); color:white;
+                font-size:10px; font-weight:700; letter-spacing:0.7px; text-transform:uppercase;
+                padding:4px 10px; border-radius:20px; width:fit-content;
+                align-items:center; gap:4px;
+            }
+            #pub-qv-badge.visible { display:flex; }
+            #pub-qv-nombre {
+                font-family:var(--font-secondary); font-size:22px; font-weight:700;
+                color:#1e1e1e; line-height:1.3; margin:0;
+            }
+            #pub-qv-sku { font-size:11.5px; color:#b0a090; }
+            #pub-qv-price { font-size:32px; font-weight:800; color:var(--color-moss-green); line-height:1; }
+            #pub-qv-desc { font-size:14px; color:#444; line-height:1.6; margin:0; }
+            #pub-qv-medidas {
+                display:none; font-size:13px; color:#555;
+                background:#f7f3ee; border-radius:8px; padding:10px 14px;
+            }
+            #pub-qv-medidas.visible { display:block; }
+            #pub-qv-btn {
+                width:100%; padding:13px; border:none; border-radius:12px;
+                background:var(--color-moss-green); color:white;
+                font-family:var(--font-primary); font-size:14px; font-weight:700;
+                cursor:pointer; display:flex; align-items:center; justify-content:center;
+                gap:8px; transition:filter 0.2s, transform 0.2s; margin-top:auto;
+            }
+            #pub-qv-btn:hover { filter:brightness(1.08); transform:translateY(-1px); }
+            #pub-qv-btn.personalizar { background:var(--color-terracotta,#c0634c); }
+            .pub-qv-ver-btn {
+                width:100%; margin-top:8px; padding:7px;
+                background:transparent; color:#8c8270;
+                border:1.5px solid #ddd; border-radius:8px;
+                font-family:var(--font-primary); font-size:12px; font-weight:600;
+                cursor:pointer; display:flex; align-items:center; justify-content:center;
+                gap:5px; transition:all 0.2s;
+            }
+            .pub-qv-ver-btn:hover { border-color:var(--color-moss-green); color:var(--color-moss-green); }
+            #pub-qv-related { display:none; border-top:1px solid #f0ece4; padding-top:14px; }
+            #pub-qv-related-label {
+                font-size:10.5px; font-weight:700; text-transform:uppercase;
+                letter-spacing:0.6px; color:#8c8270; margin-bottom:10px;
+            }
+            #pub-qv-rel-grid {
+                display:grid; grid-template-columns:repeat(4,1fr); gap:8px;
+            }
+            .pub-qv-rel-card { cursor:pointer; text-align:center; }
+            .pub-qv-rel-img-wrap {
+                aspect-ratio:1; background:#f7f3ee; border-radius:8px; overflow:hidden;
+                margin-bottom:5px; display:flex; align-items:center; justify-content:center;
+                transition:transform 0.15s, box-shadow 0.15s;
+            }
+            .pub-qv-rel-card:hover .pub-qv-rel-img-wrap {
+                transform:translateY(-2px); box-shadow:0 4px 12px rgba(0,0,0,0.12);
+            }
+            .pub-qv-rel-img-wrap img { width:100%; height:100%; object-fit:contain; }
+            .pub-qv-rel-name {
+                font-size:10.5px; font-weight:600; color:#333; line-height:1.3;
+                display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
+            }
+            .pub-qv-rel-price { font-size:11px; color:var(--color-moss-green); font-weight:700; margin-top:2px; }
+            @media(max-width:680px){
+                #pub-qv-modal { grid-template-columns:1fr; border-radius:20px; }
+                #pub-qv-img-col { min-height:220px; padding:24px; }
+                #pub-qv-img { max-height:200px; }
+                #pub-qv-info { padding:24px 20px; }
+                #pub-qv-nombre { font-size:18px; }
+                #pub-qv-price { font-size:26px; }
+                #pub-qv-rel-grid { grid-template-columns:repeat(2,1fr); }
+            }
+        `;
+        document.head.appendChild(style);
+
+        // HTML del modal
+        const overlay = document.createElement('div');
+        overlay.id = 'pub-qv-overlay';
+        overlay.setAttribute('role', 'dialog');
+        overlay.setAttribute('aria-modal', 'true');
+        overlay.innerHTML = `
+            <div id="pub-qv-modal">
+                <div id="pub-qv-img-col">
+                    <button id="pub-qv-close" aria-label="Cerrar">✕</button>
+                    <img id="pub-qv-img" src="" alt="" style="display:none;">
+                    <div id="pub-qv-img-ph">
+                        <i data-lucide="image" style="width:56px;height:56px;"></i>
+                        Sin imagen
+                    </div>
+                    <div id="pub-qv-thumbs"></div>
+                </div>
+                <div id="pub-qv-info">
+                    <div id="pub-qv-badge">
+                        <i data-lucide="sparkles" style="width:11px;height:11px;"></i> Personalizable
+                    </div>
+                    <h2 id="pub-qv-nombre"></h2>
+                    <div id="pub-qv-sku"></div>
+                    <div id="pub-qv-price"></div>
+                    <hr style="border:none;border-top:1px solid #f0ece4;margin:0;">
+                    <p id="pub-qv-desc"></p>
+                    <div id="pub-qv-medidas">
+                        <i data-lucide="ruler" style="width:12px;height:12px;display:inline;margin-right:4px;"></i>
+                        <span id="pub-qv-medidas-txt"></span>
+                    </div>
+                    <div id="pub-qv-related">
+                        <div id="pub-qv-related-label">También te puede gustar</div>
+                        <div id="pub-qv-rel-grid"></div>
+                    </div>
+                    <button id="pub-qv-btn">
+                        <i id="pub-qv-btn-icon" data-lucide="shopping-cart" style="width:15px;height:15px;"></i>
+                        <span id="pub-qv-btn-lbl">Añadir al pedido</span>
+                    </button>
+                </div>
+            </div>`;
+        document.body.appendChild(overlay);
+
+        // Cerrar
+        const closeQV = () => {
+            overlay.classList.remove('open');
+            document.body.style.overflow = '';
+            this._qvItem = null;
+        };
+        document.getElementById('pub-qv-close').addEventListener('click', closeQV);
+        overlay.addEventListener('click', e => { if (e.target === overlay) closeQV(); });
+        document.addEventListener('keydown', e => { if (e.key === 'Escape') closeQV(); });
+
+        // Botón acción
+        document.getElementById('pub-qv-btn').addEventListener('click', () => {
+            const p = this._qvItem;
+            if (!p) return;
+            closeQV();
+            if (Number(p.personalizado) === 1) {
+                this.personalizarProducto(p.id);
+            } else {
+                if (typeof Carrito !== 'undefined') Carrito.agregar(p.id);
+            }
+        });
+
+        lucide.createIcons();
+    },
+
+    _qvItem: null,
+    _relacionados: [],
+
+    _getRelacionados(p, max = 4) {
+        const all = this.productos || [];
+        const tags = (p.shopify_tags || '').toLowerCase().split(',').map(t => t.trim()).filter(Boolean);
+        const tagSet = new Set(tags);
+        const candidates = all.filter(item => item.id !== p.id);
+        if (candidates.length === 0) return [];
+        const scored = candidates.map(item => {
+            const itags = (item.shopify_tags || '').toLowerCase().split(',').map(t => t.trim()).filter(Boolean);
+            return { item, score: itags.filter(t => tagSet.has(t)).length };
+        }).sort((a, b) => b.score - a.score);
+        const withMatch = scored.filter(s => s.score > 0).slice(0, max);
+        const fallback  = scored.filter(s => s.score === 0).slice(0, max - withMatch.length);
+        return [...withMatch, ...fallback].map(s => s.item);
+    },
+
+    openQuickView(p) {
+        this._initQuickView();
+        this._qvItem = p;
+
+        const imgEl  = document.getElementById('pub-qv-img');
+        const ph     = document.getElementById('pub-qv-img-ph');
+        const thumbs = document.getElementById('pub-qv-thumbs');
+        const badge  = document.getElementById('pub-qv-badge');
+        const btn    = document.getElementById('pub-qv-btn');
+        const btnIcon= document.getElementById('pub-qv-btn-icon');
+        const btnLbl = document.getElementById('pub-qv-btn-lbl');
+
+        // Helper imagen principal
+        const setMain = (src) => {
+            imgEl.src = getFullImageUrl(src);
+            imgEl.alt = p.nombre;
+            imgEl.style.display = 'block';
+            ph.style.display = 'none';
+            imgEl.onerror = () => { imgEl.style.display='none'; ph.style.display='flex'; };
+        };
+
+        // Galería
+        const fotos = (p.fotos && p.fotos.length > 0) ? p.fotos : p.foto_ruta ? [p.foto_ruta] : [];
+        if (fotos.length > 0) {
+            setMain(fotos[0]);
+        } else {
+            imgEl.style.display = 'none';
+            ph.style.display = 'flex';
+        }
+        thumbs.innerHTML = '';
+        if (fotos.length > 1) {
+            fotos.forEach((ruta, idx) => {
+                const t = document.createElement('img');
+                t.src = getFullImageUrl(ruta);
+                t.className = 'pub-qv-thumb' + (idx === 0 ? ' active' : '');
+                t.onerror = () => t.style.display = 'none';
+                t.addEventListener('click', () => {
+                    setMain(ruta);
+                    thumbs.querySelectorAll('.pub-qv-thumb').forEach(el => el.classList.remove('active'));
+                    t.classList.add('active');
+                });
+                thumbs.appendChild(t);
+            });
+        }
+
+        // Texto
+        document.getElementById('pub-qv-nombre').textContent = p.nombre;
+        document.getElementById('pub-qv-sku').textContent = p.sku ? 'SKU: ' + p.sku : '';
+        const precio = p.precio_final || p.precio_sugerido || 0;
+        document.getElementById('pub-qv-price').textContent = '$' + precio.toFixed(2);
+        document.getElementById('pub-qv-desc').textContent = p.shopify_descripcion || '';
+
+        // Medidas
+        const medEl = document.getElementById('pub-qv-medidas');
+        if (p.ancho && p.alto && parseFloat(p.ancho) > 0 && parseFloat(p.alto) > 0) {
+            document.getElementById('pub-qv-medidas-txt').textContent = `${p.ancho}" × ${p.alto}"`;
+            medEl.classList.add('visible');
+        } else {
+            medEl.classList.remove('visible');
+        }
+
+        // Badge
+        Number(p.personalizado) === 1 ? badge.classList.add('visible') : badge.classList.remove('visible');
+
+        // Botón
+        if (Number(p.personalizado) === 1) {
+            btn.className = 'personalizar';
+            btn.id = 'pub-qv-btn';
+            btnIcon.setAttribute('data-lucide', 'sparkles');
+            btnLbl.textContent = 'Personalizar & Cotizar';
+        } else {
+            btn.className = '';
+            btn.id = 'pub-qv-btn';
+            btnIcon.setAttribute('data-lucide', 'shopping-cart');
+            btnLbl.textContent = 'Añadir al pedido';
+        }
+
+        // Productos relacionados
+        const relEl  = document.getElementById('pub-qv-related');
+        const relGrid = document.getElementById('pub-qv-rel-grid');
+        this._relacionados = this._getRelacionados(p);
+        if (this._relacionados.length > 0) {
+            relGrid.innerHTML = this._relacionados.map((r, idx) => {
+                const foto   = (r.fotos && r.fotos.length > 0) ? r.fotos[0] : r.foto_ruta;
+                const precio = r.precio_final || 0;
+                return `<div class="pub-qv-rel-card" data-rel-idx="${idx}">
+                    <div class="pub-qv-rel-img-wrap">
+                        ${foto
+                            ? `<img src="${getFullImageUrl(foto)}" alt="${r.nombre}" onerror="this.style.display='none'">`
+                            : '<i data-lucide="image" style="width:24px;height:24px;color:#ccc;"></i>'}
+                    </div>
+                    <div class="pub-qv-rel-name">${r.nombre}</div>
+                    <div class="pub-qv-rel-price">$${precio.toFixed(2)}</div>
+                </div>`;
+            }).join('');
+            relGrid.querySelectorAll('.pub-qv-rel-card').forEach(card => {
+                card.addEventListener('click', () => {
+                    const idx = parseInt(card.dataset.relIdx, 10);
+                    this.openQuickView(this._relacionados[idx]);
+                });
+            });
+            relEl.style.display = 'block';
+        } else {
+            relEl.style.display = 'none';
+        }
+
+        document.getElementById('pub-qv-overlay').classList.add('open');
+        document.body.style.overflow = 'hidden';
+        lucide.createIcons();
     }
 };

@@ -297,6 +297,12 @@
                         </a>
                     </li>
                     <li>
+                        <a href="#cotizaciones" class="nav-item" data-tab="cotizaciones">
+                            <i data-lucide="message-square"></i>
+                            <span>Cotizaciones</span>
+                        </a>
+                    </li>
+                    <li>
                         <a href="#facturas" class="nav-item" data-tab="facturas">
                             <i data-lucide="file-text"></i>
                             <span>Facturación y Contabilidad</span>
@@ -410,7 +416,17 @@
                     </div>
                 </section>
                 
-                <!-- 9. Pantalla: Facturas y Contabilidad -->
+                <!-- 10. Pantalla: Cotizaciones -->
+                <section id="view-cotizaciones" class="tab-view">
+                    <div id="cotizaciones-container">
+                        <div class="loading-state">
+                            <div class="spinner"></div>
+                            <p>Cargando cotizaciones...</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 11. Pantalla: Facturas y Contabilidad -->
                 <section id="view-facturas" class="tab-view">
                     <div id="facturas-container">
                         <div class="loading-state">
@@ -425,17 +441,18 @@
     </div>
 
     <!-- Scripts JavaScript -->
-    <script src="js/api.js?v=52"></script>
+    <script src="js/api.js?v=64"></script>
     <script src="js/components/carrito.js?v=51"></script>
-    <script src="js/components/catalogo.js?v=51"></script>
-    <script src="js/components/dashboard.js?v=51"></script>
+    <script src="js/components/catalogo.js?v=54"></script>
+    <script src="js/components/dashboard.js?v=52"></script>
     <script src="js/components/inventario.js?v=51"></script>
     <script src="js/components/disenos.js?v=51"></script>
-    <script src="js/components/costos.js?v=51"></script>
-    <script src="js/components/produccion.js?v=51"></script>
+    <script src="js/components/costos.js?v=57"></script>
+    <script src="js/components/produccion.js?v=57"></script>
     <script src="js/components/clientes.js?v=52"></script>
-    <script src="js/components/facturas.js?v=51"></script>
+    <script src="js/components/facturas.js?v=62"></script>
     <script src="js/components/personalizados.js?v=51"></script>
+    <script src="js/components/cotizaciones.js?v=6"></script>
     <script src="js/app.js?v=53"></script>
 </body>
 </html>

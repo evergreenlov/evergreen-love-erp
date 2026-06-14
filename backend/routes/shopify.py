@@ -1,10 +1,11 @@
-from fastapi import APIRouter, HTTPException, Response
+from fastapi import APIRouter, HTTPException, Response, Depends
 import urllib.request
 import urllib.error
 import json
 import datetime
 from database import get_db_connection
 from utils.shopify_exporter import generate_shopify_csv
+from auth import get_current_admin
 
 router = APIRouter(
     prefix="/api",
@@ -12,7 +13,7 @@ router = APIRouter(
 )
 
 @router.get("/shopify/exportar")
-def exportar_shopify_csv():
+def exportar_shopify_csv(current_user: dict = Depends(get_current_admin)):
     """
     Genera y sirve el archivo CSV compatible con Shopify para todos los productos.
     """
@@ -29,7 +30,7 @@ def exportar_shopify_csv():
         raise HTTPException(status_code=500, detail=f"Error al generar exportación de Shopify: {str(e)}")
 
 @router.post("/shopify/publicar_web")
-def publicar_catalogo_web():
+def publicar_catalogo_web(current_user: dict = Depends(get_current_admin)):
     """
     Publica el catálogo local (productos SQLite y fotos R2) en el endpoint
     público de Cloudflare R2 mediante el Worker.

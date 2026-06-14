@@ -278,6 +278,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 case 'clientes':
                     ClientesComponent.render('clientes-container');
                     break;
+                case 'cotizaciones':
+                    CotizacionesComponent.render('cotizaciones-container');
+                    break;
                 case 'facturas':
                     FacturasComponent.render('facturas-container');
                     break;

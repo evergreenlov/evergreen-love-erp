@@ -1,9 +1,10 @@
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, status, Depends
 from pydantic import BaseModel
 from typing import Optional, List
 import sqlite3
 
 from database import get_db_connection
+from auth import get_current_admin
 
 router = APIRouter(
     prefix="/api",
@@ -15,7 +16,7 @@ router = APIRouter(
 class OrdenSchema(BaseModel):
     codigo_orden: str
     cliente: str
-    producto_id: int
+    producto_id: Optional[int] = None
     cantidad: int
     estado: str = "Pendiente"
     fecha_entrega: Optional[str] = None
@@ -66,14 +67,16 @@ def descontar_materiales_inventario(cursor, producto_id: int, cantidad_orden: in
 # --- ENDPOINTS ÓRDENES DE PRODUCCIÓN ---
 
 @router.get("/ordenes")
-def list_ordenes():
+def list_ordenes(current_user: dict = Depends(get_current_admin)):
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute("""
-            SELECT o.*, p.nombre as producto_nombre, p.sku as producto_sku
+            SELECT o.*, p.nombre as producto_nombre, p.sku as producto_sku,
+                   f.numero_factura
             FROM ordenes_produccion o
             LEFT JOIN productos p ON o.producto_id = p.id
+            LEFT JOIN facturas f ON f.id = o.factura_id
             ORDER BY o.id DESC
         """)
         rows = cursor.fetchall()
@@ -84,7 +87,7 @@ def list_ordenes():
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/ordenes", status_code=status.HTTP_201_CREATED)
-def create_orden(orden: OrdenSchema):
+def create_orden(orden: OrdenSchema, current_user: dict = Depends(get_current_admin)):
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -119,7 +122,7 @@ def create_orden(orden: OrdenSchema):
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.put("/ordenes/{orden_id}")
-def update_orden(orden_id: int, estado: str):
+def update_orden(orden_id: int, estado: str, current_user: dict = Depends(get_current_admin)):
     estados_validos = ['Pendiente', 'En diseño', 'Cortando', 'Grabando', 'Pintura/Acabado', 'Listo', 'Entregado']
     if estado not in estados_validos:
         raise HTTPException(status_code=400, detail="Estado de producción inválido.")
@@ -167,7 +170,7 @@ def update_orden(orden_id: int, estado: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.put("/ordenes/{orden_id}/completado")
-def update_orden_completado(orden_id: int, completado: int):
+def update_orden_completado(orden_id: int, completado: int, current_user: dict = Depends(get_current_admin)):
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -179,7 +182,7 @@ def update_orden_completado(orden_id: int, completado: int):
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.delete("/ordenes/{orden_id}")
-def delete_orden(orden_id: int):
+def delete_orden(orden_id: int, current_user: dict = Depends(get_current_admin)):
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -209,7 +212,7 @@ class EvaluacionSchema(BaseModel):
     estado_aprobacion: str = "Aprobado"
 
 @router.get("/evaluaciones")
-def list_evaluaciones():
+def list_evaluaciones(current_user: dict = Depends(get_current_admin)):
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -228,7 +231,7 @@ def list_evaluaciones():
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/evaluaciones/orden/{orden_id}")
-def get_evaluacion_orden(orden_id: int):
+def get_evaluacion_orden(orden_id: int, current_user: dict = Depends(get_current_admin)):
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -242,7 +245,7 @@ def get_evaluacion_orden(orden_id: int):
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/evaluaciones", status_code=status.HTTP_201_CREATED)
-def create_or_update_evaluacion(evaluacion: EvaluacionSchema):
+def create_or_update_evaluacion(evaluacion: EvaluacionSchema, current_user: dict = Depends(get_current_admin)):
     try:
         conn = get_db_connection()
         cursor = conn.cursor()

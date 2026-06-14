@@ -282,3 +282,157 @@ def send_receipt_email(email_to: str, order_data: dict):
     except Exception as e:
         print(f"❌ Error al enviar recibo por correo a {email_to}: {str(e)}")
         return False
+
+
+def send_factura_email(email_to: str, factura_data: dict) -> tuple[bool, str]:
+    """
+    Envía una factura administrativa por email con diseño premium.
+
+    factura_data debe contener:
+      - numero_factura: str
+      - fecha_emision: str
+      - fecha_vencimiento: str (opcional)
+      - cliente_nombre: str
+      - estado: str  ("Pendiente" | "Pagada" | "Anulada")
+      - subtotal: float
+      - ivu_estatal: float
+      - ivu_municipal: float
+      - total: float
+      - notas: str (opcional)
+      - items: list de dicts {nombre_producto, cantidad, precio_unitario}
+
+    Retorna (exito: bool, mensaje: str).
+    """
+    import datetime as _dt
+
+    smtp_host = os.environ.get("SMTP_HOST", "smtp.gmail.com")
+    smtp_port = int(os.environ.get("SMTP_PORT", "587"))
+    smtp_user = os.environ.get("SMTP_USER", "")
+    smtp_pass = os.environ.get("SMTP_PASSWORD", "")
+    from_name = os.environ.get("SMTP_FROM_NAME", "Evergreen Love")
+    from_email = os.environ.get("SMTP_FROM_EMAIL", smtp_user)
+
+    if not smtp_user or not smtp_pass:
+        msg = "SMTP no configurado: faltan SMTP_USER y/o SMTP_PASSWORD en las variables de entorno."
+        print(f"⚠️ {msg}")
+        return False, msg
+
+    # ── Items HTML ─────────────────────────────────────────────────────────
+    items_html = ""
+    for item in factura_data.get("items", []):
+        subtotal_item = item["cantidad"] * item["precio_unitario"]
+        items_html += f"""
+        <tr>
+            <td style="padding:11px 12px;border-bottom:1px solid #ede6d8;font-size:13.5px;color:#2d2d2d;">{item['nombre_producto']}</td>
+            <td style="padding:11px 12px;border-bottom:1px solid #ede6d8;font-size:13.5px;color:#2d2d2d;text-align:center;">{item['cantidad']}</td>
+            <td style="padding:11px 12px;border-bottom:1px solid #ede6d8;font-size:13.5px;color:#2d2d2d;text-align:right;">${item['precio_unitario']:.2f}</td>
+            <td style="padding:11px 12px;border-bottom:1px solid #ede6d8;font-size:13.5px;font-weight:600;color:#5f5a30;text-align:right;">${subtotal_item:.2f}</td>
+        </tr>"""
+
+    # ── Estado badge ───────────────────────────────────────────────────────
+    estado = factura_data.get("estado", "Pendiente")
+    estado_color = {"Pendiente": "#e65100", "Pagada": "#2e7d32", "Anulada": "#c62828"}.get(estado, "#555")
+    estado_bg    = {"Pendiente": "#fff3e0", "Pagada": "#e8f5e9",  "Anulada": "#fce4ec"}.get(estado, "#f5f5f5")
+
+    venc = factura_data.get("fecha_vencimiento", "")
+    venc_line = f"<br><strong>Vence:</strong> {venc}" if venc and estado == "Pendiente" else ""
+
+    notas = factura_data.get("notas", "") or ""
+    notas_line = f"""
+        <div style="margin-top:18px;padding:12px 16px;background:#fdfaf5;border-left:3px solid #c8b88a;border-radius:4px;font-size:13px;color:#666;">
+            <strong>Notas:</strong> {notas}
+        </div>""" if notas.strip() else ""
+
+    anio = _dt.datetime.now().strftime("%Y")
+
+    html = f"""<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Factura {factura_data.get('numero_factura','')}</title>
+</head>
+<body style="margin:0;padding:0;background:#f6f5f0;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased;">
+  <div style="max-width:600px;margin:30px auto;background:#fff;border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,0.07);overflow:hidden;border:1px solid #eae5dc;">
+
+    <!-- HEADER -->
+    <div style="background:#5f5a30;padding:28px 40px;text-align:center;">
+      <h1 style="color:#fff;margin:0;font-size:22px;font-weight:500;letter-spacing:1px;">EVERGREEN LOVE</h1>
+      <p style="color:#eae5dc;margin:5px 0 0;font-size:11px;text-transform:uppercase;letter-spacing:2px;">Factura Electrónica</p>
+    </div>
+
+    <!-- BODY -->
+    <div style="padding:36px 40px;">
+
+      <!-- Meta -->
+      <table style="width:100%;margin-bottom:24px;font-size:13.5px;color:#555;">
+        <tr>
+          <td style="padding:4px 0;"><strong style="color:#3a3a2a;">Número:</strong> {factura_data.get('numero_factura','')}</td>
+          <td style="padding:4px 0;text-align:right;">
+            <span style="display:inline-block;padding:3px 12px;border-radius:20px;font-size:12px;font-weight:700;background:{estado_bg};color:{estado_color};">{estado}</span>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:4px 0;"><strong style="color:#3a3a2a;">Cliente:</strong> {factura_data.get('cliente_nombre','')}</td>
+          <td style="padding:4px 0;text-align:right;font-size:12.5px;color:#888;">
+            Emitida: {factura_data.get('fecha_emision','')}{venc_line}
+          </td>
+        </tr>
+      </table>
+
+      <!-- Items -->
+      <table style="width:100%;border-collapse:collapse;">
+        <thead>
+          <tr style="background:#fdfaf5;">
+            <th style="padding:9px 12px;text-align:left;font-size:12px;color:#5f5a30;font-weight:700;border-bottom:2px solid #ede6d8;">Artículo</th>
+            <th style="padding:9px 12px;text-align:center;font-size:12px;color:#5f5a30;font-weight:700;border-bottom:2px solid #ede6d8;width:50px;">Cant.</th>
+            <th style="padding:9px 12px;text-align:right;font-size:12px;color:#5f5a30;font-weight:700;border-bottom:2px solid #ede6d8;width:80px;">Precio</th>
+            <th style="padding:9px 12px;text-align:right;font-size:12px;color:#5f5a30;font-weight:700;border-bottom:2px solid #ede6d8;width:90px;">Total</th>
+          </tr>
+        </thead>
+        <tbody>{items_html}</tbody>
+      </table>
+
+      <!-- Totales -->
+      <div style="margin-top:16px;border-top:2px solid #ede6d8;padding-top:14px;">
+        <table style="width:100%;font-size:13.5px;">
+          <tr><td style="text-align:right;padding:3px 12px;color:#666;">Subtotal</td><td style="text-align:right;width:100px;padding:3px 0;color:#333;">${factura_data.get('subtotal',0):.2f}</td></tr>
+          <tr><td style="text-align:right;padding:3px 12px;color:#666;">IVU Estatal (10.5%)</td><td style="text-align:right;padding:3px 0;color:#333;">${factura_data.get('ivu_estatal',0):.2f}</td></tr>
+          <tr><td style="text-align:right;padding:3px 12px;color:#666;">IVU Municipal (1.0%)</td><td style="text-align:right;padding:3px 0;color:#333;">${factura_data.get('ivu_municipal',0):.2f}</td></tr>
+          <tr style="font-size:16px;font-weight:700;color:#5f5a30;">
+            <td style="text-align:right;padding:10px 12px 0;">Total</td>
+            <td style="text-align:right;padding:10px 0 0;">${factura_data.get('total',0):.2f}</td>
+          </tr>
+        </table>
+      </div>
+
+      {notas_line}
+    </div>
+
+    <!-- FOOTER -->
+    <div style="background:#faf9f6;padding:20px 40px;text-align:center;border-top:1px solid #ede6d8;font-size:11.5px;color:#a89880;">
+      Evergreen Love &copy; {anio} — Diseño Láser Premium<br>
+      Para consultas escríbenos por WhatsApp.
+    </div>
+  </div>
+</body>
+</html>"""
+
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = f"Factura {factura_data.get('numero_factura','')} — Evergreen Love"
+    msg["From"] = f"{from_name} <{from_email}>"
+    msg["To"] = email_to
+    msg.attach(MIMEText(html, "html"))
+
+    try:
+        server = smtplib.SMTP(smtp_host, smtp_port)
+        server.starttls()
+        server.login(smtp_user, smtp_pass)
+        server.sendmail(from_email, email_to, msg.as_string())
+        server.quit()
+        print(f"✅ Factura enviada a {email_to}")
+        return True, f"Factura enviada correctamente a {email_to}"
+    except Exception as e:
+        err = str(e)
+        print(f"❌ Error SMTP al enviar factura a {email_to}: {err}")
+        return False, err

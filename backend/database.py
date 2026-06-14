@@ -394,6 +394,190 @@ def init_db(force_reset=False):
     except Exception:
         pass  # Ya existe
 
+    try:
+        cursor.execute("ALTER TABLE gastos ADD COLUMN recibo_ruta TEXT")
+        print("Columna 'recibo_ruta' añadida a gastos.")
+    except Exception:
+        pass  # Ya existe
+
+    try:
+        cursor.execute("ALTER TABLE gastos ADD COLUMN proveedor TEXT")
+        print("Columna 'proveedor' añadida a gastos.")
+    except Exception:
+        pass  # Ya existe
+
+    # 16. Tabla de Cotizaciones
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS cotizaciones (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        producto_id INTEGER REFERENCES productos(id) ON DELETE SET NULL,
+        nombre_cliente TEXT NOT NULL,
+        email TEXT NOT NULL,
+        telefono TEXT,
+        descripcion TEXT NOT NULL,
+        presupuesto_aprox REAL,
+        estado TEXT CHECK(estado IN ('nueva','en_revision','cotizada','aprobada','rechazada'))
+            NOT NULL DEFAULT 'nueva',
+        fuente TEXT DEFAULT 'publico',
+        cliente_b2b_id INTEGER,
+        notas_internas TEXT,
+        fecha_creacion TEXT DEFAULT (datetime('now','localtime')),
+        fecha_actualizado TEXT DEFAULT (datetime('now','localtime'))
+    );
+    """)
+
+    # 17. Tabla de Imágenes de Cotizaciones
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS cotizacion_imagenes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        cotizacion_id INTEGER NOT NULL REFERENCES cotizaciones(id) ON DELETE CASCADE,
+        nombre_archivo TEXT NOT NULL,
+        fecha_subida TEXT DEFAULT (datetime('now','localtime'))
+    );
+    """)
+
+    # Migración: cotizaciones.orden_produccion_id → enlace a la orden generada
+    try:
+        cursor.execute("ALTER TABLE cotizaciones ADD COLUMN orden_produccion_id INTEGER")
+        print("Columna 'orden_produccion_id' añadida a cotizaciones.")
+    except Exception:
+        pass  # Ya existe
+
+    # Migraciones: Motor de Estimación de Precio en Cotizaciones
+    for col, tipo in [
+        ("costo_estimado",  "REAL"),
+        ("precio_estimado", "REAL"),
+        ("margen_estimado", "REAL"),
+        ("notas_estimacion","TEXT"),
+    ]:
+        try:
+            cursor.execute(f"ALTER TABLE cotizaciones ADD COLUMN {col} {tipo}")
+            print(f"Columna '{col}' añadida a cotizaciones.")
+        except Exception:
+            pass  # Ya existe
+
+    # Migración: ordenes_produccion.cotizacion_id → origen de la orden
+    try:
+        cursor.execute("ALTER TABLE ordenes_produccion ADD COLUMN cotizacion_id INTEGER")
+        print("Columna 'cotizacion_id' añadida a ordenes_produccion.")
+    except Exception:
+        pass  # Ya existe
+
+    # Migración: ordenes_produccion.notas → descripción/notas del proyecto
+    try:
+        cursor.execute("ALTER TABLE ordenes_produccion ADD COLUMN notas TEXT")
+        print("Columna 'notas' añadida a ordenes_produccion.")
+    except Exception:
+        pass  # Ya existe
+
+    # Migración: ordenes_produccion.cliente_b2b_id → cliente B2B que originó la orden
+    try:
+        cursor.execute("ALTER TABLE ordenes_produccion ADD COLUMN cliente_b2b_id INTEGER")
+        print("Columna 'cliente_b2b_id' añadida a ordenes_produccion.")
+    except Exception:
+        pass  # Ya existe
+
+    # Migración: ordenes_produccion.pedido_b2b_id → agrupa órdenes del mismo pedido B2B
+    try:
+        cursor.execute("ALTER TABLE ordenes_produccion ADD COLUMN pedido_b2b_id TEXT")
+        print("Columna 'pedido_b2b_id' añadida a ordenes_produccion.")
+    except Exception:
+        pass  # Ya existe
+
+    # Migración: factura ↔ orden — vínculo formal bidireccional
+    try:
+        cursor.execute("ALTER TABLE facturas ADD COLUMN orden_produccion_id INTEGER")
+        print("Columna 'orden_produccion_id' añadida a facturas.")
+    except Exception:
+        pass  # Ya existe
+
+    try:
+        cursor.execute("ALTER TABLE facturas ADD COLUMN codigo_orden TEXT")
+        print("Columna 'codigo_orden' añadida a facturas.")
+    except Exception:
+        pass  # Ya existe
+
+    try:
+        cursor.execute("ALTER TABLE ordenes_produccion ADD COLUMN factura_id INTEGER")
+        print("Columna 'factura_id' añadida a ordenes_produccion.")
+    except Exception:
+        pass  # Ya existe
+
+    # Tabla de configuración global (fila única)
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS configuracion (
+        id INTEGER PRIMARY KEY DEFAULT 1 CHECK(id = 1),
+        tarifa_hora_laser REAL NOT NULL DEFAULT 15.0,
+        tarifa_hora_labor REAL NOT NULL DEFAULT 18.0
+    );
+    """)
+    cursor.execute("""
+    INSERT OR IGNORE INTO configuracion (id, tarifa_hora_laser, tarifa_hora_labor)
+    VALUES (1, 15.0, 18.0)
+    """)
+
+    # Migraciones Motor de Costeo Inteligente
+    try:
+        cursor.execute("ALTER TABLE productos ADD COLUMN tipo_producto TEXT")
+        print("Columna 'tipo_producto' añadida a productos.")
+    except Exception:
+        pass
+
+    try:
+        cursor.execute("ALTER TABLE productos ADD COLUMN capas INTEGER DEFAULT 1")
+        print("Columna 'capas' añadida a productos.")
+    except Exception:
+        pass
+
+    try:
+        cursor.execute("ALTER TABLE productos ADD COLUMN complejidad TEXT DEFAULT 'simple'")
+        print("Columna 'complejidad' añadida a productos.")
+    except Exception:
+        pass
+
+    try:
+        cursor.execute("ALTER TABLE productos ADD COLUMN tiempo_pintura REAL DEFAULT 0.0")
+        print("Columna 'tiempo_pintura' añadida a productos.")
+    except Exception:
+        pass
+
+    try:
+        cursor.execute("ALTER TABLE productos ADD COLUMN tiempo_ensamblaje REAL DEFAULT 0.0")
+        print("Columna 'tiempo_ensamblaje' añadida a productos.")
+    except Exception:
+        pass
+
+    # Migraciones Resina en productos
+    for col, defn in [
+        ("usa_resina",               "INTEGER DEFAULT 0"),
+        ("cantidad_resina_ml",       "REAL DEFAULT 0.0"),
+        ("costo_resina_por_ml",      "REAL DEFAULT 0.0"),
+        ("tiempo_resina_min",        "REAL DEFAULT 0.0"),   # legacy, mapea a activo
+        ("tiempo_resina_activo_min", "REAL DEFAULT 0.0"),
+        ("tiempo_resina_curado_min", "REAL DEFAULT 0.0"),
+    ]:
+        try:
+            cursor.execute(f"ALTER TABLE productos ADD COLUMN {col} {defn}")
+            print(f"Columna '{col}' añadida a productos.")
+        except Exception:
+            pass
+
+    # Migración: cotizaciones.fecha_actualizado (puede faltar en tablas antiguas)
+    try:
+        cursor.execute("ALTER TABLE cotizaciones ADD COLUMN fecha_actualizado TEXT DEFAULT (datetime('now','localtime'))")
+        print("Columna 'fecha_actualizado' añadida a cotizaciones.")
+    except Exception:
+        pass
+
+    # Crear carpeta de recibos si no existe
+    import os as _os
+    _recibos_dir = _os.path.abspath(_os.path.join(_os.path.dirname(__file__), "..", "data", "recibos_gastos"))
+    _os.makedirs(_recibos_dir, exist_ok=True)
+
+    # Crear carpeta de imágenes de cotizaciones
+    _cotiz_dir = _os.path.abspath(_os.path.join(_os.path.dirname(__file__), "..", "data", "cotizaciones"))
+    _os.makedirs(_cotiz_dir, exist_ok=True)
+
     conn.commit()
     conn.close()
     print("Base de datos reconstruida exitosamente con las unidades en pulgadas y desglose de componentes.")

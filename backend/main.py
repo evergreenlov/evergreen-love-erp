@@ -1,5 +1,5 @@
 import os
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -7,6 +7,7 @@ from fastapi.openapi.utils import get_openapi
 import sqlite3
 
 from database import get_db_connection, init_db, bootstrap_admin
+from auth import get_current_admin
 from utils.photo_scanner import scan_and_index_photos
 from utils.backup import create_backup
 from routes import materiales
@@ -20,6 +21,9 @@ from routes import clientes
 from routes import facturas
 from routes import auth
 from routes import backups
+from routes import cotizaciones
+from routes import dashboard
+from routes import b2b
 
 
 app = FastAPI(
@@ -39,11 +43,14 @@ app.include_router(shopify.router)
 app.include_router(carrito.router)
 app.include_router(clientes.router)
 app.include_router(facturas.router)
+app.include_router(cotizaciones.router)
+app.include_router(dashboard.router)
+app.include_router(b2b.router)
 
 # Orígenes permitidos: leer desde variable de entorno, con fallback para desarrollo local
 _raw_origins = os.environ.get(
     "ALLOWED_ORIGINS",
-    "http://localhost:8000,http://127.0.0.1:8000"
+    "http://localhost:8000,http://127.0.0.1:8000,http://192.168.86.30:8000"
 )
 ALLOWED_ORIGINS = [o.strip() for o in _raw_origins.split(",") if o.strip()]
 
@@ -95,71 +102,23 @@ def health():
         "database": "connected"
     }
 
-@app.get("/api/diagnostic")
-def diagnostic():
-    import os
-    backend_dir = os.path.dirname(__file__)
-    files = []
-    try:
-        files = os.listdir(backend_dir)
-    except Exception as e:
-        files = str(e)
-    
-    db_file_exists = os.path.exists(os.path.join(backend_dir, "db_seed.json"))
-    
-    # Intentar ejecutar init_db() para forzar el sembrado si no se ha hecho
-    seeding_result = "No running"
-    try:
-        from database import init_db
-        init_db()
-        seeding_result = "Ran init_db()"
-    except Exception as e:
-        seeding_result = f"Error running init_db: {str(e)}"
-        
-    return {
-        "current_dir": backend_dir,
-        "files_in_backend": files,
-        "db_seed_exists": db_file_exists,
-        "seeding_result": seeding_result
-    }
-
 # Endpoint para verificar el estado de la base de datos y contar registros
 @app.get("/api/db_status")
-def db_status():
+def db_status(current_user: dict = Depends(get_current_admin)):
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
-        
+
         status = {}
         tables = ['materiales', 'retazos', 'disenos', 'laser_settings', 'productos', 'ordenes_produccion', 'evaluaciones_visuales', 'fotos_asociadas', 'clientes', 'catalogo_cliente', 'facturas', 'items_factura']
         for table in tables:
             cursor.execute(f"SELECT COUNT(*) FROM {table}")
             status[table] = cursor.fetchone()[0]
-            
+
         conn.close()
         return {
             "status": "success",
             "counts": status
-        }
-    except Exception as e:
-        return {
-            "status": "error",
-            "message": str(e)
-        }
-
-# Endpoint básico para listar materiales (utilizado para pruebas en Fase 1)
-@app.get("/api/test_materiales")
-def test_materiales():
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM materiales")
-        rows = cursor.fetchall()
-        materiales = [dict(row) for row in rows]
-        conn.close()
-        return {
-            "status": "success",
-            "data": materiales
         }
     except Exception as e:
         return {
@@ -185,6 +144,17 @@ os.makedirs(ADJUNTOS_DIR, exist_ok=True)
 os.makedirs(FOTOS_IMPORT_DIR, exist_ok=True)
 app.mount("/adjuntos", StaticFiles(directory=ADJUNTOS_DIR), name="adjuntos")
 app.mount("/fotos_import", StaticFiles(directory=FOTOS_IMPORT_DIR), name="fotos_import")
+
+# Imágenes de cotizaciones
+COTIZACIONES_IMGS_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "cotizaciones"))
+os.makedirs(COTIZACIONES_IMGS_DIR, exist_ok=True)
+app.mount("/cotizaciones_imgs", StaticFiles(directory=COTIZACIONES_IMGS_DIR), name="cotizaciones_imgs")
+
+# Fotos con fondo removido (rembg) — disco externo
+CATALOGO_TRANSPARENTE_DIR = "/Volumes/MYRIAM SEAG/evergreen-love/data/catalogo_transparente"
+os.makedirs(CATALOGO_TRANSPARENTE_DIR, exist_ok=True)
+os.makedirs("/Volumes/MYRIAM SEAG/rembg_models", exist_ok=True)
+app.mount("/catalogo_transparente", StaticFiles(directory=CATALOGO_TRANSPARENTE_DIR), name="catalogo_transparente")
 
 # Servir el index.html principal en la ruta raíz y también como /index.html
 @app.get("/")

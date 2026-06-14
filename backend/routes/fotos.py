@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, UploadFile, File, Header, Query, status
+from fastapi import APIRouter, HTTPException, UploadFile, File, Header, Query, status, Depends
 from typing import Optional
 import sqlite3
 import os
@@ -9,6 +9,7 @@ import urllib.error
 
 from database import get_db_connection
 from utils.photo_scanner import scan_and_index_photos, FOTOS_IMPORT_DIR
+from auth import get_current_admin
 
 router = APIRouter(
     prefix="/api",
@@ -29,13 +30,15 @@ async def subir_foto(
     x_cloudflare_account_id: Optional[str] = Header(None, alias="X-Cloudflare-Account-Id"),
     x_cloudflare_api_token: Optional[str] = Header(None, alias="X-Cloudflare-Api-Token"),
     x_cloudflare_bucket: Optional[str] = Header(None, alias="X-Cloudflare-Bucket"),
-    x_cloudflare_delivery_url: Optional[str] = Header(None, alias="X-Cloudflare-Delivery-Url")
+    x_cloudflare_delivery_url: Optional[str] = Header(None, alias="X-Cloudflare-Delivery-Url"),
+    current_user: dict = Depends(get_current_admin)
 ):
     if not orden_id and not producto_id:
         raise HTTPException(status_code=400, detail="Debe proporcionar orden_id o producto_id para asociar la foto.")
         
-    if tipo_foto not in ['antes', 'final', 'referencia', 'material']:
-        raise HTTPException(status_code=400, detail="Tipo de foto inválido. Debe ser 'antes', 'final', 'referencia' o 'material'.")
+    TIPOS_VALIDOS = ['antes', 'final', 'referencia', 'material', 'frontal', 'lateral', 'detalle', 'empaque', 'transparente']
+    if tipo_foto not in TIPOS_VALIDOS:
+        raise HTTPException(status_code=400, detail=f"Tipo de foto inválido. Debe ser uno de: {', '.join(TIPOS_VALIDOS)}.")
         
     try:
         # Generar nombre de archivo
@@ -154,28 +157,159 @@ async def subir_foto(
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/fotos/escanear")
-def trigger_escanear_fotos():
+def trigger_escanear_fotos(current_user: dict = Depends(get_current_admin)):
     try:
         res = scan_and_index_photos()
         return res
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+CATALOGO_TRANSPARENTE_DIR = "/Volumes/MYRIAM SEAG/evergreen-love/data/catalogo_transparente"
+REMBG_MODELS_DIR = "/Volumes/MYRIAM SEAG/rembg_models"
+
+@router.post("/fotos/productos/{producto_id}/remover-fondo")
+def remover_fondo_producto(
+    producto_id: int,
+    current_user: dict = Depends(get_current_admin)
+):
+    # Configurar ruta de modelos ANTES de importar rembg
+    os.environ["U2NET_HOME"] = REMBG_MODELS_DIR
+    os.makedirs(CATALOGO_TRANSPARENTE_DIR, exist_ok=True)
+    os.makedirs(REMBG_MODELS_DIR, exist_ok=True)
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # Buscar SKU del producto
+    cursor.execute("SELECT id, sku FROM productos WHERE id = ?", (producto_id,))
+    prod = cursor.fetchone()
+    if not prod:
+        conn.close()
+        raise HTTPException(status_code=404, detail="Producto no encontrado")
+    sku = prod["sku"]
+
+    # Buscar foto más reciente del producto en fotos_asociadas
+    cursor.execute("""
+        SELECT ruta_archivo, nombre_archivo FROM fotos_asociadas
+        WHERE producto_id = ?
+        ORDER BY id DESC LIMIT 1
+    """, (producto_id,))
+    foto_row = cursor.fetchone()
+    if not foto_row or not foto_row["nombre_archivo"]:
+        conn.close()
+        raise HTTPException(status_code=404, detail="El producto no tiene foto asociada")
+
+    foto_path = os.path.join(FOTOS_IMPORT_DIR, foto_row["nombre_archivo"])
+    if not os.path.exists(foto_path):
+        conn.close()
+        raise HTTPException(status_code=404, detail=f"Archivo de foto no encontrado en disco: {foto_path}")
+
+    # Nombre del PNG resultante — sobrescribe si ya existe
+    sku_safe = sku.replace("/", "_").replace("\\", "_")
+    output_filename = f"{sku_safe}_transparente.png"
+    output_path = os.path.join(CATALOGO_TRANSPARENTE_DIR, output_filename)
+
+    # Procesar con rembg (importar aquí para respetar U2NET_HOME)
+    try:
+        from PIL import Image
+        import rembg
+        with open(foto_path, "rb") as f:
+            input_bytes = f.read()
+        output_bytes = rembg.remove(input_bytes)
+        with open(output_path, "wb") as f:
+            f.write(output_bytes)
+    except Exception as e:
+        conn.close()
+        raise HTTPException(status_code=500, detail=f"Error al procesar imagen con rembg: {str(e)}")
+
+    # Actualizar fotos_asociadas: agregar/actualizar entrada con la versión transparente
+    ruta_db = f"/catalogo_transparente/{output_filename}"
+    cursor.execute("""
+        SELECT id FROM fotos_asociadas
+        WHERE producto_id = ? AND tipo_foto = 'transparente'
+    """, (producto_id,))
+    existing = cursor.fetchone()
+    if existing:
+        cursor.execute("""
+            UPDATE fotos_asociadas
+            SET ruta_archivo = ?, nombre_archivo = ?, fecha_registro = datetime('now','localtime')
+            WHERE id = ?
+        """, (ruta_db, output_filename, existing["id"]))
+    else:
+        cursor.execute("""
+            INSERT INTO fotos_asociadas (producto_id, tipo_foto, ruta_archivo, nombre_archivo)
+            VALUES (?, 'transparente', ?, ?)
+        """, (producto_id, ruta_db, output_filename))
+
+    conn.commit()
+    conn.close()
+
+    return {
+        "status": "success",
+        "mensaje": f"Fondo removido correctamente para {sku}",
+        "foto_ruta": ruta_db,
+        "archivo": output_filename
+    }
+
+_TIPO_ORDER = {'transparente': 0, 'frontal': 1, 'lateral': 2, 'detalle': 3, 'empaque': 4, 'referencia': 5}
+
 @router.get("/fotos/productos/{producto_id}")
-def get_fotos_producto(producto_id: int):
+def get_fotos_producto(producto_id: int, current_user: dict = Depends(get_current_admin)):
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
-        cursor.execute("SELECT * FROM fotos_asociadas WHERE producto_id = ?", (producto_id,))
+        cursor.execute("SELECT * FROM fotos_asociadas WHERE producto_id = ? ORDER BY id DESC", (producto_id,))
         rows = cursor.fetchall()
-        fotos = [dict(row) for row in rows]
+        fotos = []
+        for row in rows:
+            f = dict(row)
+            nombre = f.get('nombre_archivo') or ''
+            tipo   = f.get('tipo_foto') or ''
+            if tipo == 'transparente':
+                f['ruta_publica'] = f'/catalogo_transparente/{nombre}' if nombre else None
+            else:
+                f['ruta_publica'] = f'/fotos_import/{nombre}' if nombre else None
+            fotos.append(f)
+        fotos.sort(key=lambda x: _TIPO_ORDER.get(x.get('tipo_foto', ''), 6))
         conn.close()
         return {"status": "success", "data": fotos}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.delete("/fotos/{foto_id}")
+def delete_foto(foto_id: int, current_user: dict = Depends(get_current_admin)):
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM fotos_asociadas WHERE id = ?", (foto_id,))
+        foto = cursor.fetchone()
+        if not foto:
+            conn.close()
+            raise HTTPException(status_code=404, detail="Foto no encontrada")
+        foto = dict(foto)
+        nombre = foto.get('nombre_archivo') or ''
+        tipo   = foto.get('tipo_foto') or ''
+        if nombre:
+            if tipo == 'transparente':
+                filepath = os.path.join(CATALOGO_TRANSPARENTE_DIR, nombre)
+            else:
+                filepath = os.path.join(FOTOS_IMPORT_DIR, nombre)
+            if os.path.exists(filepath):
+                try:
+                    os.remove(filepath)
+                except Exception:
+                    pass
+        cursor.execute("DELETE FROM fotos_asociadas WHERE id = ?", (foto_id,))
+        conn.commit()
+        conn.close()
+        return {"status": "success", "message": "Foto eliminada correctamente"}
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @router.get("/fotos/ordenes/{orden_id}")
-def get_fotos_orden(orden_id: int):
+def get_fotos_orden(orden_id: int, current_user: dict = Depends(get_current_admin)):
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -192,7 +326,8 @@ def get_fotos_orden(orden_id: int):
 @router.post("/ia/estimar")
 async def estimar_costos_por_ia(
     file: UploadFile = File(...),
-    gemini_key: Optional[str] = Header(None, alias="X-Gemini-Key")
+    gemini_key: Optional[str] = Header(None, alias="X-Gemini-Key"),
+    current_user: dict = Depends(get_current_admin)
 ):
     """
     Recibe la foto de un producto terminado, la envía a la API de Gemini 1.5 Flash,

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, UploadFile, File, Form, status
+from fastapi import APIRouter, HTTPException, UploadFile, File, Form, status, Depends
 from pydantic import BaseModel
 from typing import Optional, List
 import sqlite3
@@ -6,6 +6,7 @@ import os
 import shutil
 
 from database import get_db_connection
+from auth import get_current_admin
 
 router = APIRouter(
     prefix="/api",
@@ -32,7 +33,7 @@ class LaserSettingSchema(BaseModel):
 # --- ENDPOINTS DISEÑOS ---
 
 @router.get("/disenos")
-def list_disenos():
+def list_disenos(current_user: dict = Depends(get_current_admin)):
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -48,7 +49,8 @@ def list_disenos():
 async def create_diseno(
     nombre: str = Form(...),
     categoria: str = Form(...),
-    file: Optional[UploadFile] = File(None)
+    file: Optional[UploadFile] = File(None),
+    current_user: dict = Depends(get_current_admin)
 ):
     # Validar categorías
     categorias_validas = ['garitas', 'casitas Viejo San Juan', 'llaveros NFC', 'ornamentos', 'shadow box', 'portadas de libreta', 'productos personalizados']
@@ -84,7 +86,7 @@ async def create_diseno(
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.delete("/disenos/{diseno_id}")
-def delete_diseno(diseno_id: int):
+def delete_diseno(diseno_id: int, current_user: dict = Depends(get_current_admin)):
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -119,7 +121,7 @@ def delete_diseno(diseno_id: int):
 # --- ENDPOINTS SETTINGS LÁSER (VINCULADOS A DISEÑO) ---
 
 @router.get("/disenos/{diseno_id}/settings")
-def get_laser_settings(diseno_id: int):
+def get_laser_settings(diseno_id: int, current_user: dict = Depends(get_current_admin)):
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -145,7 +147,7 @@ def get_laser_settings(diseno_id: int):
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/disenos/{diseno_id}/settings", status_code=status.HTTP_201_CREATED)
-def create_laser_setting(diseno_id: int, setting: LaserSettingSchema):
+def create_laser_setting(diseno_id: int, setting: LaserSettingSchema, current_user: dict = Depends(get_current_admin)):
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -177,7 +179,7 @@ def create_laser_setting(diseno_id: int, setting: LaserSettingSchema):
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.delete("/settings/{setting_id}")
-def delete_laser_setting(setting_id: int):
+def delete_laser_setting(setting_id: int, current_user: dict = Depends(get_current_admin)):
     try:
         conn = get_db_connection()
         cursor = conn.cursor()

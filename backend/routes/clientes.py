@@ -8,7 +8,7 @@ import sqlite3
 
 from database import get_db_connection
 from utils.email_helper import send_receipt_email
-from auth import get_current_admin, hash_password
+from auth import get_current_admin, get_current_b2b, get_current_user, hash_password
 
 router = APIRouter(
     prefix="/api",
@@ -36,7 +36,7 @@ class CodigoB2BSchema(BaseModel):
 # --- ENDPOINTS CLIENTES B2B ---
 
 @router.get("/clientes")
-def list_clientes():
+def list_clientes(current_user: dict = Depends(get_current_admin)):
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -49,7 +49,7 @@ def list_clientes():
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/clientes", status_code=status.HTTP_201_CREATED)
-def create_cliente(cliente: ClienteSchema):
+def create_cliente(cliente: ClienteSchema, current_user: dict = Depends(get_current_admin)):
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -75,7 +75,7 @@ def create_cliente(cliente: ClienteSchema):
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.delete("/clientes/{cliente_id}")
-def delete_cliente(cliente_id: int):
+def delete_cliente(cliente_id: int, current_user: dict = Depends(get_current_admin)):
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -97,7 +97,10 @@ def delete_cliente(cliente_id: int):
 # --- ENDPOINTS CATÁLOGO POR CLIENTE ---
 
 @router.get("/clientes/{cliente_id}/catalogo")
-def get_catalogo_cliente(cliente_id: int):
+def get_catalogo_cliente(cliente_id: int, current_user: dict = Depends(get_current_user)):
+    # Admin puede ver cualquier catálogo; B2B solo el suyo
+    if current_user.get("role") == "b2b" and current_user.get("cliente_id") != cliente_id:
+        raise HTTPException(status_code=403, detail="No tienes acceso al catálogo de este cliente.")
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -118,7 +121,40 @@ def get_catalogo_cliente(cliente_id: int):
         catalogo = []
         for row in rows:
             d = dict(row)
-            d['foto_ruta'] = f"/fotos_import/{d['foto_nombre']}" if d.get('foto_nombre') else None
+            producto_id = d['producto_id']
+
+            cursor.execute("""
+                SELECT tipo_foto, nombre_archivo, ruta_archivo
+                FROM fotos_asociadas
+                WHERE producto_id = ?
+                ORDER BY CASE tipo_foto
+                    WHEN 'transparente' THEN 0
+                    WHEN 'frontal'      THEN 1
+                    WHEN 'lateral'      THEN 2
+                    WHEN 'detalle'      THEN 3
+                    WHEN 'empaque'      THEN 4
+                    ELSE 5 END, id DESC
+            """, (producto_id,))
+            foto_rows = cursor.fetchall()
+
+            fotos = []
+            for fr in foto_rows:
+                tipo   = fr['tipo_foto']
+                nombre = fr['nombre_archivo']
+                if not nombre:
+                    continue
+                if tipo == 'transparente':
+                    ruta = f"/catalogo_transparente/{nombre}"
+                else:
+                    ruta = f"/fotos_import/{nombre}"
+                if ruta not in fotos:
+                    fotos.append(ruta)
+
+            # foto_ruta principal: primera de la lista (transparente si existe, sino referencia)
+            d['fotos'] = fotos
+            d['foto_ruta'] = fotos[0] if fotos else (
+                f"/fotos_import/{d['foto_nombre']}" if d.get('foto_nombre') else None
+            )
             catalogo.append(d)
         conn.close()
         return {"status": "success", "data": catalogo}
@@ -126,7 +162,7 @@ def get_catalogo_cliente(cliente_id: int):
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/clientes/catalogo", status_code=status.HTTP_201_CREATED)
-def add_to_catalogo_cliente(item: CatalogoClienteSchema):
+def add_to_catalogo_cliente(item: CatalogoClienteSchema, current_user: dict = Depends(get_current_admin)):
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -169,7 +205,7 @@ def add_to_catalogo_cliente(item: CatalogoClienteSchema):
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.delete("/clientes/catalogo/{item_id}")
-def delete_from_catalogo_cliente(item_id: int):
+def delete_from_catalogo_cliente(item_id: int, current_user: dict = Depends(get_current_admin)):
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -205,8 +241,10 @@ class PedidoB2BSchema(BaseModel):
     items: List[PedidoB2BItemSchema]
 
 @router.post("/clientes/{cliente_id}/pedido", status_code=status.HTTP_201_CREATED)
-def crear_pedido_b2b(cliente_id: int, pedido: PedidoB2BSchema, background_tasks: BackgroundTasks):
+def crear_pedido_b2b(cliente_id: int, pedido: PedidoB2BSchema, background_tasks: BackgroundTasks, current_user: dict = Depends(get_current_b2b)):
     """Crea un pedido B2B desde el catálogo público del cliente."""
+    if current_user.get("cliente_id") != cliente_id:
+        raise HTTPException(status_code=403, detail="No puedes crear pedidos en nombre de otro cliente.")
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -217,10 +255,14 @@ def crear_pedido_b2b(cliente_id: int, pedido: PedidoB2BSchema, background_tasks:
             conn.close()
             raise HTTPException(status_code=404, detail="Cliente no encontrado")
 
+        import time as _time
         total_pedido = sum(item.cantidad * item.precio_unitario for item in pedido.items)
         resumen_items = " | ".join([f"{item.nombre_producto} x{item.cantidad}" for item in pedido.items])
+        ts_pedido = int(_time.time() * 1000)
+        pedido_b2b_id = f"PED-{cliente_id}-{ts_pedido}"
+        ts_base = ts_pedido % 10000000
 
-        for item in pedido.items:
+        for idx, item in enumerate(pedido.items):
             notas_orden = (
                 f"[PEDIDO B2B] Cliente: {cliente['nombre']} | "
                 f"Contacto: {pedido.nombre_contacto} | "
@@ -230,12 +272,11 @@ def crear_pedido_b2b(cliente_id: int, pedido: PedidoB2BSchema, background_tasks:
                 f"Items: {resumen_items} | "
                 f"Nota: {pedido.notas or 'Sin notas'}"
             )
-            import time
-            codigo_orden = f"EVL-B2B-{int(time.time() * 1000) % 10000000}-{item.producto_id}"
+            codigo_orden = f"EVL-B2B-{ts_base}-{idx}"
             cursor.execute("""
-                INSERT INTO ordenes_produccion (codigo_orden, cliente, producto_id, cantidad, estado, material_descontado)
-                VALUES (?, ?, ?, ?, 'Pendiente', 0)
-            """, (codigo_orden, notas_orden, item.producto_id, item.cantidad))
+                INSERT INTO ordenes_produccion (codigo_orden, cliente, producto_id, cantidad, estado, material_descontado, cliente_b2b_id, pedido_b2b_id)
+                VALUES (?, ?, ?, ?, 'Pendiente', 0, ?, ?)
+            """, (codigo_orden, notas_orden, item.producto_id, item.cantidad, cliente_id, pedido_b2b_id))
 
         # --- REGISTRO AUTOMÁTICO DE FACTURA ---
         import datetime
@@ -417,8 +458,8 @@ def generar_pin_cliente(cliente_id: int, current_user: dict = Depends(get_curren
 
 
 @router.get("/clientes/{cliente_id}/info")
-def get_cliente_info(cliente_id: int):
-    """Info básica de un cliente (para el catálogo B2B público)."""
+def get_cliente_info(cliente_id: int, current_user: dict = Depends(get_current_admin)):
+    """Info básica de un cliente."""
     try:
         conn = get_db_connection()
         cursor = conn.cursor()

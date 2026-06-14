@@ -152,6 +152,7 @@ def crear_pedido_publico(pedido: PedidoPublicoSchema, background_tasks: Backgrou
         total_pedido = sum(item.cantidad * item.precio_unitario for item in pedido.items)
         resumen_items = " | ".join([f"{item.nombre_producto} x{item.cantidad}" for item in pedido.items])
 
+        ts_pedido = int(time.time() * 1000) % 10000000
         for idx, item in enumerate(pedido.items):
             notas_orden = (
                 f"[PEDIDO PÚBLICO] Contacto: {pedido.nombre_contacto} | "
@@ -162,8 +163,7 @@ def crear_pedido_publico(pedido: PedidoPublicoSchema, background_tasks: Backgrou
                 f"Pago: {pedido.metodo_pago or 'ATH Movil'} | "
                 f"Nota: {pedido.notas or 'Sin notas'}"
             )
-            # Código único añadiendo índice y milisegundos
-            codigo_orden = f"EVL-PUB-{int(time.time() * 1000) % 10000000}-{idx}-{item.producto_id}"
+            codigo_orden = f"EVL-PUB-{ts_pedido}-{idx}-{item.producto_id}"
             cursor.execute("""
                 INSERT INTO ordenes_produccion (codigo_orden, cliente, producto_id, cantidad, estado, material_descontado)
                 VALUES (?, ?, ?, ?, 'Pendiente', 0)

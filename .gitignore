@@ -9,14 +9,31 @@ __pycache__/
 venv/
 env/
 
-# Local database and uploaded attachments/images
+# Base de datos local y archivos generados
 data/evergreen.db
-data/adjuntos/*
-data/fotos_import/*
-!data/adjuntos/.gitkeep
-!data/fotos_import/.gitkeep
+data/evergreen.db.bak
+data/*.db
+data/*.bak
+
+# Respaldos (nunca deben ir a git)
+data/backups/
+
+# Archivos subidos por usuarios
+data/adjuntos/
+data/fotos_import/
+data/cotizaciones/
+data/recibos_gastos/
+
+# PDFs y archivos de prueba locales
+data/*.pdf
 
 # OS generated files
 .DS_Store
 .DS_Store?
 Thumbs.db
+
+# Directorio de sesiones Claude (memoria local)
+.claude/
+
+# Repo anidado accidental
+evergreen-love/

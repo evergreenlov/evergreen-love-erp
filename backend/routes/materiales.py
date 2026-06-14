@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, UploadFile, File, status
+from fastapi import APIRouter, HTTPException, UploadFile, File, status, Depends
 from pydantic import BaseModel, Field
 from typing import Optional, List
 import sqlite3
@@ -7,6 +7,7 @@ import io
 import os
 
 from database import get_db_connection
+from auth import get_current_admin
 
 router = APIRouter(
     prefix="/api",
@@ -40,7 +41,7 @@ class RetazoSchema(BaseModel):
 # --- ENDPOINTS MATERIALES ---
 
 @router.get("/materiales")
-def list_materiales():
+def list_materiales(current_user: dict = Depends(get_current_admin)):
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -53,7 +54,7 @@ def list_materiales():
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/materiales", status_code=status.HTTP_201_CREATED)
-def create_material(material: MaterialSchema):
+def create_material(material: MaterialSchema, current_user: dict = Depends(get_current_admin)):
     # Validar tipo de material
     tipos_validos = ['madera', 'acrilico', 'corcho', 'resina', 'herrajes', 'empaques', 'imanes', 'pegamentos', 'pinturas', 'otros']
     if material.tipo not in tipos_validos:
@@ -81,7 +82,7 @@ def create_material(material: MaterialSchema):
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.put("/materiales/{material_id}")
-def update_material(material_id: int, material: MaterialSchema):
+def update_material(material_id: int, material: MaterialSchema, current_user: dict = Depends(get_current_admin)):
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -111,7 +112,7 @@ def update_material(material_id: int, material: MaterialSchema):
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.delete("/materiales/{material_id}")
-def delete_material(material_id: int):
+def delete_material(material_id: int, current_user: dict = Depends(get_current_admin)):
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -132,7 +133,7 @@ def delete_material(material_id: int):
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/materiales/{material_id}/foto")
-async def upload_material_photo(material_id: int, file: UploadFile = File(...)):
+async def upload_material_photo(material_id: int, file: UploadFile = File(...), current_user: dict = Depends(get_current_admin)):
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -167,7 +168,7 @@ async def upload_material_photo(material_id: int, file: UploadFile = File(...)):
 # --- ENDPOINTS IMPORTACIÓN MASIVA ---
 
 @router.post("/materiales/importar")
-async def import_materiales_csv(file: UploadFile = File(...)):
+async def import_materiales_csv(file: UploadFile = File(...), current_user: dict = Depends(get_current_admin)):
     if not file.filename.endswith('.csv'):
         raise HTTPException(status_code=400, detail="El archivo debe ser de formato CSV")
         
@@ -234,7 +235,7 @@ async def import_materiales_csv(file: UploadFile = File(...)):
 # --- ENDPOINTS RETAZOS ---
 
 @router.get("/retazos")
-def list_retazos():
+def list_retazos(current_user: dict = Depends(get_current_admin)):
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -253,7 +254,7 @@ def list_retazos():
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/retazos", status_code=status.HTTP_201_CREATED)
-def create_retazo(retazo: RetazoSchema):
+def create_retazo(retazo: RetazoSchema, current_user: dict = Depends(get_current_admin)):
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -278,7 +279,7 @@ def create_retazo(retazo: RetazoSchema):
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.put("/retazos/{retazo_id}")
-def update_retazo(retazo_id: int, retazo: RetazoSchema):
+def update_retazo(retazo_id: int, retazo: RetazoSchema, current_user: dict = Depends(get_current_admin)):
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -303,7 +304,7 @@ def update_retazo(retazo_id: int, retazo: RetazoSchema):
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.delete("/retazos/{retazo_id}")
-def delete_retazo(retazo_id: int):
+def delete_retazo(retazo_id: int, current_user: dict = Depends(get_current_admin)):
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
