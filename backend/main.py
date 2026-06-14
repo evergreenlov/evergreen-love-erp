@@ -65,17 +65,31 @@ app.add_middleware(
 # Inicializar base de datos al arrancar
 @app.on_event("startup")
 def startup_event():
-    init_db()
-    bootstrap_admin()
-    # Diagnóstico: imprimir rutas de cotizaciones registradas
+    import traceback as _tb
+
+    try:
+        init_db()
+        print("✅ Base de datos inicializada.")
+    except Exception as e:
+        print(f"❌ ERROR en init_db: {e}")
+        _tb.print_exc()
+
+    try:
+        bootstrap_admin()
+    except Exception as e:
+        print(f"❌ ERROR en bootstrap_admin: {e}")
+        _tb.print_exc()
+
+    # Diagnóstico: rutas de cotizaciones registradas
     cotiz_routes = [(r.path, list(getattr(r, 'methods', []))) for r in app.routes if 'cotizacion' in r.path]
     print("📋 Rutas cotizaciones registradas:", cotiz_routes)
+
     try:
         backup_path = create_backup()
         print(f"✅ Respaldo automático creado: {os.path.basename(backup_path)}")
     except Exception as e:
         print(f"⚠️ Error al crear respaldo automático: {str(e)}")
-    # Copiar fotos semilla desde frontend/fotos_import a data/fotos_import en el disco persistente
+
     try:
         import shutil
         src_dir = os.path.join(FRONTEND_DIR, "fotos_import")
