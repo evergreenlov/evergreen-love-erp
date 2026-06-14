@@ -1239,8 +1239,19 @@
 
     // Helper seguro de precios B2B
     function getPrecioItem(item) {
-        if (!item) return 0;
-        return Number(item.precio_b2b ?? item.precio_especial ?? item.precio_final ?? 0);
+      const precio = Number(
+        item?.precio_b2b ??
+        item?.precio_especial ??
+        item?.precio_final ??
+        item?.precio_retail ??
+        0
+      );
+      return Number.isFinite(precio) ? precio : 0;
+    }
+
+    function formatPrecioItem(item) {
+      const precio = getPrecioItem(item);
+      return precio > 0 ? `$${precio.toFixed(2)}` : 'Consultar precio';
     }
 
     let clienteId = null;
@@ -1639,6 +1650,7 @@
         const data = await res.json();
         const items = data.data || [];
         _allCatalogItems = items;
+        console.log('[B2B catalog sample]', _allCatalogItems?.[0]);
 
         if (items.length === 0) {
             grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:60px;color:#c8bba8;font-style:italic;">
@@ -1674,7 +1686,7 @@
                    </div>`;
 
             const precioB2BVal = getPrecioItem(item);
-            const precioB2BText = precioB2BVal <= 0 ? "Consultar precio" : `$${precioB2BVal.toFixed(2)}`;
+            const precioB2BText = formatPrecioItem(item);
 
             const actionButton = isPersonalizado
                 ? `<button class="btn-agregar" style="background-color: var(--color-terracotta); border-color: var(--color-terracotta);" id="btn-add-${item.producto_id}"
@@ -1699,7 +1711,7 @@
                     <div class="product-sku">SKU: ${item.producto_sku}</div>
                     <div class="product-price-row">
                         <div class="price-b2b">${precioB2BText}</div>
-                        <div class="price-retail">Retail $${item.precio_retail.toFixed(2)}</div>
+                        <div class="price-retail">Retail $${Number(item?.precio_retail ?? 0).toFixed(2)}</div>
                         ${item.etiqueta_precio ? `<div style="font-size:10px;color:#1976d2;font-weight:600;margin-top:2px;">${item.etiqueta_precio}</div>` : ''}
                     </div>
                     <div class="qty-row">
@@ -1804,9 +1816,9 @@
                     : `<div class="cart-item-placeholder"><i data-lucide="package" style="width:20px;height:20px;color:#c8bba8;"></i></div>`}
                 <div class="cart-item-info">
                     <div class="cart-item-name">${item.nombre}</div>
-                    <div class="cart-item-sub">Cant: ${item.cantidad} × $${item.precio.toFixed(2)}</div>
+                    <div class="cart-item-sub">Cant: ${item.cantidad} × $${Number(item.precio ?? 0).toFixed(2)}</div>
                 </div>
-                <div class="cart-item-price">$${(item.precio * item.cantidad).toFixed(2)}</div>
+                <div class="cart-item-price">$${(Number(item.precio ?? 0) * item.cantidad).toFixed(2)}</div>
                 <button class="btn-remove-item" onclick="removeFromCart(${item.producto_id})">
                     <i data-lucide="x" style="width:16px;height:16px;"></i>
                 </button>
@@ -1870,10 +1882,10 @@
                             ${imgHtml}
                             <div style="flex: 1; min-width: 0; text-align: left;">
                                 <div style="font-weight: 600; font-size: 13px; color: #2d2d2d; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${item.nombre}</div>
-                                <div style="font-size: 11px; color: #8c8270;">Cant: ${item.cantidad} × $${item.precio.toFixed(2)}</div>
+                                <div style="font-size: 11px; color: #8c8270;">Cant: ${item.cantidad} × $${Number(item.precio ?? 0).toFixed(2)}</div>
                             </div>
                             <div style="font-weight: 700; font-size: 13.5px; color: var(--color-moss-green); flex-shrink: 0;">
-                                $${(item.precio * item.cantidad).toFixed(2)}
+                                $${(Number(item.precio ?? 0) * item.cantidad).toFixed(2)}
                             </div>
                         </div>
                     `;
@@ -2176,9 +2188,8 @@
             // Texto
             nombre.textContent  = item.producto_nombre;
             sku.textContent     = 'SKU: ' + item.producto_sku;
-            const pB2bVal = getPrecioItem(item);
-            pB2b.textContent    = pB2bVal <= 0 ? "Consultar precio" : '$' + pB2bVal.toFixed(2);
-            pRetail.textContent = 'Retail $' + item.precio_retail.toFixed(2);
+            pB2b.textContent    = formatPrecioItem(item);
+            pRetail.textContent = 'Retail $' + Number(item?.precio_retail ?? 0).toFixed(2);
 
             // Descripción
             const descTxt = item.shopify_descripcion || '';
@@ -2224,8 +2235,7 @@
             if (rel.length > 0) {
                 relGrid.innerHTML = rel.map((r, idx) => {
                     const foto   = (r.fotos && r.fotos.length > 0) ? r.fotos[0] : r.foto_ruta;
-                    const precioVal = getPrecioItem(r);
-                    const precioText = precioVal <= 0 ? "Consultar precio" : `$${precioVal.toFixed(2)}`;
+                    const precioText = formatPrecioItem(r);
                     return `<div class="qv-rel-card" data-rel-idx="${idx}">
                         <div class="qv-rel-img-wrap">
                             ${foto ? `<img src="${getFullImageUrl(foto)}" alt="${r.producto_nombre}" onerror="this.style.display='none'">` : ''}
