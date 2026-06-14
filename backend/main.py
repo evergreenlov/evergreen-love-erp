@@ -81,7 +81,7 @@ def startup_event():
         _tb.print_exc()
 
     # Diagnóstico: rutas de cotizaciones registradas
-    cotiz_routes = [(r.path, list(getattr(r, 'methods', []))) for r in app.routes if 'cotizacion' in r.path]
+    cotiz_routes = [(r.path, list(getattr(r, 'methods', []))) for r in app.routes if hasattr(r, 'path') and 'cotizacion' in r.path]
     print("📋 Rutas cotizaciones registradas:", cotiz_routes)
 
     try:
