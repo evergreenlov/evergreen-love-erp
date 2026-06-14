@@ -216,17 +216,34 @@ const ClientesComponent = {
             </div>
 
             <!-- MODAL: PIN GENERADO — mostrar una vez -->
-            <div id="pin-reveal-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.55); z-index:4000; align-items:center; justify-content:center;">
-                <div style="background:white; border-radius:16px; padding:32px 28px 24px; max-width:400px; width:90%; box-shadow:0 12px 40px rgba(0,0,0,0.2); text-align:center;">
+            <div id="pin-reveal-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:4000; align-items:center; justify-content:center;">
+                <div style="background:white; border-radius:16px; padding:32px 28px 24px; max-width:480px; width:92%; box-shadow:0 12px 40px rgba(0,0,0,0.25); text-align:center;">
                     <div style="width:52px;height:52px;background:#e8f5e2;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;">
                         <i data-lucide="key-round" style="width:24px;height:24px;color:#3d7a30;"></i>
                     </div>
-                    <h3 style="font-size:16px;color:#2d2d2d;margin:0 0 6px;">PIN Generado</h3>
-                    <p style="font-size:12.5px;color:#8c8270;margin:0 0 18px;">Copia este PIN y compártelo con el cliente.<br><strong style="color:#c0694a;">No podrás verlo de nuevo.</strong></p>
-                    <div id="pin-reveal-value" style="font-family:monospace;font-size:26px;font-weight:700;letter-spacing:6px;color:#2d5a27;background:#e8f5e2;border:2px dashed #a8d898;border-radius:10px;padding:16px;margin-bottom:18px;"></div>
-                    <div style="display:flex;align-items:center;gap:8px;justify-content:center;margin-bottom:18px;">
+                    <h3 style="font-size:17px;color:#2d2d2d;margin:0 0 4px;">Acceso B2B Generado</h3>
+                    <p style="font-size:12.5px;color:#8c8270;margin:0 0 20px;">Comparte esta información con el cliente.<br><strong style="color:#c0694a;">No podrás ver el PIN de nuevo.</strong></p>
+
+                    <div style="background:#f7f4ef;border-radius:10px;padding:16px 18px;margin-bottom:16px;text-align:left;">
+                        <div style="font-size:11.5px;color:#8c8270;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">Código B2B</div>
+                        <div id="pin-modal-codigo" style="font-family:monospace;font-size:17px;font-weight:700;color:#2d5a27;letter-spacing:2px;"></div>
+                    </div>
+                    <div style="background:#e8f5e2;border:2px dashed #a8d898;border-radius:10px;padding:16px;margin-bottom:16px;text-align:left;">
+                        <div style="font-size:11.5px;color:#5a7a50;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">PIN de Acceso</div>
+                        <div id="pin-reveal-value" style="font-family:monospace;font-size:26px;font-weight:700;letter-spacing:6px;color:#2d5a27;"></div>
+                    </div>
+                    <div style="background:#f0f4ff;border-radius:10px;padding:12px 16px;margin-bottom:20px;text-align:left;">
+                        <div style="font-size:11.5px;color:#6070a0;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">Enlace Directo</div>
+                        <div id="pin-modal-enlace" style="font-size:11.5px;color:#3d5ab0;word-break:break-all;font-family:monospace;"></div>
+                    </div>
+
+                    <button id="btn-copiar-msg-pin" style="width:100%;padding:10px 18px;background:#3d7a30;color:white;border:none;border-radius:8px;font-size:13.5px;font-weight:600;font-family:var(--font-primary);cursor:pointer;margin-bottom:18px;display:flex;align-items:center;justify-content:center;gap:6px;">
+                        <i data-lucide="copy" style="width:15px;height:15px;"></i> Copiar mensaje para cliente
+                    </button>
+
+                    <div style="display:flex;align-items:center;gap:8px;justify-content:center;margin-bottom:14px;">
                         <input type="checkbox" id="pin-confirm-check" style="width:16px;height:16px;cursor:pointer;accent-color:#5f7a45;">
-                        <label for="pin-confirm-check" style="font-size:13px;color:#5a5245;cursor:pointer;">Confirmo que lo anoté</label>
+                        <label for="pin-confirm-check" style="font-size:13px;color:#5a5245;cursor:pointer;">Confirmo que anoté el PIN</label>
                     </div>
                     <button id="btn-close-pin-modal" disabled style="padding:10px 28px;background:#5f7a45;color:white;border:none;border-radius:8px;font-size:14px;font-weight:600;font-family:var(--font-primary);cursor:not-allowed;opacity:0.45;transition:opacity 0.2s;">Cerrar</button>
                 </div>
@@ -624,12 +641,17 @@ const ClientesComponent = {
         // ── PIN ─────────────────────────────────────────────────
         const btnPin = document.getElementById('btn-generar-pin-cliente');
         btnPin.addEventListener('click', async () => {
-            if (!confirm(`¿Generar un nuevo PIN para ${cliente.nombre}? El PIN anterior dejará de funcionar.`)) return;
+            const tienePinActivo = !!cliente.pin_hash;
+            const confirmMsg = tienePinActivo
+                ? `¿Resetear el PIN de ${cliente.nombre}?\n\nEl PIN anterior quedará INVALIDADO inmediatamente y el cliente no podrá acceder con él.`
+                : `¿Generar un PIN de acceso B2B para ${cliente.nombre}?`;
+            if (!confirm(confirmMsg)) return;
             btnPin.textContent = 'Generando...';
             btnPin.disabled = true;
             try {
                 const res = await fetch(`${API_BASE_URL}/clientes/${cliente.id}/generar-pin`, {
                     method: 'POST',
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('ev_token') || ''}` },
                 });
                 const data = await res.json();
                 if (!res.ok) {
@@ -641,15 +663,27 @@ const ClientesComponent = {
                 const idx = this.clientes.findIndex(c => c.id === cliente.id);
                 if (idx !== -1) this.clientes[idx].pin_hash = 'set';
 
-                // Mostrar modal PIN una sola vez
+                // Calcular enlace directo
+                const baseUrl = window.location.origin;
+                const enlace = cliente.codigo_b2b
+                    ? `${baseUrl}/catalogo_b2b.html?cliente=${encodeURIComponent(cliente.codigo_b2b)}`
+                    : `${baseUrl}/catalogo_b2b.html`;
+
+                // Poblar modal con todos los datos
                 const modal = document.getElementById('pin-reveal-modal');
                 document.getElementById('pin-reveal-value').textContent = data.pin;
+                document.getElementById('pin-modal-codigo').textContent = cliente.codigo_b2b || '(sin código B2B)';
+                document.getElementById('pin-modal-enlace').textContent = cliente.codigo_b2b ? enlace : '(asigna un código B2B primero)';
+
                 const check = document.getElementById('pin-confirm-check');
                 const closeBtn = document.getElementById('btn-close-pin-modal');
+                const copyBtn = document.getElementById('btn-copiar-msg-pin');
+
                 check.checked = false;
                 closeBtn.disabled = true;
                 closeBtn.style.opacity = '0.45';
                 closeBtn.style.cursor = 'not-allowed';
+
                 check.onchange = () => {
                     closeBtn.disabled = !check.checked;
                     closeBtn.style.opacity = check.checked ? '1' : '0.45';
@@ -657,15 +691,31 @@ const ClientesComponent = {
                 };
                 closeBtn.onclick = () => {
                     modal.style.display = 'none';
-                    // Refrescar sección B2B para mostrar "PIN activo"
                     this.loadClienteCatalog();
                 };
+
+                copyBtn.onclick = async () => {
+                    const mensaje = cliente.codigo_b2b
+                        ? `Acceso al portal B2B Evergreen Love:\nEnlace: ${enlace}\nCódigo: ${cliente.codigo_b2b}\nPIN: ${data.pin}`
+                        : `Acceso al portal B2B Evergreen Love:\nPortal: ${baseUrl}/catalogo_b2b.html\nPIN: ${data.pin}`;
+                    try {
+                        await navigator.clipboard.writeText(mensaje);
+                        copyBtn.textContent = '✓ ¡Copiado!';
+                        setTimeout(() => {
+                            copyBtn.innerHTML = '<i data-lucide="copy" style="width:15px;height:15px;"></i> Copiar mensaje para cliente';
+                            lucide.createIcons();
+                        }, 2000);
+                    } catch {
+                        prompt('Copia este mensaje:', mensaje);
+                    }
+                };
+
                 modal.style.display = 'flex';
                 lucide.createIcons();
             } catch {
                 alert('No se pudo conectar con el servidor.');
             } finally {
-                btnPin.textContent = 'Resetear PIN';
+                btnPin.textContent = tienePinActivo ? 'Resetear PIN' : 'Generar PIN';
                 btnPin.disabled = false;
             }
         });

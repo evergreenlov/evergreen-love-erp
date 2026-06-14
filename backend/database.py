@@ -603,36 +603,49 @@ def init_db(force_reset=False):
 def bootstrap_admin():
     """
     Crea el primer superadmin desde variables de entorno si la tabla usuarios está vacía.
-    Solo se ejecuta una vez. Después de crear el primer admin, las vars de entorno
-    ADMIN_EMAIL y ADMIN_PASSWORD pueden eliminarse del servidor.
+    Si ADMIN_FORCE_RESET=true, actualiza la contraseña aunque ya exista el usuario.
+    Después de crear/resetear el admin, elimina o vacía ADMIN_PASSWORD en el servidor.
     """
     import os
     import bcrypt as _bcrypt
 
     email = os.environ.get("ADMIN_EMAIL", "").strip()
     password = os.environ.get("ADMIN_PASSWORD", "").strip()
+    force_reset = os.environ.get("ADMIN_FORCE_RESET", "").strip().lower() == "true"
 
     if not email or not password:
         return
 
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT COUNT(*) FROM usuarios")
-    count = cursor.fetchone()[0]
 
-    if count == 0:
-        password_hash = _bcrypt.hashpw(password.encode("utf-8"), _bcrypt.gensalt()).decode("utf-8")
-        try:
+    cursor.execute("SELECT id FROM usuarios WHERE email = ?", (email,))
+    existing = cursor.fetchone()
+
+    if existing and not force_reset:
+        print(f"ℹ️ Admin {email} ya existe. Usa ADMIN_FORCE_RESET=true para resetear la contraseña.")
+        conn.close()
+        return
+
+    admin_name = os.environ.get("ADMIN_NAME", "Administrador").strip()
+    password_hash = _bcrypt.hashpw(password.encode("utf-8"), _bcrypt.gensalt()).decode("utf-8")
+    try:
+        if existing:
             cursor.execute(
-                "INSERT INTO usuarios (email, nombre, rol, password_hash) VALUES (?, ?, 'superadmin', ?)",
-                (email, "Administrador", password_hash)
+                "UPDATE usuarios SET password_hash = ?, rol = 'superadmin', activo = 1, nombre = ? WHERE email = ?",
+                (password_hash, admin_name, email),
+            )
+            conn.commit()
+            print(f"✅ Contraseña de superadmin reseteada: {email}")
+        else:
+            cursor.execute(
+                "INSERT INTO usuarios (email, nombre, rol, password_hash, activo) VALUES (?, ?, 'superadmin', ?, 1)",
+                (email, admin_name, password_hash),
             )
             conn.commit()
             print(f"✅ Primer superadmin creado: {email}")
-        except Exception as e:
-            print(f"⚠️ Error al crear superadmin bootstrap: {str(e)}")
-    else:
-        print(f"ℹ️ Tabla usuarios ya tiene {count} registro(s). Bootstrap omitido.")
+    except Exception as e:
+        print(f"⚠️ Error en bootstrap_admin: {str(e)}")
 
     conn.close()
 
