@@ -251,7 +251,15 @@ const ClientesComponent = {
             this.renderClientesList();
             this.populateProductosSelect();
         } catch (error) {
-            console.error("Error al cargar datos B2B:", error);
+            console.error("Error detallado al cargar datos B2B (clientes/productos):", error);
+            const container = document.getElementById('clientes-list-container');
+            if (container) {
+                container.innerHTML = `
+                    <div style="color: var(--color-danger); text-align: center; padding: 24px; font-weight: 600; font-size: 14px; border: 1px dashed var(--color-danger); border-radius: var(--radius-sm); background-color: rgba(217, 83, 79, 0.05);">
+                        ❌ Error cargando clientes B2B
+                    </div>
+                `;
+            }
         }
     },
 
