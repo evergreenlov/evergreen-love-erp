@@ -368,8 +368,30 @@ const ClientesComponent = {
 
         const container = document.getElementById('catalog-details-container');
         const pinActivo = !!cliente.pin_hash;
+        const baseUrl = window.location.origin;
+        const enlaceUnico = cliente.codigo_b2b
+            ? `${baseUrl}/catalogo_b2b.html?cliente=${encodeURIComponent(cliente.codigo_b2b)}`
+            : null;
 
         container.innerHTML = `
+            ${enlaceUnico ? `
+            <div style="background:#e8f4fd;border:1.5px solid #90caf9;border-radius:10px;padding:14px 16px;margin-bottom:18px;">
+                <div style="font-size:12px;font-weight:600;color:#1565c0;margin-bottom:10px;display:flex;align-items:center;gap:5px;">
+                    <i data-lucide="link" style="width:13px;height:13px;"></i> Enlace Único de Acceso
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                    <code style="font-size:11px;background:white;border:1px solid #90caf9;border-radius:6px;padding:5px 10px;color:#1565c0;word-break:break-all;flex:1;">${enlaceUnico}</code>
+                    <button onclick="navigator.clipboard.writeText('${enlaceUnico}').then(()=>{ this.textContent='✓ Copiado'; setTimeout(()=>{ this.textContent='Copiar enlace'; },2000); })"
+                        style="font-size:11px;padding:5px 12px;background:#1976d2;color:white;border:none;border-radius:6px;cursor:pointer;white-space:nowrap;font-family:var(--font-primary);">
+                        Copiar enlace
+                    </button>
+                </div>
+                <p style="font-size:10px;color:#5585b5;margin:6px 0 0;">Comparte este enlace directamente con el cliente. No requiere PIN.</p>
+            </div>` : `
+            <div style="background:#fff8e1;border:1.5px solid #ffe082;border-radius:10px;padding:12px 16px;margin-bottom:18px;font-size:12px;color:#795548;">
+                <i data-lucide="alert-triangle" style="width:13px;height:13px;vertical-align:middle;"></i>
+                Asigna un <strong>Código B2B</strong> a este cliente para generar su enlace único de acceso.
+            </div>`}
             <div style="background:#f5f9f0;border:1.5px solid #c8ddb8;border-radius:10px;padding:14px 16px;margin-bottom:18px;">
                 <div style="font-size:12px;font-weight:600;color:#2d5a27;margin-bottom:10px;display:flex;align-items:center;gap:5px;">
                     <i data-lucide="key-round" style="width:13px;height:13px;"></i> Acceso Portal B2B

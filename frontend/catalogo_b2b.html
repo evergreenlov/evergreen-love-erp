@@ -1259,6 +1259,9 @@
     let cart = [];   // { producto_id, nombre, sku, precio, cantidad, foto }
     let isB2BExempt = false;
     let isB2BSummaryExpanded = false;
+    // Modo enlace único (sin PIN)
+    let _linkMode = false;
+    let _linkCodigoB2B = null;
 
     /* ── SESIÓN B2B ───────────────────────────── */
     const B2B_TOKEN_KEY    = 'ev_b2b_token';
@@ -1643,10 +1646,17 @@
         const grid = document.getElementById('products-grid');
         grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:60px 0;color:#c8bba8;"><div class="spinner"></div><p>Cargando...</p></div>`;
 
-        const res = await fetch(`${API}/clientes/${clienteId}/catalogo`, {
-            headers: b2bAuthHeaders()
-        });
+        let res;
+        if (_linkMode && _linkCodigoB2B) {
+            res = await fetch(`${API}/clientes/publico/${encodeURIComponent(_linkCodigoB2B)}/catalogo`);
+        } else {
+            res = await fetch(`${API}/clientes/${clienteId}/catalogo`, { headers: b2bAuthHeaders() });
+        }
         if (res.status === 401) { showLoginScreen('Sesión expirada. Ingresa de nuevo.'); return; }
+        if (!res.ok) {
+            grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:40px;color:#e74c3c;">No se pudo cargar el catálogo. Verifica el enlace.</div>`;
+            return;
+        }
         const data = await res.json();
         const items = data.data || [];
         _allCatalogItems = items;
@@ -1997,9 +2007,15 @@
         };
 
         try {
-            const res = await fetch(`${API}/clientes/${clienteId}/pedido`, {
+            const pedidoUrl = _linkMode && _linkCodigoB2B
+                ? `${API}/clientes/publico/${encodeURIComponent(_linkCodigoB2B)}/pedido`
+                : `${API}/clientes/${clienteId}/pedido`;
+            const pedidoHeaders = _linkMode
+                ? { 'Content-Type': 'application/json' }
+                : { 'Content-Type': 'application/json', ...b2bAuthHeaders() };
+            const res = await fetch(pedidoUrl, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', ...b2bAuthHeaders() },
+                headers: pedidoHeaders,
                 body: JSON.stringify(payload)
             });
             const data = await res.json();
@@ -2067,8 +2083,46 @@
             clearB2BSession();
         }
 
-        // Pre-rellenar código si viene por URL (?codigo=FLORERIA-BCN)
+        // Acceso por enlace único: ?cliente=CODIGO_B2B
         const params = new URLSearchParams(window.location.search);
+        const clienteParam = params.get('cliente');
+        if (clienteParam) {
+            _linkMode = true;
+            _linkCodigoB2B = clienteParam.toUpperCase();
+            try {
+                // Cargar datos del cliente para mostrar su nombre
+                const infoRes = await fetch(`${API}/clientes/publico/${encodeURIComponent(_linkCodigoB2B)}/catalogo`);
+                if (!infoRes.ok) throw new Error('Enlace no válido');
+                const infoData = await infoRes.json();
+                clienteNombre = infoData.cliente_nombre || _linkCodigoB2B;
+                // Mostrar banner de acceso por enlace
+                const loginScreen = document.getElementById('login-screen');
+                loginScreen.style.display = 'none';
+                // Insertar aviso visible sobre el catálogo
+                const banner = document.createElement('div');
+                banner.id = 'link-mode-banner';
+                banner.style.cssText = 'background:#f0f9f0;border:1.5px solid #c8ddb8;border-radius:10px;padding:12px 18px;margin:16px auto;max-width:900px;display:flex;align-items:center;gap:10px;font-size:13px;color:#2d5a27;font-weight:600;';
+                banner.innerHTML = `<span style="font-size:18px;">🔒</span> Catálogo privado para: <strong>${clienteNombre}</strong>`;
+                document.getElementById('catalog-screen').insertAdjacentElement('afterbegin', banner);
+                // Ocultar tabs que requieren JWT (pedidos, facturas, cotizaciones)
+                ['tab-btn-pedidos','tab-btn-facturas','tab-btn-cotizaciones'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) el.style.display = 'none';
+                });
+                await loadCatalog();
+                document.getElementById('catalog-screen').style.display = 'block';
+                document.getElementById('btn-carrito').style.display = 'flex';
+                switchTab('catalogo');
+            } catch (e) {
+                document.getElementById('login-screen').style.display = 'block';
+                const el = document.getElementById('login-error');
+                el.textContent = `❌ Enlace no válido. Solicita un nuevo enlace a Evergreen Love.`;
+                el.style.display = 'block';
+            }
+            return;
+        }
+
+        // Pre-rellenar código si viene por URL (?codigo=FLORERIA-BCN)
         const codigoParam = params.get('codigo');
         if (codigoParam) {
             document.getElementById('input-codigo-b2b').value = codigoParam.toUpperCase();

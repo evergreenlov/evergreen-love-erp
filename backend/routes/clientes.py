@@ -296,6 +296,191 @@ class PedidoB2BSchema(BaseModel):
     notas: Optional[str] = None
     items: List[PedidoB2BItemSchema]
 
+@router.get("/clientes/publico/{codigo_b2b}/catalogo")
+def catalogo_publico_por_codigo(codigo_b2b: str):
+    """Catálogo público accesible mediante enlace con codigo_b2b. Sin datos sensibles."""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT id, nombre, nivel_precio_b2b FROM clientes WHERE codigo_b2b = ?",
+            (codigo_b2b.upper(),)
+        )
+        cl = cursor.fetchone()
+        if not cl:
+            raise HTTPException(status_code=404, detail="Enlace no válido o cliente no encontrado.")
+        cliente_id = cl["id"]
+        nivel = cl["nivel_precio_b2b"] or "retail"
+
+        cursor.execute("""
+            SELECT cc.producto_id, cc.precio_especial,
+                   p.nombre as producto_nombre, p.sku as producto_sku,
+                   p.precio_final as precio_retail, p.personalizado,
+                   p.precio_wholesale_12, p.precio_wholesale_24, p.precio_wholesale_50,
+                   (SELECT f.nombre_archivo FROM fotos_asociadas f
+                    WHERE f.producto_id = p.id AND f.tipo_foto = 'referencia'
+                    ORDER BY f.id DESC LIMIT 1) as foto_nombre
+            FROM catalogo_cliente cc
+            JOIN productos p ON cc.producto_id = p.id
+            WHERE cc.cliente_id = ?
+            ORDER BY p.nombre ASC
+        """, (cliente_id,))
+        rows = cursor.fetchall()
+
+        catalogo = []
+        for row in rows:
+            d = dict(row)
+            pid = d["producto_id"]
+            cursor.execute("""
+                SELECT tipo_foto, nombre_archivo FROM fotos_asociadas
+                WHERE producto_id = ?
+                ORDER BY CASE tipo_foto
+                    WHEN 'transparente' THEN 0 WHEN 'frontal' THEN 1
+                    WHEN 'lateral' THEN 2 WHEN 'detalle' THEN 3
+                    ELSE 4 END, id DESC
+            """, (pid,))
+            fotos = []
+            for fr in cursor.fetchall():
+                nombre = fr["nombre_archivo"]
+                if not nombre:
+                    continue
+                ruta = f"/catalogo_transparente/{nombre}" if fr["tipo_foto"] == "transparente" else f"/fotos_import/{nombre}"
+                if ruta not in fotos:
+                    fotos.append(ruta)
+            d["fotos"] = fotos
+            d["foto_ruta"] = fotos[0] if fotos else (
+                f"/fotos_import/{d['foto_nombre']}" if d.get("foto_nombre") else None
+            )
+            precio_b2b, etiqueta = _calcular_precio_b2b(d, nivel)
+            d["precio_b2b"] = precio_b2b
+            d["etiqueta_precio"] = etiqueta
+            d["nivel_precio_b2b"] = nivel
+            # No exponer datos sensibles
+            for campo in ("precio_especial", "foto_nombre", "precio_wholesale_12",
+                          "precio_wholesale_24", "precio_wholesale_50"):
+                d.pop(campo, None)
+            catalogo.append(d)
+
+        conn.close()
+        return {
+            "status": "success",
+            "cliente_nombre": cl["nombre"],
+            "codigo_b2b": codigo_b2b.upper(),
+            "nivel_precio_b2b": nivel,
+            "data": catalogo,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/clientes/publico/{codigo_b2b}/pedido", status_code=status.HTTP_201_CREATED)
+def crear_pedido_publico(codigo_b2b: str, pedido: PedidoB2BSchema, background_tasks: BackgroundTasks):
+    """Crea pedido B2B desde enlace único (sin JWT). Resuelve codigo_b2b → cliente_id internamente."""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT id, nombre FROM clientes WHERE codigo_b2b = ?",
+            (codigo_b2b.upper(),)
+        )
+        cl = cursor.fetchone()
+        if not cl:
+            raise HTTPException(status_code=404, detail="Enlace no válido o cliente no encontrado.")
+        cliente_id = cl["id"]
+        cliente_nombre = cl["nombre"]
+
+        import time as _time, datetime
+        total_pedido = sum(item.cantidad * item.precio_unitario for item in pedido.items)
+        resumen_items = " | ".join([f"{item.nombre_producto} x{item.cantidad}" for item in pedido.items])
+        ts_pedido = int(_time.time() * 1000)
+        pedido_b2b_id = f"PED-{cliente_id}-{ts_pedido}"
+        ts_base = ts_pedido % 10000000
+
+        for idx, item in enumerate(pedido.items):
+            notas_orden = (
+                f"[PEDIDO B2B] Cliente: {cliente_nombre} | "
+                f"Contacto: {pedido.nombre_contacto} | "
+                f"Email: {pedido.email_contacto or 'N/A'} | "
+                f"Tel: {pedido.telefono_contacto or 'N/A'} | "
+                f"Total pedido: ${total_pedido:.2f} | "
+                f"Items: {resumen_items} | "
+                f"Nota: {pedido.notas or 'Sin notas'}"
+            )
+            codigo_orden = f"EVL-B2B-{ts_base}-{idx}"
+            cursor.execute("""
+                INSERT INTO ordenes_produccion
+                    (codigo_orden, cliente, producto_id, cantidad, estado, material_descontado, cliente_b2b_id, pedido_b2b_id)
+                VALUES (?, ?, ?, ?, 'Pendiente', 0, ?, ?)
+            """, (codigo_orden, notas_orden, item.producto_id, item.cantidad, cliente_id, pedido_b2b_id))
+
+        subtotal = sum(item.cantidad * item.precio_unitario for item in pedido.items)
+        is_exempt = pedido.notas and "EXENTO" in pedido.notas
+        ivu_estatal = subtotal * 0.105
+        ivu_municipal = 0.0 if is_exempt else subtotal * 0.01
+        total_factura = subtotal + ivu_estatal + ivu_municipal
+
+        anio = datetime.datetime.now().strftime("%Y")
+        cursor.execute(
+            "SELECT numero_factura FROM facturas WHERE numero_factura LIKE ? ORDER BY numero_factura DESC LIMIT 1",
+            (f"EV-{anio}-%",)
+        )
+        last_row = cursor.fetchone()
+        next_seq = 1
+        if last_row:
+            try:
+                next_seq = int(last_row["numero_factura"].split("-")[-1]) + 1
+            except ValueError:
+                pass
+        num_factura = f"EV-{anio}-{next_seq:04d}"
+
+        cursor.execute("""
+            INSERT INTO facturas
+                (numero_factura, cliente_id, fecha_emision, fecha_vencimiento,
+                 subtotal, ivu_estatal, ivu_municipal, total, notas, estado)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pendiente')
+        """, (
+            num_factura, cliente_id,
+            datetime.datetime.now().strftime("%Y-%m-%d"),
+            (datetime.datetime.now() + datetime.timedelta(days=15)).strftime("%Y-%m-%d"),
+            round(subtotal, 2), round(ivu_estatal, 2), round(ivu_municipal, 2),
+            round(total_factura, 2),
+            f"Pedido B2B de {pedido.nombre_contacto}. Notas: {pedido.notas or 'Ninguna'}",
+        ))
+        factura_id = cursor.lastrowid
+
+        for item in pedido.items:
+            prod_id = item.producto_id
+            if not prod_id:
+                cursor.execute("SELECT id FROM productos WHERE nombre = ?", (item.nombre_producto,))
+                pr = cursor.fetchone()
+                if pr:
+                    prod_id = pr["id"]
+            cursor.execute("""
+                INSERT INTO items_factura (factura_id, producto_id, nombre_producto, cantidad, precio_unitario, total)
+                VALUES (?, ?, ?, ?, ?, ?)
+            """, (factura_id, prod_id, item.nombre_producto, item.cantidad,
+                  item.precio_unitario, round(item.cantidad * item.precio_unitario, 2)))
+
+        conn.commit()
+        conn.close()
+        return {
+            "status": "success",
+            "message": "Pedido registrado correctamente",
+            "numero_factura": num_factura,
+            "pedido_b2b_id": pedido_b2b_id,
+            "total": round(total_factura, 2),
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        if 'conn' in locals():
+            conn.rollback()
+            conn.close()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.post("/clientes/{cliente_id}/pedido", status_code=status.HTTP_201_CREATED)
 def crear_pedido_b2b(cliente_id: int, pedido: PedidoB2BSchema, background_tasks: BackgroundTasks, current_user: dict = Depends(get_current_b2b)):
     """Crea un pedido B2B desde el catálogo público del cliente."""
