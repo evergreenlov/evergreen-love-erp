@@ -50,7 +50,7 @@ app.include_router(b2b.router)
 # Orígenes permitidos: leer desde variable de entorno, con fallback para desarrollo local
 _raw_origins = os.environ.get(
     "ALLOWED_ORIGINS",
-    "http://localhost:8000,http://127.0.0.1:8000,http://192.168.86.30:8000"
+    "http://localhost:8000,http://127.0.0.1:8000,http://192.168.86.30:8000,https://evergreen-love-erp.pages.dev,https://evergreen-love-erp.onrender.com"
 )
 ALLOWED_ORIGINS = [o.strip() for o in _raw_origins.split(",") if o.strip()]
 

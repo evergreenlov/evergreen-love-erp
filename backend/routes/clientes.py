@@ -103,21 +103,45 @@ def delete_cliente(cliente_id: int, current_user: dict = Depends(get_current_adm
 
 def _calcular_precio_b2b(row: dict, nivel: str) -> tuple:
     """Devuelve (precio_b2b, etiqueta_precio) según nivel del cliente y override manual."""
-    override = row.get('precio_especial') or 0
-    if override > 0:
-        return override, "Precio Especial"
-    precio_final = row.get('precio_retail') or row.get('precio_final') or 0
+    override = row.get('precio_especial')
+    try:
+        override_val = float(override) if override is not None else 0.0
+    except (ValueError, TypeError):
+        override_val = 0.0
+
+    if override_val > 0:
+        return override_val, "Precio Especial"
+
+    # Fallback a precio_retail o precio_final
+    precio_final = row.get('precio_retail') or row.get('precio_final') or 0.0
+    try:
+        precio_final_val = float(precio_final) if precio_final is not None else 0.0
+    except (ValueError, TypeError):
+        precio_final_val = 0.0
+
     if nivel == 'wholesale_12':
-        precio = row.get('precio_wholesale_12') or precio_final
-        return precio, "Precio B2B 12+"
+        precio = row.get('precio_wholesale_12')
+        try:
+            precio_val = float(precio) if precio is not None and float(precio) > 0 else precio_final_val
+        except (ValueError, TypeError):
+            precio_val = precio_final_val
+        return precio_val, "Precio B2B 12+"
     elif nivel == 'wholesale_24':
-        precio = row.get('precio_wholesale_24') or precio_final
-        return precio, "Precio B2B 24+"
+        precio = row.get('precio_wholesale_24')
+        try:
+            precio_val = float(precio) if precio is not None and float(precio) > 0 else precio_final_val
+        except (ValueError, TypeError):
+            precio_val = precio_final_val
+        return precio_val, "Precio B2B 24+"
     elif nivel == 'wholesale_50':
-        precio = row.get('precio_wholesale_50') or precio_final
-        return precio, "Precio Distribuidor 50+"
+        precio = row.get('precio_wholesale_50')
+        try:
+            precio_val = float(precio) if precio is not None and float(precio) > 0 else precio_final_val
+        except (ValueError, TypeError):
+            precio_val = precio_final_val
+        return precio_val, "Precio Distribuidor 50+"
     else:  # retail
-        return precio_final, "Precio Retail"
+        return precio_final_val, "Precio Retail"
 
 
 @router.get("/clientes/{cliente_id}/catalogo")

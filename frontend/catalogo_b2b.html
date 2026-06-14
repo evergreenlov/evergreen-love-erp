@@ -1236,6 +1236,13 @@
 <script src="js/components/cotizacion-modal.js?v=1"></script>
 <script>
     const API = API_BASE_URL;
+
+    // Helper seguro de precios B2B
+    function getPrecioItem(item) {
+        if (!item) return 0;
+        return Number(item.precio_b2b ?? item.precio_especial ?? item.precio_final ?? 0);
+    }
+
     let clienteId = null;
     let clienteNombre = '';
     let cart = [];   // { producto_id, nombre, sku, precio, cantidad, foto }
@@ -1488,7 +1495,7 @@
                         producto_id: item.producto_id,
                         nombre:      enCatalogo.producto_nombre,
                         sku:         enCatalogo.producto_sku || '',
-                        precio:      enCatalogo.precio_b2b,
+                        precio:      getPrecioItem(enCatalogo),
                         cantidad:    item.cantidad,
                         foto:        enCatalogo.foto_ruta || null,
                     });
@@ -1666,6 +1673,9 @@
                        <i data-lucide="image" style="width:48px;height:48px;"></i>
                    </div>`;
 
+            const precioB2BVal = getPrecioItem(item);
+            const precioB2BText = precioB2BVal <= 0 ? "Consultar precio" : `$${precioB2BVal.toFixed(2)}`;
+
             const actionButton = isPersonalizado
                 ? `<button class="btn-agregar" style="background-color: var(--color-terracotta); border-color: var(--color-terracotta);" id="btn-add-${item.producto_id}"
                             onclick="personalizarB2BProducto(${item.producto_id})">
@@ -1673,7 +1683,7 @@
                         Personalizar & Pedir
                     </button>`
                 : `<button class="btn-agregar" id="btn-add-${item.producto_id}"
-                            onclick="addToCart(${item.producto_id}, '${item.producto_nombre.replace(/'/g,"\\'")}', '${item.producto_sku}', ${item.precio_b2b}, '${item.foto_ruta || ''}')">
+                            onclick="addToCart(${item.producto_id}, '${item.producto_nombre.replace(/'/g,"\\'")}', '${item.producto_sku}', ${precioB2BVal}, '${item.foto_ruta || ''}')">
                         <i data-lucide="plus" style="width:14px;height:14px;"></i>
                         Agregar al Pedido
                     </button>`;
@@ -1688,7 +1698,7 @@
                     <div class="product-name">${item.producto_nombre}</div>
                     <div class="product-sku">SKU: ${item.producto_sku}</div>
                     <div class="product-price-row">
-                        <div class="price-b2b">$${item.precio_b2b.toFixed(2)}</div>
+                        <div class="price-b2b">${precioB2BText}</div>
                         <div class="price-retail">Retail $${item.precio_retail.toFixed(2)}</div>
                         ${item.etiqueta_precio ? `<div style="font-size:10px;color:#1976d2;font-weight:600;margin-top:2px;">${item.etiqueta_precio}</div>` : ''}
                     </div>
@@ -1716,7 +1726,7 @@
             CotizacionModal.open({
                 productoId: item ? item.producto_id : productoId,
                 productoNombre: item ? item.producto_nombre : null,
-                precioFinal: item ? item.precio_b2b : null,
+                precioFinal: item ? getPrecioItem(item) : null,
                 fuente: 'b2b',
                 clienteB2bId: clienteId || null
             });
@@ -2166,7 +2176,8 @@
             // Texto
             nombre.textContent  = item.producto_nombre;
             sku.textContent     = 'SKU: ' + item.producto_sku;
-            pB2b.textContent    = '$' + item.precio_b2b.toFixed(2);
+            const pB2bVal = getPrecioItem(item);
+            pB2b.textContent    = pB2bVal <= 0 ? "Consultar precio" : '$' + pB2bVal.toFixed(2);
             pRetail.textContent = 'Retail $' + item.precio_retail.toFixed(2);
 
             // Descripción
@@ -2213,13 +2224,14 @@
             if (rel.length > 0) {
                 relGrid.innerHTML = rel.map((r, idx) => {
                     const foto   = (r.fotos && r.fotos.length > 0) ? r.fotos[0] : r.foto_ruta;
-                    const precio = r.precio_b2b || r.precio_retail || 0;
+                    const precioVal = getPrecioItem(r);
+                    const precioText = precioVal <= 0 ? "Consultar precio" : `$${precioVal.toFixed(2)}`;
                     return `<div class="qv-rel-card" data-rel-idx="${idx}">
                         <div class="qv-rel-img-wrap">
                             ${foto ? `<img src="${getFullImageUrl(foto)}" alt="${r.producto_nombre}" onerror="this.style.display='none'">` : ''}
                         </div>
                         <div class="qv-rel-name">${r.producto_nombre}</div>
-                        <div class="qv-rel-price">$${precio.toFixed(2)}</div>
+                        <div class="qv-rel-price">${precioText}</div>
                     </div>`;
                 }).join('');
                 relGrid.querySelectorAll('.qv-rel-card').forEach((card, idx) => {
@@ -2271,7 +2283,7 @@
                     _currentItem.producto_id,
                     _currentItem.producto_nombre,
                     _currentItem.producto_sku,
-                    _currentItem.precio_b2b,
+                    getPrecioItem(_currentItem),
                     _currentItem.foto_ruta || ''
                 );
                 closeQV();

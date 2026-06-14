@@ -1677,7 +1677,11 @@ function getFullImageUrl(path) {
                 healthCheckPromise = (async () => {
                     try {
                         const controller = new AbortController();
-                        const timeoutId = setTimeout(() => controller.abort(), 3000);  // 3s máximo
+                        const isPortal = window.location.pathname.includes('catalogo_publico.html') || 
+                                         window.location.pathname.includes('catalogo_b2b.html') ||
+                                         window.location.pathname.includes('publico');
+                        const timeoutMs = isPortal ? 45000 : 3000;
+                        const timeoutId = setTimeout(() => controller.abort(), timeoutMs);  // 45s para portales públicos/B2B para dejar que Render despierte
                         const check = await originalFetch(`${API_BASE_URL}/health`, { signal: controller.signal });
                         clearTimeout(timeoutId);
                         if (!check.ok) throw new Error();
