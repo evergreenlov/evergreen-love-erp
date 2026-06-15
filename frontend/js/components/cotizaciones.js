@@ -235,12 +235,20 @@ const CotizacionesComponent = {
                 </div>
             </div>
 
+            <!-- Personalización del cliente (se carga async abajo) -->
+            <div id="cotiz-personal-wrap" style="display:none;" class="card" style="padding:20px;border:2px solid #c5d9a8;">
+                <h4 style="font-size:13px;font-weight:700;color:var(--color-moss-green);margin:0 0 14px;display:flex;align-items:center;gap:6px;padding:20px 20px 0;">
+                    <i data-lucide="sparkles" style="width:14px;height:14px;"></i> Personalización del Cliente
+                </h4>
+                <div id="cotiz-personal-inner" style="padding:0 20px 20px;display:flex;flex-direction:column;gap:8px;"></div>
+            </div>
+
             <!-- Descripción -->
             <div class="card" style="padding:20px;">
                 <h4 style="font-size:13px;font-weight:700;color:var(--color-moss-green);margin:0 0 10px;display:flex;align-items:center;gap:6px;">
-                    <i data-lucide="align-left" style="width:14px;height:14px;"></i> Descripción del Proyecto
+                    <i data-lucide="align-left" style="width:14px;height:14px;"></i> Descripción / Notas Adicionales
                 </h4>
-                <p style="font-size:13px;color:#333;line-height:1.7;margin:0;white-space:pre-wrap;">${c.descripcion}</p>
+                ${c.descripcion ? `<p style="font-size:13px;color:#333;line-height:1.7;margin:0;white-space:pre-wrap;">${c.descripcion}</p>` : `<p style="font-size:13px;color:#aaa;font-style:italic;margin:0;">Sin descripción adicional.</p>`}
             </div>
 
             <!-- Notas internas -->
@@ -342,6 +350,30 @@ const CotizacionesComponent = {
         </div>`;
 
         lucide.createIcons();
+
+        // Cargar respuestas de personalización de forma asíncrona
+        (async () => {
+            try {
+                const pRes = await EvergreenAPI.getPersonalizacionCotizacion(c.id);
+                const respuestas = pRes.data || [];
+                if (respuestas.length === 0) return;
+                const wrap = document.getElementById('cotiz-personal-wrap');
+                const inner = document.getElementById('cotiz-personal-inner');
+                if (!wrap || !inner) return;
+                inner.innerHTML = respuestas.map(r => {
+                    const isArchivo = r.tipo === 'archivo' && r.archivo_ruta;
+                    const valorHtml = isArchivo
+                        ? `<a href="${r.archivo_ruta}" target="_blank" style="color:var(--color-moss-green);font-weight:600;text-decoration:none;">📎 Ver archivo adjunto</a>`
+                        : `<span style="color:#222;font-weight:600;">${r.valor || '—'}</span>`;
+                    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:#f6faf0;border-radius:8px;font-size:13px;">
+                        <span style="color:#666;">${r.etiqueta}</span>
+                        ${valorHtml}
+                    </div>`;
+                }).join('');
+                wrap.style.display = 'block';
+                lucide.createIcons();
+            } catch (_) {}
+        })();
     },
 
     async _guardarEstado(id) {

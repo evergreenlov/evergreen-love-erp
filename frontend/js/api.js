@@ -3644,5 +3644,22 @@ const EvergreenAPI = {
         if (!r.ok) throw new Error('Error al obtener personalización');
         return r.json();
     },
+
+    async guardarRespuestasCotizacion(cotizacionId, formData) {
+        const r = await fetch(`${API_BASE_URL}/cotizaciones/${cotizacionId}/personalizacion/respuestas`, {
+            method: 'POST',
+            body: formData
+        });
+        if (!r.ok) throw new Error('Error al guardar respuestas de cotización');
+        return r.json();
+    },
+
+    async getPersonalizacionCotizacion(cotizacionId) {
+        const r = await fetch(`${API_BASE_URL}/cotizaciones/${cotizacionId}/personalizacion`, {
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('ev_token')}` }
+        });
+        if (!r.ok) throw new Error('Error al obtener personalización de cotización');
+        return r.json();
+    },
 };
 

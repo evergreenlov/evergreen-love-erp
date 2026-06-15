@@ -113,6 +113,14 @@ const CotizacionModal = {
                         <div id="cotiz-producto-label" class="cotiz-producto-label"></div>
                     </div>
 
+                    <!-- Campos de personalización dinámicos (se inyectan si el producto los tiene) -->
+                    <div id="cotiz-campos-wrap" style="display:none;border:1.5px solid #c5d9a8;border-radius:12px;padding:14px 16px;background:#f6faf0;margin-bottom:4px;">
+                        <div style="font-size:11.5px;font-weight:700;color:#5f7830;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;display:flex;align-items:center;gap:6px;">
+                            <span>✨</span> Personalización del Producto
+                        </div>
+                        <div id="cotiz-campos-inner"></div>
+                    </div>
+
                     <div class="cotiz-grid" id="cotiz-grid">
                         <div class="cotiz-field">
                             <label>Nombre <span style="color:#c0634c;">*</span></label>
@@ -130,7 +138,7 @@ const CotizacionModal = {
                     </div>
 
                     <div class="cotiz-field">
-                        <label>Descripción del proyecto <span style="color:#c0634c;">*</span></label>
+                        <label id="cotiz-desc-label">Descripción del proyecto <span style="color:#c0634c;">*</span></label>
                         <textarea id="cotiz-desc" placeholder="Describe qué necesitas: dimensiones, material, cantidad, evento o uso, personalización deseada…"></textarea>
                     </div>
 
@@ -183,10 +191,31 @@ const CotizacionModal = {
     },
 
     _context: {},
+    _campos: [],
 
-    open({ productoId = null, productoNombre = null, precioFinal = null, fuente = 'publico', clienteB2bId = null } = {}) {
+    _renderCampoInput(c) {
+        const req = c.requerido ? ' <span style="color:#c0634c;">*</span>' : '';
+        const extra = c.costo_adicional > 0 ? ` <span style="color:#c0634c;font-size:10.5px;">(+$${Number(c.costo_adicional).toFixed(2)})</span>` : '';
+        const labelHtml = `<label style="font-size:12.5px;font-weight:600;color:#444;margin-bottom:4px;display:block;">${c.etiqueta}${req}${extra}</label>`;
+        const base = `style="width:100%;padding:8px 10px;border:1px solid #d4e6b5;border-radius:8px;font-size:13px;background:#fff;box-sizing:border-box;"`;
+        let input = '';
+        if (c.tipo === 'texto')    input = `<input type="text" id="cotiz-campo-${c.id}" ${base}>`;
+        else if (c.tipo === 'textarea') input = `<textarea id="cotiz-campo-${c.id}" rows="2" ${base}></textarea>`;
+        else if (c.tipo === 'fecha')    input = `<input type="date" id="cotiz-campo-${c.id}" ${base}>`;
+        else if (c.tipo === 'checkbox') input = `<label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;"><input type="checkbox" id="cotiz-campo-${c.id}" style="width:15px;height:15px;"> Sí</label>`;
+        else if (c.tipo === 'select') {
+            const opts = (c.opciones || '').split(',').map(o => o.trim()).filter(Boolean);
+            input = `<select id="cotiz-campo-${c.id}" ${base}><option value="">-- Selecciona --</option>${opts.map(o => `<option value="${o}">${o}</option>`).join('')}</select>`;
+        } else if (c.tipo === 'archivo') {
+            input = `<input type="file" id="cotiz-campo-${c.id}" accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.svg" style="font-size:12px;">`;
+        }
+        return `<div style="margin-bottom:10px;" data-campo-id="${c.id}" data-campo-tipo="${c.tipo}" data-campo-etiqueta="${c.etiqueta.replace(/"/g,'&quot;')}" data-campo-requerido="${c.requerido}">${labelHtml}${input}</div>`;
+    },
+
+    async open({ productoId = null, productoNombre = null, precioFinal = null, fuente = 'publico', clienteB2bId = null } = {}) {
         this._init();
         this._context = { productoId, productoNombre, precioFinal, fuente, clienteB2bId };
+        this._campos = [];
 
         // Reset form
         ['cotiz-nombre', 'cotiz-email', 'cotiz-telefono', 'cotiz-desc', 'cotiz-presupuesto'].forEach(id => {
@@ -211,10 +240,41 @@ const CotizacionModal = {
             prodWrap.style.display = 'none';
         }
 
+        // Limpiar sección de campos dinámicos
+        const camposWrap = document.getElementById('cotiz-campos-wrap');
+        const camposInner = document.getElementById('cotiz-campos-inner');
+        camposWrap.style.display = 'none';
+        camposInner.innerHTML = '';
+
         const overlay = document.getElementById('cotiz-overlay');
         overlay.classList.add('open');
         document.body.style.overflow = 'hidden';
         document.getElementById('cotiz-nombre').focus();
+
+        // Cargar campos dinámicos si hay productoId
+        const descLabel = document.getElementById('cotiz-desc-label');
+        if (productoId) {
+            try {
+                const apiBase = (typeof API_BASE_URL !== 'undefined') ? API_BASE_URL : window.location.origin + '/api';
+                const res = await fetch(`${apiBase}/productos/${productoId}/campos-personalizacion/publico`);
+                if (res.ok) {
+                    const data = await res.json();
+                    const campos = data.data || data.campos || [];
+                    if (campos.length > 0) {
+                        this._campos = campos;
+                        camposInner.innerHTML = campos.map(c => this._renderCampoInput(c)).join('');
+                        camposWrap.style.display = 'block';
+                        // Con campos, la descripción pasa a ser "Notas adicionales" y opcional
+                        if (descLabel) descLabel.innerHTML = 'Notas adicionales <span style="color:#aaa;font-weight:400;">(opcional)</span>';
+                        document.getElementById('cotiz-desc').placeholder = 'Alguna indicación extra para el equipo…';
+                    }
+                }
+            } catch (_) {}
+        }
+        if (this._campos.length === 0 && descLabel) {
+            descLabel.innerHTML = 'Descripción del proyecto <span style="color:#c0634c;">*</span>';
+            document.getElementById('cotiz-desc').placeholder = 'Describe qué necesitas: dimensiones, material, cantidad, evento o uso, personalización deseada…';
+        }
     },
 
     close() {
@@ -224,15 +284,15 @@ const CotizacionModal = {
     },
 
     async _submit() {
-        const nombre = document.getElementById('cotiz-nombre').value.trim();
-        const email  = document.getElementById('cotiz-email').value.trim();
-        const desc   = document.getElementById('cotiz-desc').value.trim();
-        const tel    = document.getElementById('cotiz-telefono').value.trim();
-        const presu  = document.getElementById('cotiz-presupuesto').value.trim();
+        const nombre  = document.getElementById('cotiz-nombre').value.trim();
+        const email   = document.getElementById('cotiz-email').value.trim();
+        const desc    = document.getElementById('cotiz-desc').value.trim();
+        const tel     = document.getElementById('cotiz-telefono').value.trim();
+        const presu   = document.getElementById('cotiz-presupuesto').value.trim();
         const errorEl = document.getElementById('cotiz-error');
 
-        if (!nombre || !email || !desc) {
-            errorEl.textContent = 'Por favor completa nombre, email y descripción del proyecto.';
+        if (!nombre || !email) {
+            errorEl.textContent = 'Por favor completa nombre y email.';
             errorEl.style.display = 'block';
             return;
         }
@@ -242,9 +302,45 @@ const CotizacionModal = {
             return;
         }
 
-        const fileInput = document.getElementById('cotiz-archivos');
-        const files = fileInput.files ? Array.from(fileInput.files).slice(0, 5) : [];
+        // Recolectar y validar campos dinámicos
+        const camposData = []; // [{campo_id, etiqueta, tipo, valor}]
+        const camposArchivos = {}; // {campo_id: File}
+        for (const c of (this._campos || [])) {
+            const el = document.getElementById(`cotiz-campo-${c.id}`);
+            if (!el) continue;
 
+            if (c.tipo === 'archivo') {
+                if (c.requerido && (!el.files || el.files.length === 0)) {
+                    errorEl.textContent = `El campo "${c.etiqueta}" es obligatorio.`;
+                    errorEl.style.display = 'block';
+                    el.style.outline = '2px solid #c0634c';
+                    return;
+                }
+                if (el.files && el.files.length > 0) camposArchivos[c.id] = el.files[0];
+                camposData.push({ campo_id: c.id, etiqueta: c.etiqueta, tipo: 'archivo', valor: '' });
+            } else {
+                let valor = c.tipo === 'checkbox' ? (el.checked ? 'Sí' : 'No') : el.value.trim();
+                if (c.requerido && !valor) {
+                    errorEl.textContent = `El campo "${c.etiqueta}" es obligatorio.`;
+                    errorEl.style.display = 'block';
+                    el.style.borderColor = '#c0634c';
+                    return;
+                }
+                if (valor) camposData.push({ campo_id: c.id, etiqueta: c.etiqueta, tipo: c.tipo, valor });
+            }
+        }
+
+        // Si no hay campos, la descripción es requerida
+        if (camposData.length === 0 && !desc) {
+            errorEl.textContent = 'Por favor describe tu proyecto.';
+            errorEl.style.display = 'block';
+            return;
+        }
+
+        const fileInput = document.getElementById('cotiz-archivos');
+        const refFiles = fileInput.files ? Array.from(fileInput.files).slice(0, 5) : [];
+
+        // Payload de cotización (descripción = notas adicionales solamente)
         const formData = new FormData();
         formData.append('nombre_cliente', nombre);
         formData.append('email', email);
@@ -254,7 +350,7 @@ const CotizacionModal = {
         if (presu) formData.append('presupuesto_aprox', parseFloat(presu));
         formData.append('fuente', this._context.fuente || 'publico');
         if (this._context.clienteB2bId) formData.append('cliente_b2b_id', this._context.clienteB2bId);
-        files.forEach(f => formData.append('archivos', f));
+        refFiles.forEach(f => formData.append('archivos', f));
 
         const btn = document.getElementById('cotiz-btn-submit');
         btn.disabled = true;
@@ -263,11 +359,29 @@ const CotizacionModal = {
 
         try {
             const apiBase = (typeof API_BASE_URL !== 'undefined') ? API_BASE_URL : window.location.origin + '/api';
+
+            // 1. Crear cotización
             const response = await fetch(`${apiBase}/cotizaciones`, { method: 'POST', body: formData });
             if (!response.ok) {
                 const err = await response.json();
                 throw new Error(err.detail || 'Error al enviar');
             }
+            const result = await response.json();
+            const cotizacionId = result.id;
+
+            // 2. Guardar respuestas estructuradas de campos (si hay)
+            if (camposData.length > 0 && cotizacionId) {
+                const fd2 = new FormData();
+                fd2.append('respuestas_json', JSON.stringify(camposData));
+                for (const [campoId, file] of Object.entries(camposArchivos)) {
+                    fd2.append(`archivo_${campoId}`, file);
+                }
+                await fetch(`${apiBase}/cotizaciones/${cotizacionId}/personalizacion/respuestas`, {
+                    method: 'POST',
+                    body: fd2
+                }).catch(() => {}); // silencioso — cotización ya creada
+            }
+
             document.getElementById('cotiz-form-wrap').style.display = 'none';
             document.getElementById('cotiz-success').style.display = 'block';
         } catch (err) {

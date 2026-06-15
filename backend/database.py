@@ -638,6 +638,19 @@ def init_db(force_reset=False):
     );
     """)
 
+    # Tabla de respuestas de personalización por cotización
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS cotizacion_personalizacion_respuestas (
+        id           INTEGER PRIMARY KEY AUTOINCREMENT,
+        cotizacion_id INTEGER NOT NULL REFERENCES cotizaciones(id) ON DELETE CASCADE,
+        campo_id     INTEGER REFERENCES producto_personalizacion_campos(id),
+        etiqueta     TEXT NOT NULL,
+        tipo         TEXT NOT NULL,
+        valor        TEXT,
+        archivo_ruta TEXT
+    );
+    """)
+
     # Migración: campo personalizacion_json en carrito
     try:
         cursor.execute("ALTER TABLE carrito ADD COLUMN personalizacion_json TEXT")

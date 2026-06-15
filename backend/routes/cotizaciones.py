@@ -3,6 +3,9 @@ from pydantic import BaseModel
 from typing import Optional, List
 import sqlite3
 import os
+import json
+import re
+import time
 
 from database import get_db_connection
 from auth import get_current_admin
@@ -48,18 +51,26 @@ def _safe_filename(cotizacion_id: int, original: str) -> str:
 
 # ── PÚBLICO ────────────────────────────────────────────────────────────────
 
+COTIZ_PERSONAL_DIR = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "..", "..", "data", "personalizacion_archivos")
+)
+COTIZ_PERSONAL_ALLOWED = {".jpg", ".jpeg", ".png", ".gif", ".webp", ".pdf", ".svg"}
+
+
 @router.post("/cotizaciones")
 async def crear_cotizacion(
     nombre_cliente: str = Form(...),
     email: str = Form(...),
     telefono: Optional[str] = Form(None),
     producto_id: Optional[int] = Form(None),
-    descripcion: str = Form(...),
+    descripcion: Optional[str] = Form(""),
     presupuesto_aprox: Optional[float] = Form(None),
     fuente: str = Form("publico"),
     cliente_b2b_id: Optional[int] = Form(None),
     archivos: List[UploadFile] = File(default=[]),
 ):
+    descripcion = (descripcion or "").strip()
+
     if len(archivos) > MAX_FILES:
         raise HTTPException(status_code=400, detail=f"Máximo {MAX_FILES} archivos por cotización.")
 
@@ -389,6 +400,20 @@ def convertir_a_produccion(
             WHERE id = ?
         """, (orden_id, cotizacion_id))
 
+        # Copiar respuestas de personalización a la orden de producción
+        cursor.execute("""
+            SELECT campo_id, etiqueta, tipo, valor, archivo_ruta
+            FROM cotizacion_personalizacion_respuestas
+            WHERE cotizacion_id = ?
+        """, (cotizacion_id,))
+        respuestas = cursor.fetchall()
+        for r in respuestas:
+            cursor.execute("""
+                INSERT INTO pedido_personalizacion_respuestas
+                    (orden_id, campo_id, etiqueta, tipo, valor, archivo_ruta)
+                VALUES (?, ?, ?, ?, ?, ?)
+            """, (orden_id, r["campo_id"], r["etiqueta"], r["tipo"], r["valor"], r["archivo_ruta"]))
+
         conn.commit()
         return {
             "status": "success",
@@ -427,6 +452,101 @@ def listar_imagenes_cotizacion(
             i["es_pdf"] = ext == ".pdf"
             imagenes.append(i)
         return {"status": "success", "data": imagenes}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
+
+
+@router.post("/cotizaciones/{cotizacion_id}/personalizacion/respuestas")
+async def guardar_respuestas_cotizacion(
+    cotizacion_id: int,
+    respuestas_json: str = Form(...),
+    archivos: List[UploadFile] = File(default=[]),
+):
+    """Guarda respuestas de campos de personalización para una cotización (público, sin auth)."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT id FROM cotizaciones WHERE id = ?", (cotizacion_id,))
+        if not cursor.fetchone():
+            raise HTTPException(status_code=404, detail="Cotización no encontrada")
+
+        try:
+            respuestas = json.loads(respuestas_json)
+        except Exception:
+            raise HTTPException(status_code=400, detail="respuestas_json inválido")
+
+        # Mapear archivos por nombre de campo (archivo_{campo_id})
+        archivos_map = {}
+        for f in archivos:
+            if f.filename:
+                archivos_map[f.field_name] = f
+
+        # Borrar respuestas anteriores (por si el cliente reenvía)
+        cursor.execute(
+            "DELETE FROM cotizacion_personalizacion_respuestas WHERE cotizacion_id = ?",
+            (cotizacion_id,)
+        )
+
+        os.makedirs(COTIZ_PERSONAL_DIR, exist_ok=True)
+
+        for r in respuestas:
+            campo_id = r.get("campo_id")
+            etiqueta = r.get("etiqueta", "")
+            tipo = r.get("tipo", "texto")
+            valor = r.get("valor", "")
+            archivo_ruta = None
+
+            if tipo == "archivo":
+                key = f"archivo_{campo_id}"
+                upload = archivos_map.get(key)
+                if upload and upload.filename:
+                    ext = os.path.splitext(upload.filename)[1].lower()
+                    if ext in COTIZ_PERSONAL_ALLOWED:
+                        base = re.sub(r"[^a-zA-Z0-9_-]", "_", os.path.splitext(upload.filename)[0])[:30]
+                        ts = int(time.time() * 1000) % 100000
+                        fname = f"cotiz{cotizacion_id}_campo{campo_id}_{base}_{ts}{ext}"
+                        fpath = os.path.join(COTIZ_PERSONAL_DIR, fname)
+                        contenido = await upload.read()
+                        with open(fpath, "wb") as out:
+                            out.write(contenido)
+                        archivo_ruta = f"/personalizacion_archivos/{fname}"
+
+            cursor.execute("""
+                INSERT INTO cotizacion_personalizacion_respuestas
+                    (cotizacion_id, campo_id, etiqueta, tipo, valor, archivo_ruta)
+                VALUES (?, ?, ?, ?, ?, ?)
+            """, (cotizacion_id, campo_id, etiqueta, tipo, valor or None, archivo_ruta))
+
+        conn.commit()
+        return {"status": "success", "message": "Respuestas guardadas"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
+
+
+@router.get("/cotizaciones/{cotizacion_id}/personalizacion")
+def get_personalizacion_cotizacion(
+    cotizacion_id: int,
+    current_user: dict = Depends(get_current_admin),
+):
+    """Devuelve las respuestas de personalización de una cotización."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+            SELECT id, campo_id, etiqueta, tipo, valor, archivo_ruta
+            FROM cotizacion_personalizacion_respuestas
+            WHERE cotizacion_id = ?
+            ORDER BY id
+        """, (cotizacion_id,))
+        rows = [dict(r) for r in cursor.fetchall()]
+        return {"status": "success", "data": rows}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     finally:

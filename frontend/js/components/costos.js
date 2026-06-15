@@ -1189,9 +1189,8 @@ const CostosComponent = {
 
         // ─── CAMPOS DE PERSONALIZACIÓN ────────────────────────────────────────────
         const productoIdActual = isEditing ? this.editingProductoId : null;
-        // Array temporal que vive mientras el modal está abierto
-        if (!this._camposTemp) this._camposTemp = [];
         this._camposTemp = [];
+        this._camposActivos = false; // se pone true cuando el admin toca la sección
 
         const seccionCampos   = document.getElementById('seccion-campos-personalizacion');
         const listaCampos     = document.getElementById('lista-campos-personalizacion');
@@ -1201,6 +1200,7 @@ const CostosComponent = {
         // Mostrar/ocultar sección según tipo de venta
         selectPersonal.addEventListener('change', () => {
             seccionCampos.style.display = selectPersonal.value === '1' ? 'block' : 'none';
+            if (selectPersonal.value === '1') this._camposActivos = true;
         });
 
         // Renderiza la lista de campos temporales en el modal
@@ -1219,6 +1219,7 @@ const CostosComponent = {
             listaCampos.querySelectorAll('.btn-del-campo').forEach(btn => {
                 btn.addEventListener('click', () => {
                     this._camposTemp.splice(parseInt(btn.dataset.idx), 1);
+                    this._camposActivos = true;
                     renderCamposTemp();
                 });
             });
@@ -1282,6 +1283,7 @@ const CostosComponent = {
                 };
                 if (editIdx !== null) this._camposTemp[editIdx] = nuevo;
                 else this._camposTemp.push(nuevo);
+                this._camposActivos = true;
                 div.remove();
                 renderCamposTemp();
             });
@@ -1293,7 +1295,8 @@ const CostosComponent = {
         if (isEditing && productoIdActual) {
             EvergreenAPI.getCamposPersonalizacion(productoIdActual).then(res => {
                 if (res.status === 'success') {
-                    this._camposTemp = res.data;
+                    this._camposTemp = res.data || [];
+                    this._camposActivos = true; // carga exitosa → el admin puede editar
                     renderCamposTemp();
                 }
             }).catch(() => {});
@@ -1476,14 +1479,27 @@ const CostosComponent = {
     },
 
     async _guardarCamposPersonalizacion(productoId) {
-        if (!this._camposTemp || this._camposTemp.length === 0) return;
+        // Solo proceder si el admin abrió la sección (carga exitosa o cambió el dropdown)
+        if (!this._camposActivos) return;
         try {
-            // Obtener campos actuales para saber cuáles eliminar / actualizar
-            const existentes = await EvergreenAPI.getCamposPersonalizacion(productoId).then(r => r.data || []).catch(() => []);
-            const existentesIds = new Set(existentes.map(c => c.id));
-            const tempIds = new Set(this._camposTemp.filter(c => c.id).map(c => c.id));
+            // Obtener campos actuales — si falla la API, no borramos nada
+            const existentes = await EvergreenAPI.getCamposPersonalizacion(productoId)
+                .then(r => r.data || [])
+                .catch(() => null);
 
-            // Eliminar (desactivar) los que ya no están en la lista temporal
+            if (existentes === null) {
+                // API no disponible — solo intentar crear campos nuevos
+                for (let i = 0; i < (this._camposTemp || []).length; i++) {
+                    const c = { ...this._camposTemp[i], orden: i };
+                    if (!c.id) await EvergreenAPI.createCampoPersonalizacion(productoId, c).catch(() => {});
+                }
+                return;
+            }
+
+            const existentesIds = new Set(existentes.map(c => c.id));
+            const tempIds = new Set((this._camposTemp || []).filter(c => c.id).map(c => c.id));
+
+            // Eliminar los que ya no están en la lista temporal
             for (const ex of existentes) {
                 if (!tempIds.has(ex.id)) {
                     await EvergreenAPI.deleteCampoPersonalizacion(productoId, ex.id).catch(() => {});
@@ -1491,7 +1507,7 @@ const CostosComponent = {
             }
 
             // Crear o actualizar
-            for (let i = 0; i < this._camposTemp.length; i++) {
+            for (let i = 0; i < (this._camposTemp || []).length; i++) {
                 const c = { ...this._camposTemp[i], orden: i };
                 if (c.id && existentesIds.has(c.id)) {
                     await EvergreenAPI.updateCampoPersonalizacion(productoId, c.id, c).catch(() => {});
@@ -1500,9 +1516,11 @@ const CostosComponent = {
                 }
             }
         } catch (err) {
-            console.warn('Error al guardar campos de personalización:', err.message);
+            console.warn('Error al guardar campos:', err.message);
+            alert('⚠️ Los campos de personalización podrían no haberse guardado. Verifica la conexión y reintenta.');
         }
         this._camposTemp = [];
+        this._camposActivos = false;
     },
 
     openGeminiConfigModal() {
