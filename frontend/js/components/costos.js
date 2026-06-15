@@ -392,6 +392,9 @@ const CostosComponent = {
                     </div>
                 </div>
 
+                <!-- Panel Campos de Personalización (se inyecta cuando hay producto seleccionado) -->
+                <div id="campos-panel-wrap" style="margin-top:24px; display:none;"></div>
+
                 <!-- Modales Dinámicos -->
                 <div id="product-save-modal" class="modal-overlay" style="display: none;"></div>
                 <div id="gemini-config-modal" class="modal-overlay" style="display: none;"></div>
@@ -403,7 +406,37 @@ const CostosComponent = {
             // Si hay un producto en modo edición, aplicar sus valores a la calculadora
             if (this.editingProductoId) {
                 const p = this.productos.find(prod => prod.id === this.editingProductoId);
-                if (p) this._aplicarModoEdicion(p);
+                if (p) {
+                    this._aplicarModoEdicion(p);
+                    // Mostrar panel de campos si el producto es personalizable
+                    if (p.personalizado) this.renderCamposPanel(p.id);
+                }
+            }
+
+            // Mostrar/ocultar panel de campos cuando cambia tipo-producto
+            const tipoSelect = document.getElementById('tipo-producto');
+            if (tipoSelect) {
+                tipoSelect.addEventListener('change', () => {
+                    const wrap = document.getElementById('campos-panel-wrap');
+                    if (!wrap) return;
+                    if (tipoSelect.value === 'personalizado' && this.editingProductoId) {
+                        this.renderCamposPanel(this.editingProductoId);
+                    } else if (tipoSelect.value === 'personalizado' && !this.editingProductoId) {
+                        wrap.style.display = 'block';
+                        wrap.innerHTML = `<div class="card" style="padding:20px;border:2px solid #c5d9a8;">
+                            <h3 style="margin:0 0 8px;font-size:15px;color:var(--color-moss-green);display:flex;align-items:center;gap:8px;">
+                                <i data-lucide="sliders" style="width:16px;height:16px;"></i> Campos de Personalización para el Cliente
+                            </h3>
+                            <p style="font-size:13px;color:#8c8270;margin:0;">
+                                Para configurar los campos de personalización, primero <strong>guarda el producto en el catálogo</strong> (botón azul de abajo).<br>
+                                Luego regresa a editarlo — el panel de campos aparecerá aquí automáticamente.
+                            </p>
+                        </div>`;
+                        lucide.createIcons();
+                    } else {
+                        wrap.style.display = 'none';
+                    }
+                });
             }
 
         } catch (error) {
@@ -955,7 +988,10 @@ const CostosComponent = {
         const defNombre   = editingProd ? _esc(editingProd.nombre) : '';
         const defDesc     = editingProd ? _esc(editingProd.shopify_descripcion || '') : '';
         const defPrecio   = editingProd ? editingProd.precio_final.toFixed(2) : sugerido.toFixed(2);
-        const defPersonal = editingProd ? editingProd.personalizado : 0;
+        const tipoProductoCalc = document.getElementById('tipo-producto')?.value || '';
+        const defPersonal = editingProd
+            ? editingProd.personalizado
+            : (tipoProductoCalc === 'personalizado' ? 1 : 0);
         const defShTitulo = editingProd ? _esc(editingProd.shopify_titulo || '') : '';
         const defShTags   = editingProd ? _esc(editingProd.shopify_tags || '') : '';
         const defB2bPrecio   = editingProd && editingProd.b2b_precio ? editingProd.b2b_precio.toFixed(2) : '';
@@ -1110,6 +1146,8 @@ const CostosComponent = {
                             </div>
                         </div>
                     </div>
+
+                    <div id="modal-campos-error" style="display:none;color:#c0392b;font-size:12.5px;background:#fff5f5;border-radius:8px;padding:10px 14px;border:1px solid #ffd0cc;"></div>
 
                     <div style="display: flex; gap: 12px; margin-top: 10px;">
                         <button type="button" class="btn btn-secondary" id="btn-close-prod-modal" style="flex: 1;">Cancelar</button>
@@ -1479,8 +1517,13 @@ const CostosComponent = {
     },
 
     async _guardarCamposPersonalizacion(productoId) {
-        // Solo proceder si el admin abrió la sección (carga exitosa o cambió el dropdown)
+        // Solo proceder si el admin interactuó con la sección de campos en el modal
         if (!this._camposActivos) return;
+        const modalErrorEl = document.getElementById('modal-campos-error');
+        const showModalErr = (msg) => {
+            if (modalErrorEl) { modalErrorEl.textContent = msg; modalErrorEl.style.display = 'block'; }
+            else alert(msg);
+        };
         try {
             // Obtener campos actuales — si falla la API, no borramos nada
             const existentes = await EvergreenAPI.getCamposPersonalizacion(productoId)
@@ -1516,11 +1559,223 @@ const CostosComponent = {
                 }
             }
         } catch (err) {
-            console.warn('Error al guardar campos:', err.message);
-            alert('⚠️ Los campos de personalización podrían no haberse guardado. Verifica la conexión y reintenta.');
+            showModalErr('⚠️ Error al guardar campos de personalización: ' + err.message);
         }
         this._camposTemp = [];
         this._camposActivos = false;
+    },
+
+    /**
+     * Renderiza el panel de campos de personalización en la vista principal de Costos.
+     * Se muestra cuando se edita un producto personalizable.
+     */
+    async renderCamposPanel(productoId) {
+        const wrap = document.getElementById('campos-panel-wrap');
+        if (!wrap) return;
+
+        // Estado local del panel (independiente del modal)
+        let camposList = [];
+        let panelActivo = false;
+
+        const statusId = 'campos-panel-status';
+
+        const showStatus = (msg, isError = false) => {
+            const el = document.getElementById(statusId);
+            if (!el) return;
+            el.textContent = msg;
+            el.style.color = isError ? '#c0392b' : '#5f7830';
+            el.style.display = 'block';
+            if (!isError) setTimeout(() => { if (el) el.style.display = 'none'; }, 3000);
+        };
+
+        const renderLista = () => {
+            const lista = document.getElementById('campos-panel-lista');
+            if (!lista) return;
+            if (camposList.length === 0) {
+                lista.innerHTML = `<p style="font-size:13px;color:#8c8270;margin:0;font-style:italic;">Sin campos configurados. Usa <strong>+ Añadir Campo</strong> para comenzar.</p>`;
+                return;
+            }
+            lista.innerHTML = camposList.map((c, i) => `
+                <div style="display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;background:#fff;border:1px solid #d4e6b5;border-radius:8px;padding:10px 14px;">
+                    <div>
+                        <strong style="font-size:13px;">${c.etiqueta}</strong>
+                        <span style="font-size:11.5px;color:#8c8270;margin-left:8px;">[${c.tipo}${c.requerido ? ' · requerido' : ''}${c.opciones ? ` · ${c.opciones}` : ''}${c.costo_adicional > 0 ? ` · +$${Number(c.costo_adicional).toFixed(2)}` : ''}]</span>
+                    </div>
+                    <button type="button" data-idx="${i}" class="cpanel-edit" style="padding:4px 12px;font-size:12px;background:#f0f5eb;border:1px solid #c5d9a8;border-radius:6px;cursor:pointer;font-weight:600;">Editar</button>
+                    <button type="button" data-idx="${i}" class="cpanel-del" style="padding:4px 12px;font-size:12px;background:#fce4ec;border:1px solid #e57373;border-radius:6px;cursor:pointer;color:#c0392b;font-weight:600;">✕</button>
+                </div>`).join('');
+
+            lista.querySelectorAll('.cpanel-del').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    camposList.splice(parseInt(btn.dataset.idx), 1);
+                    panelActivo = true;
+                    renderLista();
+                });
+            });
+            lista.querySelectorAll('.cpanel-edit').forEach(btn => {
+                btn.addEventListener('click', () => abrirFormCampo(parseInt(btn.dataset.idx)));
+            });
+        };
+
+        const abrirFormCampo = (editIdx = null) => {
+            const existing = document.getElementById('cpanel-campo-form');
+            if (existing) existing.remove();
+            const c = editIdx !== null ? { ...camposList[editIdx] } : { etiqueta: '', tipo: 'texto', requerido: 0, opciones: '', costo_adicional: 0 };
+
+            const div = document.createElement('div');
+            div.id = 'cpanel-campo-form';
+            div.style.cssText = 'background:#eef6e8;border:1.5px solid #b8d9a0;border-radius:10px;padding:16px;margin-top:12px;display:flex;flex-direction:column;gap:10px;';
+            div.innerHTML = `
+                <div style="font-size:13px;font-weight:700;color:var(--color-moss-green);">${editIdx !== null ? '✏️ Editar' : '➕ Nuevo'} Campo</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                    <div style="display:flex;flex-direction:column;gap:4px;">
+                        <label style="font-size:12px;font-weight:600;">Etiqueta <span style="color:#c0634c;">*</span></label>
+                        <input id="cpf-etiqueta" value="${c.etiqueta}" placeholder="Ej. Tamaño, Color, Texto a grabar…"
+                            style="padding:8px 10px;border:1px solid #ccc;border-radius:6px;font-size:13px;font-family:var(--font-primary);">
+                    </div>
+                    <div style="display:flex;flex-direction:column;gap:4px;">
+                        <label style="font-size:12px;font-weight:600;">Tipo</label>
+                        <select id="cpf-tipo" style="padding:8px 10px;border:1px solid #ccc;border-radius:6px;font-size:13px;font-family:var(--font-primary);">
+                            ${['texto','textarea','fecha','select','checkbox','archivo'].map(t => `<option value="${t}" ${c.tipo===t?'selected':''}>${t.charAt(0).toUpperCase()+t.slice(1)}</option>`).join('')}
+                        </select>
+                    </div>
+                </div>
+                <div id="cpf-opciones-wrap" style="display:${c.tipo==='select'?'flex':'none'};flex-direction:column;gap:4px;">
+                    <label style="font-size:12px;font-weight:600;">Opciones (separadas por coma) <span style="color:#c0634c;">*</span></label>
+                    <input id="cpf-opciones" value="${c.opciones||''}" placeholder='Ej. 4", 6", 8"  ó  Natural, Nogal, Caoba'
+                        style="padding:8px 10px;border:1px solid #ccc;border-radius:6px;font-size:13px;font-family:var(--font-primary);">
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:center;">
+                    <label style="font-size:13px;display:flex;align-items:center;gap:8px;cursor:pointer;">
+                        <input type="checkbox" id="cpf-requerido" ${c.requerido?'checked':''} style="width:15px;height:15px;"> Requerido
+                    </label>
+                    <div style="display:flex;flex-direction:column;gap:4px;">
+                        <label style="font-size:12px;font-weight:600;">Costo adicional ($)</label>
+                        <input type="number" id="cpf-costo" value="${c.costo_adicional||0}" step="0.01" min="0"
+                            style="padding:8px 10px;border:1px solid #ccc;border-radius:6px;font-size:13px;font-family:var(--font-primary);">
+                    </div>
+                </div>
+                <div style="display:flex;gap:8px;justify-content:flex-end;">
+                    <button type="button" id="cpf-cancel" style="padding:6px 16px;font-size:13px;border:1px solid #ccc;border-radius:6px;cursor:pointer;background:#fff;">Cancelar</button>
+                    <button type="button" id="cpf-save" style="padding:6px 16px;font-size:13px;background:var(--color-moss-green);color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:700;">✓ Guardar campo</button>
+                </div>`;
+
+            document.getElementById('campos-panel-lista').insertAdjacentElement('afterend', div);
+
+            document.getElementById('cpf-tipo').addEventListener('change', function() {
+                document.getElementById('cpf-opciones-wrap').style.display = this.value === 'select' ? 'flex' : 'none';
+            });
+            document.getElementById('cpf-cancel').addEventListener('click', () => div.remove());
+            document.getElementById('cpf-save').addEventListener('click', () => {
+                const etiqueta = document.getElementById('cpf-etiqueta').value.trim();
+                if (!etiqueta) { alert('La etiqueta es obligatoria.'); return; }
+                const tipo = document.getElementById('cpf-tipo').value;
+                const opciones = document.getElementById('cpf-opciones').value.trim();
+                if (tipo === 'select' && !opciones) { alert('Debes agregar opciones para el campo de tipo select.'); return; }
+                const nuevo = {
+                    etiqueta,
+                    tipo,
+                    requerido: document.getElementById('cpf-requerido').checked ? 1 : 0,
+                    opciones: opciones || null,
+                    costo_adicional: parseFloat(document.getElementById('cpf-costo').value) || 0,
+                    orden: editIdx !== null ? (c.orden ?? editIdx) : camposList.length,
+                    id: editIdx !== null ? c.id : null,
+                };
+                if (editIdx !== null) camposList[editIdx] = nuevo;
+                else camposList.push(nuevo);
+                panelActivo = true;
+                div.remove();
+                renderLista();
+            });
+        };
+
+        // ── Render inicial del panel ──────────────────────────────────────────
+        wrap.style.display = 'block';
+        wrap.innerHTML = `
+        <div class="card" style="padding:24px;border:2px solid #c5d9a8;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
+                <h3 style="margin:0;font-size:16px;color:var(--color-moss-green);display:flex;align-items:center;gap:8px;">
+                    <i data-lucide="sliders" style="width:18px;height:18px;"></i> Campos de Personalización para el Cliente
+                </h3>
+                <div style="display:flex;align-items:center;gap:10px;">
+                    <span id="${statusId}" style="font-size:12px;display:none;"></span>
+                    <button id="cpanel-add" type="button" style="padding:7px 16px;background:var(--color-moss-green);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;">
+                        <i data-lucide="plus" style="width:14px;height:14px;"></i> Añadir Campo
+                    </button>
+                    <button id="cpanel-save" type="button" style="padding:7px 16px;background:#1976d2;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;">
+                        Guardar Todo
+                    </button>
+                </div>
+            </div>
+            <p style="font-size:12.5px;color:#8c8270;margin:0 0 14px;">
+                Estos campos aparecerán como formulario para el cliente al pedir o cotizar este producto (catálogo público y B2B).
+            </p>
+            <div id="campos-panel-lista" style="display:flex;flex-direction:column;gap:8px;min-height:30px;">
+                <p style="font-size:13px;color:#aaa;font-style:italic;margin:0;">Cargando campos…</p>
+            </div>
+        </div>`;
+
+        lucide.createIcons();
+
+        // Cargar campos existentes
+        try {
+            const res = await EvergreenAPI.getCamposPersonalizacion(productoId);
+            camposList = res.data || [];
+            panelActivo = false;
+            renderLista();
+        } catch (err) {
+            document.getElementById('campos-panel-lista').innerHTML =
+                `<p style="color:#c0392b;font-size:13px;margin:0;">⚠️ Error al cargar campos: ${err.message}</p>`;
+        }
+
+        document.getElementById('cpanel-add').addEventListener('click', () => abrirFormCampo());
+
+        document.getElementById('cpanel-save').addEventListener('click', async () => {
+            const btn = document.getElementById('cpanel-save');
+            btn.disabled = true;
+            btn.textContent = 'Guardando…';
+            try {
+                // Obtener campos actuales del servidor para diff
+                const existentes = await EvergreenAPI.getCamposPersonalizacion(productoId)
+                    .then(r => r.data || [])
+                    .catch(() => null);
+
+                if (existentes !== null) {
+                    const tempIds = new Set(camposList.filter(c => c.id).map(c => c.id));
+                    // Eliminar los removidos
+                    for (const ex of existentes) {
+                        if (!tempIds.has(ex.id)) {
+                            await EvergreenAPI.deleteCampoPersonalizacion(productoId, ex.id);
+                        }
+                    }
+                }
+
+                const existentesIds = new Set((existentes || []).map(c => c.id));
+                for (let i = 0; i < camposList.length; i++) {
+                    const c = { ...camposList[i], orden: i };
+                    if (c.id && existentesIds.has(c.id)) {
+                        await EvergreenAPI.updateCampoPersonalizacion(productoId, c.id, c);
+                    } else {
+                        const created = await EvergreenAPI.createCampoPersonalizacion(productoId, c);
+                        // Actualizar id local para que ediciones futuras funcionen
+                        if (created?.data?.id) camposList[i].id = created.data.id;
+                        else if (created?.id) camposList[i].id = created.id;
+                    }
+                }
+
+                panelActivo = false;
+                showStatus('✓ Campos guardados correctamente');
+                // Recargar para obtener ids actualizados
+                const reloaded = await EvergreenAPI.getCamposPersonalizacion(productoId);
+                camposList = reloaded.data || [];
+                renderLista();
+            } catch (err) {
+                showStatus('⚠️ Error al guardar: ' + err.message, true);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Guardar Todo';
+            }
+        });
     },
 
     openGeminiConfigModal() {
