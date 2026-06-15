@@ -337,24 +337,41 @@ def get_fotos_orden(orden_id: int, current_user: dict = Depends(get_current_admi
 
 # --- ENDPOINT IA (GEMINI API MULTIMODAL) ---
 
+def _key_info(key: str) -> dict:
+    """Devuelve metadatos de la clave sin exponerla."""
+    clean = key.strip()
+    return {
+        "longitud_raw": len(key),
+        "longitud_limpia": len(clean),
+        "tiene_espacios": key != clean,
+        "prefijo": clean[:6] if len(clean) >= 6 else clean,
+        "sufijo": clean[-4:] if len(clean) >= 4 else clean,
+        "empieza_con_AIzaSy": clean.startswith("AIzaSy"),
+    }
+
+
 @router.get("/ia/test")
 async def test_gemini(
     gemini_key: Optional[str] = Header(None, alias="X-Gemini-Key"),
     current_user: dict = Depends(get_current_admin)
 ):
-    """Prueba de conectividad con Gemini. Envía 'Hola' y confirma respuesta."""
-    modelo_activo = "gemini-2.0-flash (v1beta)"
-    api_key_configurada = bool(gemini_key)
+    """Diagnóstico de conectividad Gemini: verifica la clave y envía 'Hola'."""
+    modelo = "gemini-2.0-flash"
+    api_version = "v1beta"
 
-    if not api_key_configurada:
+    if not gemini_key:
         return {
             "status": "sin_key",
-            "modelo_activo": modelo_activo,
             "api_key_configurada": False,
-            "mensaje": "No se proporcionó X-Gemini-Key en el header."
+            "modelo": f"{api_version}/{modelo}",
+            "mensaje": "No se recibió X-Gemini-Key en el header."
         }
 
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={gemini_key}"
+    info = _key_info(gemini_key)
+    clean_key = gemini_key.strip()
+    print(f"[IA/test] key_info={info}")
+
+    url = f"https://generativelanguage.googleapis.com/{api_version}/models/{modelo}:generateContent?key={clean_key}"
     payload = {"contents": [{"parts": [{"text": "Responde solo con la palabra: Hola"}]}]}
     try:
         req = urllib.request.Request(
@@ -368,8 +385,13 @@ async def test_gemini(
             texto = res_json.get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text", "").strip()
             return {
                 "status": "ok",
-                "modelo_activo": modelo_activo,
                 "api_key_configurada": True,
+                "longitud": info["longitud_limpia"],
+                "prefijo": info["prefijo"],
+                "sufijo": info["sufijo"],
+                "tiene_espacios": info["tiene_espacios"],
+                "empieza_con_AIzaSy": info["empieza_con_AIzaSy"],
+                "modelo": f"{api_version}/{modelo}",
                 "respuesta_gemini": texto
             }
     except urllib.error.HTTPError as he:
@@ -378,18 +400,25 @@ async def test_gemini(
             error_body = he.read().decode('utf-8')
         except Exception:
             pass
+        print(f"[IA/test] HTTP {he.code}: {error_body[:300]}")
         return {
             "status": "error",
-            "modelo_activo": modelo_activo,
             "api_key_configurada": True,
+            "longitud": info["longitud_limpia"],
+            "prefijo": info["prefijo"],
+            "sufijo": info["sufijo"],
+            "tiene_espacios": info["tiene_espacios"],
+            "empieza_con_AIzaSy": info["empieza_con_AIzaSy"],
+            "modelo": f"{api_version}/{modelo}",
             "http_code": he.code,
             "detalle": error_body[:500]
         }
     except Exception as e:
         return {
             "status": "error",
-            "modelo_activo": modelo_activo,
             "api_key_configurada": True,
+            "longitud": info["longitud_limpia"],
+            "modelo": f"{api_version}/{modelo}",
             "detalle": str(e)
         }
 
@@ -406,7 +435,7 @@ async def estimar_costos_por_ia(
     """
     if not gemini_key:
         raise HTTPException(
-            status_code=400, 
+            status_code=400,
             detail="Se requiere la API Key de Gemini. Por favor, ingrésala en la configuración de la app."
         )
         
@@ -414,6 +443,11 @@ async def estimar_costos_por_ia(
     if not file.filename.lower().endswith(('.png', '.jpg', '.jpeg')):
         raise HTTPException(status_code=400, detail="Formato de imagen no soportado. Suba JPG, JPEG o PNG.")
         
+    # Limpiar la clave de espacios/saltos de línea invisibles
+    gemini_key = gemini_key.strip()
+    info = _key_info(gemini_key)
+    print(f"[IA/estimar] key_info={info}")
+
     try:
         # 1. Leer imagen y codificar en Base64
         contents = await file.read()
