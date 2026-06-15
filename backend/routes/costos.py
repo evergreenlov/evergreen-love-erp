@@ -155,7 +155,19 @@ def update_configuracion(cfg: ConfiguracionSchema, current_user: dict = Depends(
 # --- ENDPOINTS PRODUCTOS ---
 
 def _build_fotos(cursor, producto_id):
-    """Devuelve rutas de fotos en el orden de galería: transparente, frontal, lateral, detalle, empaque, referencia."""
+    """Devuelve rutas de fotos priorizando producto_imagenes (galería nueva),
+    con fallback a fotos_asociadas. La imagen principal va primero."""
+    # 1. Intentar galería nueva
+    cursor.execute("""
+        SELECT ruta_imagen FROM producto_imagenes
+        WHERE producto_id = ?
+        ORDER BY es_principal DESC, orden ASC, id ASC
+    """, (producto_id,))
+    galeria = [r["ruta_imagen"] for r in cursor.fetchall() if r["ruta_imagen"]]
+    if galeria:
+        return galeria
+
+    # 2. Fallback: fotos_asociadas (comportamiento original)
     cursor.execute("""
         SELECT tipo_foto, nombre_archivo FROM fotos_asociadas
         WHERE producto_id = ?
@@ -202,6 +214,13 @@ def list_productos_publico():
             d['foto_ruta'] = fotos[0] if fotos else (
                 f"/fotos_import/{d['foto_nombre']}" if d.get('foto_nombre') else None
             )
+            # Galería completa para el modal de personalización
+            cursor.execute("""
+                SELECT id, ruta_imagen, es_principal, orden, alt_text, tipo
+                FROM producto_imagenes WHERE producto_id = ?
+                ORDER BY es_principal DESC, orden ASC, id ASC
+            """, (d['id'],))
+            d['galeria'] = [dict(r) for r in cursor.fetchall()]
             productos.append(d)
         conn.close()
         return {"status": "success", "data": productos}

@@ -25,6 +25,7 @@ from routes import cotizaciones
 from routes import dashboard
 from routes import b2b
 from routes import personalizacion
+from routes import galeria
 
 
 app = FastAPI(
@@ -48,6 +49,7 @@ app.include_router(cotizaciones.router)
 app.include_router(dashboard.router)
 app.include_router(b2b.router)
 app.include_router(personalizacion.router)
+app.include_router(galeria.router)
 
 # Orígenes permitidos: leer desde variable de entorno, con fallback para desarrollo local
 _raw_origins = os.environ.get(
@@ -185,6 +187,11 @@ else:
 os.makedirs(CATALOGO_TRANSPARENTE_DIR, exist_ok=True)
 os.makedirs(REMBG_MODELS_DIR, exist_ok=True)
 app.mount("/catalogo_transparente", StaticFiles(directory=CATALOGO_TRANSPARENTE_DIR), name="catalogo_transparente")
+
+# Galería de imágenes de productos
+PRODUCTO_GALERIA_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "producto_galeria"))
+os.makedirs(PRODUCTO_GALERIA_DIR, exist_ok=True)
+app.mount("/producto_galeria", StaticFiles(directory=PRODUCTO_GALERIA_DIR), name="producto_galeria")
 
 # Servir el index.html principal en la ruta raíz y también como /index.html
 @app.get("/")

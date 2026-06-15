@@ -723,6 +723,24 @@ def init_db(force_reset=False):
     _personal_dir = _os.path.abspath(_os.path.join(_os.path.dirname(__file__), "..", "data", "personalizacion_archivos"))
     _os.makedirs(_personal_dir, exist_ok=True)
 
+    # Galería de imágenes por producto
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS producto_imagenes (
+        id             INTEGER PRIMARY KEY AUTOINCREMENT,
+        producto_id    INTEGER NOT NULL REFERENCES productos(id) ON DELETE CASCADE,
+        ruta_imagen    TEXT NOT NULL,
+        es_principal   INTEGER NOT NULL DEFAULT 0,
+        orden          INTEGER NOT NULL DEFAULT 0,
+        alt_text       TEXT,
+        tipo           TEXT NOT NULL DEFAULT 'producto',
+        fecha_creacion TEXT DEFAULT (datetime('now','localtime'))
+    );
+    """)
+
+    # Crear carpeta de galería de productos
+    _galeria_dir = _os.path.abspath(_os.path.join(_os.path.dirname(__file__), "..", "data", "producto_galeria"))
+    _os.makedirs(_galeria_dir, exist_ok=True)
+
     conn.commit()
     conn.close()
     print("Base de datos reconstruida exitosamente con las unidades en pulgadas y desglose de componentes.")

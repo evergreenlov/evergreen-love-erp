@@ -395,6 +395,9 @@ const CostosComponent = {
                 <!-- Panel Campos de Personalización (se inyecta cuando hay producto seleccionado) -->
                 <div id="campos-panel-wrap" style="margin-top:24px; display:none;"></div>
 
+                <!-- Panel Galería del Producto -->
+                <div id="galeria-panel-wrap" style="margin-top:24px; display:none;"></div>
+
                 <!-- Modales Dinámicos -->
                 <div id="product-save-modal" class="modal-overlay" style="display: none;"></div>
                 <div id="gemini-config-modal" class="modal-overlay" style="display: none;"></div>
@@ -410,6 +413,7 @@ const CostosComponent = {
                     this._aplicarModoEdicion(p);
                     // Mostrar panel de campos si el producto es personalizable
                     if (p.personalizado) this.renderCamposPanel(p.id);
+                    this.renderGaleriaPanel(p.id);
                 }
             }
 
@@ -2058,5 +2062,171 @@ const CostosComponent = {
                 alert("Error al actualizar producto: " + err.message);
             }
         });
+    },
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // PANEL GALERÍA DEL PRODUCTO (admin)
+    // ──────────────────────────────────────────────────────────────────────────
+    async renderGaleriaPanel(productoId) {
+        const wrap = document.getElementById('galeria-panel-wrap');
+        if (!wrap) return;
+
+        const TIPOS = ['producto', 'ejemplo_cliente', 'material', 'detalle', 'uso_real'];
+
+        const showStatus = (msg, isError = false) => {
+            const el = document.getElementById('galeria-panel-status');
+            if (!el) return;
+            el.textContent = msg;
+            el.style.color = isError ? '#c0392b' : '#5f7830';
+            el.style.display = 'block';
+            if (!isError) setTimeout(() => { if (el) el.style.display = 'none'; }, 3500);
+        };
+
+        const render = async () => {
+            let imagenes = [];
+            try {
+                const res = await EvergreenAPI.getGaleriaProducto(productoId);
+                imagenes = res.data || [];
+            } catch (e) {
+                console.error('renderGaleriaPanel load error:', e);
+            }
+
+            wrap.style.display = 'block';
+            wrap.innerHTML = `
+                <div class="card" style="padding:20px;border:2px solid #b8d0f0;margin-top:0;">
+                    <h3 style="margin:0 0 4px;font-size:15px;color:#1565c0;display:flex;align-items:center;gap:8px;">
+                        🖼️ Galería del Producto
+                    </h3>
+                    <p style="font-size:12px;color:#8c8270;margin:0 0 14px;">
+                        Hasta 10 imágenes. La imagen principal aparece primero en el catálogo.
+                    </p>
+                    <div id="galeria-panel-status" style="display:none;font-size:12.5px;margin-bottom:10px;"></div>
+
+                    <!-- Miniaturas existentes -->
+                    <div id="galeria-panel-grid" style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px;min-height:30px;">
+                        ${imagenes.length === 0
+                            ? `<p style="font-size:13px;color:#aaa;font-style:italic;margin:0;">Sin imágenes aún. Sube la primera imagen del producto.</p>`
+                            : imagenes.map(img => `
+                                <div data-img-id="${img.id}" style="position:relative;width:90px;flex-shrink:0;">
+                                    <div style="position:relative;width:90px;height:90px;border-radius:10px;overflow:hidden;
+                                        border:2px solid ${img.es_principal ? '#1565c0' : '#e0d9ce'};background:#f5f0e8;">
+                                        <img src="${getFullImageUrl(img.ruta_imagen)}"
+                                            style="width:100%;height:100%;object-fit:cover;"
+                                            onerror="this.style.display='none'">
+                                        ${img.es_principal
+                                            ? `<span style="position:absolute;bottom:3px;left:0;right:0;text-align:center;font-size:9px;background:rgba(21,101,192,0.85);color:#fff;padding:1px 0;">⭐ Principal</span>`
+                                            : ''}
+                                    </div>
+                                    <div style="margin-top:4px;display:flex;flex-direction:column;gap:3px;">
+                                        <select class="galeria-tipo-sel" data-img-id="${img.id}"
+                                            style="font-size:10px;padding:2px 4px;border:1px solid #ddd;border-radius:4px;width:100%;">
+                                            ${TIPOS.map(t => `<option value="${t}" ${img.tipo === t ? 'selected' : ''}>${t}</option>`).join('')}
+                                        </select>
+                                        <div style="display:flex;gap:3px;">
+                                            ${!img.es_principal
+                                                ? `<button class="galeria-btn-principal" data-img-id="${img.id}"
+                                                    style="flex:1;font-size:9px;padding:2px;background:#e3f2fd;border:1px solid #90caf9;border-radius:4px;cursor:pointer;font-weight:700;" title="Marcar como principal">⭐</button>`
+                                                : ''}
+                                            <button class="galeria-btn-del" data-img-id="${img.id}"
+                                                style="flex:1;font-size:9px;padding:2px;background:#fce4ec;border:1px solid #ef9a9a;border-radius:4px;cursor:pointer;color:#c62828;font-weight:700;" title="Eliminar">✕</button>
+                                        </div>
+                                    </div>
+                                </div>`).join('')
+                        }
+                    </div>
+
+                    <!-- Subir nueva imagen -->
+                    ${imagenes.length < 10 ? `
+                    <div style="border-top:1px solid #e8e0d5;padding-top:12px;">
+                        <label style="font-size:12px;font-weight:700;color:#333;display:block;margin-bottom:6px;">Agregar imagen</label>
+                        <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end;">
+                            <input type="file" id="galeria-file-input" accept=".jpg,.jpeg,.png,.webp"
+                                style="font-size:12px;flex:1;min-width:160px;">
+                            <select id="galeria-tipo-nuevo" style="font-size:12px;padding:6px 8px;border:1px solid #ddd;border-radius:6px;">
+                                ${TIPOS.map(t => `<option value="${t}">${t}</option>`).join('')}
+                            </select>
+                            <label style="font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer;">
+                                <input type="checkbox" id="galeria-es-principal" style="width:13px;height:13px;">
+                                Principal
+                            </label>
+                            <button id="galeria-btn-subir"
+                                style="padding:7px 16px;background:#1565c0;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;">
+                                Subir
+                            </button>
+                        </div>
+                    </div>` : `<p style="font-size:12px;color:#e67e22;margin:0;">Límite de 10 imágenes alcanzado.</p>`}
+                </div>`;
+
+            // ── Evento: subir imagen ──
+            const btnSubir = document.getElementById('galeria-btn-subir');
+            if (btnSubir) {
+                btnSubir.addEventListener('click', async () => {
+                    const fileInput = document.getElementById('galeria-file-input');
+                    const tipo = document.getElementById('galeria-tipo-nuevo')?.value || 'producto';
+                    const esPrincipal = document.getElementById('galeria-es-principal')?.checked || false;
+                    if (!fileInput?.files?.length) { showStatus('Selecciona una imagen.', true); return; }
+                    const file = fileInput.files[0];
+                    btnSubir.disabled = true;
+                    btnSubir.textContent = 'Subiendo…';
+                    try {
+                        await EvergreenAPI.subirImagenGaleria(productoId, file, esPrincipal, '', tipo);
+                        showStatus('✅ Imagen subida.');
+                        await render();
+                    } catch (e) {
+                        console.error('galeria upload error:', e);
+                        showStatus('Error: ' + e.message, true);
+                        btnSubir.disabled = false;
+                        btnSubir.textContent = 'Subir';
+                    }
+                });
+            }
+
+            // ── Evento: marcar principal ──
+            wrap.querySelectorAll('.galeria-btn-principal').forEach(btn => {
+                btn.addEventListener('click', async () => {
+                    const imgId = parseInt(btn.dataset.imgId);
+                    try {
+                        await EvergreenAPI.updateImagenGaleria(productoId, imgId, { es_principal: 1 });
+                        showStatus('✅ Imagen principal actualizada.');
+                        await render();
+                    } catch (e) {
+                        console.error('galeria principal error:', e);
+                        showStatus('Error: ' + e.message, true);
+                    }
+                });
+            });
+
+            // ── Evento: eliminar ──
+            wrap.querySelectorAll('.galeria-btn-del').forEach(btn => {
+                btn.addEventListener('click', async () => {
+                    const imgId = parseInt(btn.dataset.imgId);
+                    if (!confirm('¿Eliminar esta imagen de la galería?')) return;
+                    try {
+                        await EvergreenAPI.deleteImagenGaleria(productoId, imgId);
+                        showStatus('Imagen eliminada.');
+                        await render();
+                    } catch (e) {
+                        console.error('galeria delete error:', e);
+                        showStatus('Error: ' + e.message, true);
+                    }
+                });
+            });
+
+            // ── Evento: cambiar tipo ──
+            wrap.querySelectorAll('.galeria-tipo-sel').forEach(sel => {
+                sel.addEventListener('change', async () => {
+                    const imgId = parseInt(sel.dataset.imgId);
+                    try {
+                        await EvergreenAPI.updateImagenGaleria(productoId, imgId, { tipo: sel.value });
+                        showStatus('Tipo actualizado.');
+                    } catch (e) {
+                        console.error('galeria tipo error:', e);
+                        showStatus('Error: ' + e.message, true);
+                    }
+                });
+            });
+        };
+
+        await render();
     }
 };

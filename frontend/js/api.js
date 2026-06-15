@@ -3582,7 +3582,57 @@ const EvergreenAPI = {
             throw error;
         }
     },
+    // ── Galería de productos ────────────────────────────────────────────────
 
+    async getGaleriaProducto(productoId) {
+        const r = await fetch(`${API_BASE_URL}/productos/${productoId}/galeria`, {
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('ev_token')}` }
+        });
+        if (!r.ok) throw new Error('Error al obtener galería');
+        return r.json();
+    },
+
+    async getGaleriaProductoPublico(productoId) {
+        const r = await fetch(`${API_BASE_URL}/productos/${productoId}/galeria/publico`);
+        if (!r.ok) throw new Error('Error al obtener galería');
+        return r.json();
+    },
+
+    async subirImagenGaleria(productoId, file, esPrincipal = false, altText = '', tipo = 'producto') {
+        const fd = new FormData();
+        fd.append('file', file);
+        fd.append('es_principal', esPrincipal ? '1' : '0');
+        if (altText) fd.append('alt_text', altText);
+        fd.append('tipo', tipo);
+        const r = await fetch(`${API_BASE_URL}/productos/${productoId}/galeria`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('ev_token')}` },
+            body: fd
+        });
+        if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error(e.detail || 'Error al subir imagen'); }
+        return r.json();
+    },
+
+    async updateImagenGaleria(productoId, imagenId, payload) {
+        const r = await fetch(`${API_BASE_URL}/productos/${productoId}/galeria/${imagenId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('ev_token')}` },
+            body: JSON.stringify(payload)
+        });
+        if (!r.ok) throw new Error('Error al actualizar imagen');
+        return r.json();
+    },
+
+    async deleteImagenGaleria(productoId, imagenId) {
+        const r = await fetch(`${API_BASE_URL}/productos/${productoId}/galeria/${imagenId}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('ev_token')}` }
+        });
+        if (!r.ok) throw new Error('Error al eliminar imagen');
+        return r.json();
+    },
+
+    // ── Campos de personalización ───────────────────────────────────────────
     // ─── CAMPOS DE PERSONALIZACIÓN ──────────────────────────────────────────────
     async getCamposPersonalizacion(productoId) {
         const r = await fetch(`${API_BASE_URL}/productos/${productoId}/campos-personalizacion`, {

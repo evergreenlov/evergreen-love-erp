@@ -14,6 +14,7 @@ const CotizacionModal = {
     _tamanoSel: null,
     _showMaterial: false,
     _showTamano: false,
+    _galeria: [],
 
     _MATERIALES: [
         { id: 'basswood',              nombre: 'Basswood',              bg: '#D4B48C', desc: 'Madera de tilo' },
@@ -112,6 +113,23 @@ const CotizacionModal = {
                 font-size: 11px; color: #7a6840; background: #f3eddf;
                 border-radius: 20px; padding: 3px 10px; width: fit-content;
                 font-weight: 600;
+            }
+
+            /* Thumbnail strip */
+            #cotiz-thumbs {
+                display: none; flex-wrap: wrap; gap: 6px; margin-top: 4px;
+            }
+            .cotiz-thumb {
+                width: 48px; height: 48px; border-radius: 7px; overflow: hidden;
+                border: 2px solid transparent; cursor: pointer;
+                background: #ede7db; flex-shrink: 0;
+                transition: border-color 0.15s, transform 0.1s;
+            }
+            .cotiz-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+            .cotiz-thumb.active { border-color: #5f7830; }
+            .cotiz-thumb:hover:not(.active) { border-color: #c5d9a8; transform: scale(1.05); }
+            @media(max-width:640px) {
+                #cotiz-thumbs { display: none !important; }
             }
 
             /* ── RIGHT: Form column ── */
@@ -314,6 +332,8 @@ const CotizacionModal = {
                             <div id="cotiz-preview-mat-badge"></div>
                             <div id="cotiz-preview-tam-badge"></div>
                         </div>
+                        <!-- Thumbnail strip -->
+                        <div id="cotiz-thumbs"></div>
                     </div>
 
                     <!-- ── RIGHT: Formulario ── -->
@@ -535,6 +555,34 @@ const CotizacionModal = {
         }
     },
 
+    // ── Thumbnail strip ──
+    _renderThumbs() {
+        const wrap = document.getElementById('cotiz-thumbs');
+        if (!wrap) return;
+        if (!this._galeria || this._galeria.length < 2) {
+            wrap.style.display = 'none';
+            wrap.innerHTML = '';
+            return;
+        }
+        wrap.style.display = 'flex';
+        wrap.innerHTML = this._galeria.map((img, i) => {
+            const url = (typeof getFullImageUrl === 'function')
+                ? getFullImageUrl(img.ruta_imagen)
+                : img.ruta_imagen;
+            return `<div class="cotiz-thumb${i === 0 ? ' active' : ''}" data-idx="${i}" data-url="${url}">
+                <img src="${url}" alt="${img.alt_text || ''}" onerror="this.parentElement.style.display='none'">
+            </div>`;
+        }).join('');
+        wrap.querySelectorAll('.cotiz-thumb').forEach(thumb => {
+            thumb.addEventListener('click', () => {
+                const url = thumb.dataset.url;
+                this._updatePreviewImg(url);
+                wrap.querySelectorAll('.cotiz-thumb').forEach(t => t.classList.remove('active'));
+                thumb.classList.add('active');
+            });
+        });
+    },
+
     // ── Campo input renderer (sin cambios respecto a v3) ──
     _renderCampoInput(c) {
         const req   = c.requerido ? ' <span style="color:#c0634c;">*</span>' : '';
@@ -559,7 +607,7 @@ const CotizacionModal = {
 
     // ── Open modal ──
     async open({ productoId = null, productoNombre = null, precioFinal = null,
-                 imagenUrl = null, fuente = 'publico', clienteB2bId = null } = {}) {
+                 imagenUrl = null, galeria = [], fuente = 'publico', clienteB2bId = null } = {}) {
         this._init();
         this._context = { productoId, productoNombre, precioFinal, fuente, clienteB2bId };
         this._campos = [];
@@ -567,6 +615,7 @@ const CotizacionModal = {
         this._tamanoSel = null;
         this._showMaterial = false;
         this._showTamano = false;
+        this._galeria = Array.isArray(galeria) ? galeria : [];
 
         // Reset form fields
         ['cotiz-nombre','cotiz-email','cotiz-telefono','cotiz-desc','cotiz-presupuesto'].forEach(id => {
@@ -598,6 +647,7 @@ const CotizacionModal = {
         if (nombre) nombre.textContent = productoNombre || '';
         if (precio) precio.textContent = precioFinal ? `$${parseFloat(precioFinal).toFixed(2)}` : '';
         this._updatePreviewImg(imagenUrl);
+        this._renderThumbs();
 
         // Producto label (right column)
         const prodWrap  = document.getElementById('cotiz-producto-wrap');

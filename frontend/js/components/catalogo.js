@@ -201,6 +201,8 @@ const CatalogoComponent = {
                 productoId: prod ? prod.id : null,
                 productoNombre: prod ? prod.nombre : null,
                 precioFinal: prod ? prod.precio_final : null,
+                imagenUrl: prod ? (prod.foto_ruta || null) : null,
+                galeria: prod ? (prod.galeria || []) : [],
                 fuente: 'publico'
             });
         } else if (prod && typeof PersonalizadosComponent !== 'undefined') {
