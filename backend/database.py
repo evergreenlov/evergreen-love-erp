@@ -219,7 +219,8 @@ def init_db(force_reset=False):
     CREATE TABLE IF NOT EXISTS facturas (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         numero_factura TEXT UNIQUE NOT NULL,
-        cliente_id INTEGER NOT NULL,
+        cliente_id INTEGER,
+        cliente_nombre_manual TEXT,
         fecha_emision TEXT NOT NULL,
         fecha_vencimiento TEXT,
         fecha_pago TEXT,
@@ -233,6 +234,9 @@ def init_db(force_reset=False):
         notificado INTEGER DEFAULT 0,
         notas TEXT,
         estado TEXT CHECK(estado IN ('Pendiente', 'Pagada', 'Anulada')) NOT NULL DEFAULT 'Pendiente',
+        orden_produccion_id INTEGER,
+        codigo_orden TEXT,
+        cotizacion_id INTEGER REFERENCES cotizaciones(id),
         FOREIGN KEY (cliente_id) REFERENCES clientes (id) ON DELETE RESTRICT
     );
     """)
@@ -542,6 +546,50 @@ def init_db(force_reset=False):
         print("Columna 'pedido_b2b_id' añadida a ordenes_produccion.")
     except Exception:
         pass  # Ya existe
+
+    # Migración: facturas.cliente_id debe ser nullable (no NOT NULL).
+    # Si la tabla fue creada con NOT NULL, se reconstruye preservando todos los datos.
+    cursor.execute("PRAGMA table_info(facturas)")
+    _fac_cols = {r[1]: r for r in cursor.fetchall()}  # name → (cid, name, type, notnull, dflt, pk)
+    _cliente_id_notnull = _fac_cols.get("cliente_id", (None, None, None, 0))[3]
+    if _cliente_id_notnull:
+        print("Reconstruyendo tabla facturas para quitar NOT NULL de cliente_id…")
+        cursor.execute("ALTER TABLE facturas RENAME TO _facturas_rebuild")
+        cursor.execute("""
+        CREATE TABLE facturas (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            numero_factura TEXT UNIQUE NOT NULL,
+            cliente_id INTEGER,
+            cliente_nombre_manual TEXT,
+            fecha_emision TEXT NOT NULL,
+            fecha_vencimiento TEXT,
+            fecha_pago TEXT,
+            metodo_pago TEXT CHECK(metodo_pago IN ('Efectivo', 'ATH Movil', 'Cheque', 'Tarjeta', 'Transferencia', 'Otro')),
+            numero_cheque TEXT,
+            subtotal REAL NOT NULL DEFAULT 0.0,
+            ivu_estatal REAL NOT NULL DEFAULT 0.0,
+            ivu_municipal REAL NOT NULL DEFAULT 0.0,
+            total REAL NOT NULL DEFAULT 0.0,
+            monto_pagado REAL,
+            notificado INTEGER DEFAULT 0,
+            notas TEXT,
+            estado TEXT CHECK(estado IN ('Pendiente', 'Pagada', 'Anulada')) NOT NULL DEFAULT 'Pendiente',
+            orden_produccion_id INTEGER,
+            codigo_orden TEXT,
+            cotizacion_id INTEGER REFERENCES cotizaciones(id),
+            FOREIGN KEY (cliente_id) REFERENCES clientes (id) ON DELETE RESTRICT
+        )
+        """)
+        # Copiar columnas que existan en la tabla vieja
+        _old_cols = ", ".join(
+            c for c in ("id","numero_factura","cliente_id","fecha_emision","fecha_vencimiento",
+                        "fecha_pago","metodo_pago","numero_cheque","subtotal","ivu_estatal",
+                        "ivu_municipal","total","monto_pagado","notificado","notas","estado")
+            if c in _fac_cols
+        )
+        cursor.execute(f"INSERT INTO facturas ({_old_cols}) SELECT {_old_cols} FROM _facturas_rebuild")
+        cursor.execute("DROP TABLE _facturas_rebuild")
+        print("Tabla facturas reconstruida: cliente_id ahora es nullable.")
 
     # Migración: factura ↔ orden — vínculo formal bidireccional
     try:
