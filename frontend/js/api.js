@@ -2843,21 +2843,23 @@ const EvergreenAPI = {
     },
 
     // 7. Estimación de IA con Gemini
-    async estimarCostoPorIA(file, geminiKey) {
+    async estimarCostoPorIA(file, geminiKey, signal) {
         try {
             const formData = new FormData();
             formData.append("file", file);
-            
+
             const response = await fetch(`${API_BASE_URL}/ia/estimar`, {
                 method: 'POST',
                 headers: {
                     'X-Gemini-Key': geminiKey
                 },
-                body: formData
+                body: formData,
+                signal: signal || null
             });
             if (!response.ok) {
-                const err = await response.json();
-                throw new Error(err.detail || "Error al analizar la imagen con IA");
+                let detail = "Error al analizar la imagen con IA";
+                try { detail = (await response.json()).detail || detail; } catch (_) {}
+                throw new Error(detail);
             }
             return await response.json();
         } catch (error) {
