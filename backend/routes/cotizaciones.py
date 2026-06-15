@@ -852,6 +852,60 @@ def descargar_pdf_cotizacion(
     )
 
 
+# ── GET /cotizaciones/{id}/pdf-interno ───────────────────────────────────────
+
+@router.get("/cotizaciones/{cotizacion_id}/pdf-interno")
+def descargar_pdf_interno(
+    cotizacion_id: int,
+    current_user: dict = Depends(get_current_admin),
+):
+    """Genera la Hoja de Costos Interna. Solo admins. Nunca enviada al cliente."""
+    from routes.pdf_cotizacion import generar_hoja_interna
+
+    cotizacion, respuestas = _fetch_cotizacion_y_respuestas(cotizacion_id)
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        # Producto completo con todos sus costos
+        producto = None
+        componentes = []
+        if cotizacion.get("producto_id"):
+            cursor.execute("SELECT * FROM productos WHERE id = ?", (cotizacion["producto_id"],))
+            row = cursor.fetchone()
+            if row:
+                producto = dict(row)
+            cursor.execute("""
+                SELECT cp.cantidad_usada, cp.costo_calculado,
+                       m.nombre as material_nombre, m.tipo as material_tipo
+                FROM componentes_producto cp
+                LEFT JOIN materiales m ON m.id = cp.material_id
+                WHERE cp.producto_id = ?
+            """, (cotizacion["producto_id"],))
+            componentes = [dict(r) for r in cursor.fetchall()]
+
+        # Tarifas de configuración
+        cursor.execute("SELECT tarifa_hora_laser, tarifa_hora_labor FROM configuracion LIMIT 1")
+        cfg = cursor.fetchone()
+        tarifa_laser = float(cfg["tarifa_hora_laser"]) if cfg else 15.0
+        tarifa_labor = float(cfg["tarifa_hora_labor"]) if cfg else 12.0
+    finally:
+        conn.close()
+
+    pdf_buf = generar_hoja_interna(
+        cotizacion, respuestas,
+        producto, componentes,
+        tarifa_laser, tarifa_labor,
+    )
+
+    filename = f"costos-internos-{cotizacion_id}.pdf"
+    return StreamingResponse(
+        pdf_buf,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
 # ── POST /cotizaciones/{id}/enviar-email ──────────────────────────────────────
 
 @router.post("/cotizaciones/{cotizacion_id}/enviar-email")

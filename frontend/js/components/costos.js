@@ -1287,12 +1287,12 @@ const CostosComponent = {
                     <input id="cf-etiqueta" value="${c.etiqueta}" style="width:100%;padding:5px 8px;border:1px solid #ccc;border-radius:4px;font-size:12px;box-sizing:border-box;"></div>
                     <div><label style="font-size:11px;font-weight:500;">Tipo</label><br>
                     <select id="cf-tipo" style="width:100%;padding:5px 8px;border:1px solid #ccc;border-radius:4px;font-size:12px;">
-                        ${['texto','textarea','fecha','select','checkbox','archivo'].map(t => `<option value="${t}" ${c.tipo===t?'selected':''}>${t}</option>`).join('')}
+                        ${['texto','textarea','fecha','select','multiselect','checkbox','archivo'].map(t => `<option value="${t}" ${c.tipo===t?'selected':''}>${t}</option>`).join('')}
                     </select></div>
                 </div>
-                <div id="cf-opciones-wrap" style="display:${c.tipo==='select'?'block':'none'}">
-                    <label style="font-size:11px;font-weight:500;">Opciones (separadas por coma)</label><br>
-                    <input id="cf-opciones" value="${c.opciones||''}" placeholder="Rojo, Azul, Verde" style="width:100%;padding:5px 8px;border:1px solid #ccc;border-radius:4px;font-size:12px;box-sizing:border-box;">
+                <div id="cf-opciones-wrap" style="display:${['select','multiselect'].includes(c.tipo)?'block':'none'}">
+                    <label id="cf-opciones-label" style="font-size:11px;font-weight:500;">${c.tipo==='multiselect'?'Opciones con costo (una por línea: Nombre | costo)':'Opciones (separadas por coma)'}</label><br>
+                    <textarea id="cf-opciones" rows="3" placeholder="${c.tipo==='multiselect'?'Baltic | 0\nBasswood | 1.50\nWalnut | 3.00':'Rojo, Azul, Verde'}" style="width:100%;padding:5px 8px;border:1px solid #ccc;border-radius:4px;font-size:12px;box-sizing:border-box;resize:vertical;">${c.tipo==='multiselect'?(c.opciones||'').split(',').map(o=>o.trim()).join('\n'):(c.opciones||'')}</textarea>
                 </div>
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;align-items:center;">
                     <label style="font-size:12px;display:flex;align-items:center;gap:6px;cursor:pointer;">
@@ -1308,17 +1308,28 @@ const CostosComponent = {
             listaCampos.parentElement.appendChild(div);
 
             document.getElementById('cf-tipo').addEventListener('change', function() {
-                document.getElementById('cf-opciones-wrap').style.display = this.value === 'select' ? 'block' : 'none';
+                const isOpts = ['select','multiselect'].includes(this.value);
+                document.getElementById('cf-opciones-wrap').style.display = isOpts ? 'block' : 'none';
+                if (isOpts) {
+                    const isMulti = this.value === 'multiselect';
+                    document.getElementById('cf-opciones-label').textContent = isMulti ? 'Opciones con costo (una por línea: Nombre | costo)' : 'Opciones (separadas por coma)';
+                    document.getElementById('cf-opciones').placeholder = isMulti ? 'Baltic | 0\nBasswood | 1.50\nWalnut | 3.00' : 'Rojo, Azul, Verde';
+                }
             });
             document.getElementById('cf-cancel').addEventListener('click', () => div.remove());
             document.getElementById('cf-save').addEventListener('click', () => {
                 const etiqueta = document.getElementById('cf-etiqueta').value.trim();
                 if (!etiqueta) { alert('La etiqueta es obligatoria.'); return; }
+                const _tipoSave = document.getElementById('cf-tipo').value;
+                let _opcionesSave = document.getElementById('cf-opciones').value.trim() || null;
+                if (_tipoSave === 'multiselect' && _opcionesSave) {
+                    _opcionesSave = _opcionesSave.split('\n').map(l => l.trim()).filter(Boolean).join(',');
+                }
                 const nuevo = {
                     etiqueta,
-                    tipo: document.getElementById('cf-tipo').value,
+                    tipo: _tipoSave,
                     requerido: document.getElementById('cf-requerido').checked ? 1 : 0,
-                    opciones: document.getElementById('cf-opciones').value.trim() || null,
+                    opciones: _opcionesSave,
                     costo_adicional: parseFloat(document.getElementById('cf-costo').value) || 0,
                     orden: editIdx !== null ? c.orden : this._camposTemp.length,
                     id: editIdx !== null ? c.id : null,
@@ -1640,14 +1651,14 @@ const CostosComponent = {
                     <div style="display:flex;flex-direction:column;gap:4px;">
                         <label style="font-size:12px;font-weight:600;">Tipo</label>
                         <select id="cpf-tipo" style="padding:8px 10px;border:1px solid #ccc;border-radius:6px;font-size:13px;font-family:var(--font-primary);">
-                            ${['texto','textarea','fecha','select','checkbox','archivo'].map(t => `<option value="${t}" ${c.tipo===t?'selected':''}>${t.charAt(0).toUpperCase()+t.slice(1)}</option>`).join('')}
+                            ${['texto','textarea','fecha','select','multiselect','checkbox','archivo'].map(t => `<option value="${t}" ${c.tipo===t?'selected':''}>${t.charAt(0).toUpperCase()+t.slice(1)}</option>`).join('')}
                         </select>
                     </div>
                 </div>
-                <div id="cpf-opciones-wrap" style="display:${c.tipo==='select'?'flex':'none'};flex-direction:column;gap:4px;">
-                    <label style="font-size:12px;font-weight:600;">Opciones (separadas por coma) <span style="color:#c0634c;">*</span></label>
-                    <input id="cpf-opciones" value="${c.opciones||''}" placeholder='Ej. 4", 6", 8"  ó  Natural, Nogal, Caoba'
-                        style="padding:8px 10px;border:1px solid #ccc;border-radius:6px;font-size:13px;font-family:var(--font-primary);">
+                <div id="cpf-opciones-wrap" style="display:${['select','multiselect'].includes(c.tipo)?'flex':'none'};flex-direction:column;gap:4px;">
+                    <label id="cpf-opciones-label" style="font-size:12px;font-weight:600;">${c.tipo==='multiselect'?'Opciones con costo (una por línea: Nombre | costo)':'Opciones (separadas por coma)'} <span style="color:#c0634c;">*</span></label>
+                    <textarea id="cpf-opciones" rows="4" placeholder="${c.tipo==='multiselect'?'Baltic | 0\nBasswood | 1.50\nWalnut | 3.00':'Ej. 4\", 6\", 8\"  ó  Natural, Nogal, Caoba'}"
+                        style="padding:8px 10px;border:1px solid #ccc;border-radius:6px;font-size:13px;font-family:var(--font-primary);resize:vertical;">${c.tipo==='multiselect'?(c.opciones||'').split(',').map(o=>o.trim()).join('\n'):(c.opciones||'')}</textarea>
                 </div>
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:center;">
                     <label style="font-size:13px;display:flex;align-items:center;gap:8px;cursor:pointer;">
@@ -1667,15 +1678,24 @@ const CostosComponent = {
             document.getElementById('campos-panel-lista').insertAdjacentElement('afterend', div);
 
             document.getElementById('cpf-tipo').addEventListener('change', function() {
-                document.getElementById('cpf-opciones-wrap').style.display = this.value === 'select' ? 'flex' : 'none';
+                const isOpts = ['select','multiselect'].includes(this.value);
+                document.getElementById('cpf-opciones-wrap').style.display = isOpts ? 'flex' : 'none';
+                if (isOpts) {
+                    const isMulti = this.value === 'multiselect';
+                    document.getElementById('cpf-opciones-label').textContent = (isMulti ? 'Opciones con costo (una por línea: Nombre | costo)' : 'Opciones (separadas por coma)') + ' *';
+                    document.getElementById('cpf-opciones').placeholder = isMulti ? 'Baltic | 0\nBasswood | 1.50\nWalnut | 3.00' : 'Ej. 4", 6", 8"  ó  Natural, Nogal, Caoba';
+                }
             });
             document.getElementById('cpf-cancel').addEventListener('click', () => div.remove());
             document.getElementById('cpf-save').addEventListener('click', () => {
                 const etiqueta = document.getElementById('cpf-etiqueta').value.trim();
                 if (!etiqueta) { alert('La etiqueta es obligatoria.'); return; }
                 const tipo = document.getElementById('cpf-tipo').value;
-                const opciones = document.getElementById('cpf-opciones').value.trim();
-                if (tipo === 'select' && !opciones) { alert('Debes agregar opciones para el campo de tipo select.'); return; }
+                let opciones = document.getElementById('cpf-opciones').value.trim();
+                if (['select','multiselect'].includes(tipo) && !opciones) { alert('Debes agregar opciones para este tipo de campo.'); return; }
+                if (tipo === 'multiselect' && opciones) {
+                    opciones = opciones.split('\n').map(l => l.trim()).filter(Boolean).join(',');
+                }
                 const nuevo = {
                     etiqueta,
                     tipo,

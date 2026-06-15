@@ -3757,6 +3757,14 @@ const EvergreenAPI = {
         return r.blob();
     },
 
+    async descargarPdfInternoCotzacion(cotizacionId) {
+        const r = await fetch(`${API_BASE_URL}/cotizaciones/${cotizacionId}/pdf-interno`, {
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('ev_token')}` }
+        });
+        if (!r.ok) { const e = await r.json(); throw new Error(e.detail || 'Error al generar Hoja Interna'); }
+        return r.blob();
+    },
+
     async enviarEmailCotizacion(cotizacionId) {
         const r = await fetch(`${API_BASE_URL}/cotizaciones/${cotizacionId}/enviar-email`, {
             method: 'POST',

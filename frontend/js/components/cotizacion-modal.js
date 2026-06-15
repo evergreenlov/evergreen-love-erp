@@ -757,6 +757,16 @@ const CotizacionModal = {
         else if (c.tipo === 'select') {
             const opts = (c.opciones || '').split(',').map(o => o.trim()).filter(Boolean);
             input = `<select id="cotiz-campo-${c.id}" ${base}><option value="">-- Selecciona --</option>${opts.map(o => `<option value="${o}">${o}</option>`).join('')}</select>`;
+        } else if (c.tipo === 'multiselect') {
+            const opts = (c.opciones || '').split(',').map(o => {
+                const [nombre, costo] = o.trim().split('|');
+                return { nombre: (nombre||'').trim(), costo: parseFloat(costo) || 0 };
+            }).filter(o => o.nombre);
+            input = `<div id="cotiz-campo-${c.id}" style="display:flex;flex-direction:column;gap:6px;padding:4px 0;">${opts.map(o =>
+                `<label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;font-weight:normal;">
+                    <input type="checkbox" value="${o.nombre}" data-costo="${o.costo}" style="width:14px;height:14px;accent-color:#5f7830;">
+                    ${o.nombre}${o.costo > 0 ? ` <span style="color:#c0634c;font-size:11px;">(+$${o.costo.toFixed(2)})</span>` : ''}
+                </label>`).join('')}</div>`;
         } else if (c.tipo === 'archivo') {
             input = `<input type="file" id="cotiz-campo-${c.id}" accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.svg" style="font-size:12px;">`;
         }
@@ -803,6 +813,12 @@ const CotizacionModal = {
             if (c.tipo === 'archivo') continue;
             const el = document.getElementById(`cotiz-campo-${c.id}`);
             if (!el) continue;
+            if (c.tipo === 'multiselect') {
+                const checked = Array.from(el.querySelectorAll('input[type=checkbox]:checked'));
+                const vals = checked.map(cb => parseFloat(cb.dataset.costo) > 0 ? `${cb.value} (+$${parseFloat(cb.dataset.costo).toFixed(2)})` : cb.value);
+                if (vals.length) lines.push(`• *${c.etiqueta}:* ${vals.join(', ')}`);
+                continue;
+            }
             const val = c.tipo === 'checkbox' ? (el.checked ? 'Sí' : '') : el.value.trim();
             if (val) lines.push(`• *${c.etiqueta}:* ${val}`);
         }
@@ -1009,6 +1025,17 @@ const CotizacionModal = {
                 }
                 if (el.files && el.files.length > 0) camposArchivos[c.id] = el.files[0];
                 camposData.push({ campo_id: c.id, etiqueta: c.etiqueta, tipo: 'archivo', valor: '' });
+            } else if (c.tipo === 'multiselect') {
+                const checked = Array.from(el.querySelectorAll('input[type=checkbox]:checked'));
+                if (c.requerido && checked.length === 0) {
+                    errorEl.textContent = `Selecciona al menos una opción en "${c.etiqueta}".`;
+                    errorEl.style.display = 'block';
+                    el.style.outline = '2px solid #c0634c';
+                    return;
+                }
+                el.style.outline = '';
+                const vals = checked.map(cb => parseFloat(cb.dataset.costo) > 0 ? `${cb.value} (+$${parseFloat(cb.dataset.costo).toFixed(2)})` : cb.value);
+                if (vals.length) camposData.push({ campo_id: c.id, etiqueta: c.etiqueta, tipo: 'multiselect', valor: vals.join(', ') });
             } else {
                 let valor = c.tipo === 'checkbox' ? (el.checked ? 'Sí' : 'No') : el.value.trim();
                 if (c.requerido && !valor) {

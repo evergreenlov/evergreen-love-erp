@@ -353,15 +353,19 @@ const CotizacionesComponent = {
                 <!-- Botones PDF / Email / Copiar — siempre visibles -->
                 <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
                     <button onclick="CotizacionesComponent._descargarPdf(${c.id})"
-                        style="padding:7px 14px;background:#fff;color:#5f7830;border:1.5px solid #5f7830;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;transition:all 0.15s;" id="btn-pdf-${c.id}">
-                        📄 Descargar PDF
+                        style="padding:7px 14px;background:#fff;color:#5f7830;border:1.5px solid #5f7830;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;" id="btn-pdf-${c.id}">
+                        📄 Descargar Cotización Cliente
                     </button>
                     <button onclick="CotizacionesComponent._enviarEmail(${c.id},'${(c.email||'').replace(/'/g,"&#39;")}')"
-                        style="padding:7px 14px;background:#fff;color:#1565c0;border:1.5px solid #1565c0;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;transition:all 0.15s;" id="btn-email-${c.id}">
-                        ✉️ Enviar por Email
+                        style="padding:7px 14px;background:#fff;color:#1565c0;border:1.5px solid #1565c0;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;" id="btn-email-${c.id}">
+                        ✉️ Enviar Cotización por Email
+                    </button>
+                    <button onclick="CotizacionesComponent._descargarPdfInterno(${c.id})"
+                        style="padding:7px 14px;background:#fff5f5;color:#c0634c;border:1.5px solid #c0634c;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;" id="btn-pdf-int-${c.id}">
+                        🔒 Descargar Hoja Interna
                     </button>
                     <button onclick="CotizacionesComponent._copiarMensaje(${c.id},${c.precio_estimado||0},'${(c.nombre_cliente||'').replace(/'/g,"&#39;")}')"
-                        style="padding:7px 14px;background:#fff;color:#7a6840;border:1.5px solid #c5b89a;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;transition:all 0.15s;">
+                        style="padding:7px 14px;background:#fff;color:#7a6840;border:1.5px solid #c5b89a;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;">
                         📋 Copiar Mensaje
                     </button>
                 </div>
@@ -519,6 +523,26 @@ const CotizacionesComponent = {
             setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 1000);
         } catch (e) {
             this._accionMsg('Error al generar PDF: ' + e.message, true);
+        } finally {
+            if (btn) { btn.disabled = false; btn.innerHTML = orig; }
+        }
+    },
+
+    async _descargarPdfInterno(id) {
+        const btn = document.getElementById(`btn-pdf-int-${id}`);
+        const orig = btn ? btn.innerHTML : '';
+        try {
+            if (btn) { btn.disabled = true; btn.innerHTML = '⏳ Generando…'; }
+            const blob = await EvergreenAPI.descargarPdfInternoCotzacion(id);
+            const url  = URL.createObjectURL(blob);
+            const a    = document.createElement('a');
+            a.href     = url;
+            a.download = `costos-internos-${id}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 1000);
+        } catch (e) {
+            this._accionMsg('Error al generar Hoja Interna: ' + e.message, true);
         } finally {
             if (btn) { btn.disabled = false; btn.innerHTML = orig; }
         }
