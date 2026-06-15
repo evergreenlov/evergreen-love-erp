@@ -273,7 +273,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     CatalogoComponent.render('catalogo-view');
                     break;
                 case 'personalizados':
-                    PersonalizadosComponent.render('personalizados-container');
+                    window.location.hash = '#costos';
+                    return;
                     break;
                 case 'clientes':
                     ClientesComponent.render('clientes-container');
