@@ -486,6 +486,12 @@ def init_db(force_reset=False):
 
     # Migración: factura ↔ orden — vínculo formal bidireccional
     try:
+        cursor.execute("ALTER TABLE facturas ADD COLUMN cliente_nombre_manual TEXT")
+        print("Columna 'cliente_nombre_manual' añadida a facturas.")
+    except Exception:
+        pass  # Ya existe
+
+    try:
         cursor.execute("ALTER TABLE facturas ADD COLUMN orden_produccion_id INTEGER")
         print("Columna 'orden_produccion_id' añadida a facturas.")
     except Exception:
