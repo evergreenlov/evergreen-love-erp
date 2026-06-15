@@ -337,6 +337,63 @@ def get_fotos_orden(orden_id: int, current_user: dict = Depends(get_current_admi
 
 # --- ENDPOINT IA (GEMINI API MULTIMODAL) ---
 
+@router.get("/ia/test")
+async def test_gemini(
+    gemini_key: Optional[str] = Header(None, alias="X-Gemini-Key"),
+    current_user: dict = Depends(get_current_admin)
+):
+    """Prueba de conectividad con Gemini. Envía 'Hola' y confirma respuesta."""
+    modelo_activo = "gemini-2.0-flash (v1beta)"
+    api_key_configurada = bool(gemini_key)
+
+    if not api_key_configurada:
+        return {
+            "status": "sin_key",
+            "modelo_activo": modelo_activo,
+            "api_key_configurada": False,
+            "mensaje": "No se proporcionó X-Gemini-Key en el header."
+        }
+
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={gemini_key}"
+    payload = {"contents": [{"parts": [{"text": "Responde solo con la palabra: Hola"}]}]}
+    try:
+        req = urllib.request.Request(
+            url,
+            data=json.dumps(payload).encode('utf-8'),
+            headers={'Content-Type': 'application/json'},
+            method='POST'
+        )
+        with urllib.request.urlopen(req) as response:
+            res_json = json.loads(response.read().decode('utf-8'))
+            texto = res_json.get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text", "").strip()
+            return {
+                "status": "ok",
+                "modelo_activo": modelo_activo,
+                "api_key_configurada": True,
+                "respuesta_gemini": texto
+            }
+    except urllib.error.HTTPError as he:
+        error_body = ""
+        try:
+            error_body = he.read().decode('utf-8')
+        except Exception:
+            pass
+        return {
+            "status": "error",
+            "modelo_activo": modelo_activo,
+            "api_key_configurada": True,
+            "http_code": he.code,
+            "detalle": error_body[:500]
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "modelo_activo": modelo_activo,
+            "api_key_configurada": True,
+            "detalle": str(e)
+        }
+
+
 @router.post("/ia/estimar")
 async def estimar_costos_por_ia(
     file: UploadFile = File(...),
@@ -380,6 +437,9 @@ async def estimar_costos_por_ia(
             "}"
         )
         
+        # responseMimeType solo es soportado en v1beta con modelos >= 1.5.
+        # Para máxima compatibilidad, se construye el payload SIN ese campo:
+        # el prompt ya instruye al modelo a devolver JSON puro.
         req_data = {
             "contents": [{
                 "parts": [
@@ -391,74 +451,82 @@ async def estimar_costos_por_ia(
                         }
                     }
                 ]
-            }],
-            "generationConfig": {
-                "responseMimeType": "application/json"
-            }
+            }]
         }
-        
-        # Lista de combinaciones (versión de API y modelo) para máxima compatibilidad
+
+        # Orden de preferencia: modelos más recientes y estables primero.
+        # gemini-3.5-flash no existe — eliminado para evitar 404 innecesarios.
         endpoints_to_try = [
+            ("v1beta", "gemini-2.0-flash"),
             ("v1beta", "gemini-1.5-flash-latest"),
             ("v1beta", "gemini-1.5-flash"),
+            ("v1", "gemini-1.5-flash-latest"),
             ("v1", "gemini-1.5-flash"),
-            ("v1beta", "gemini-2.5-flash"),
-            ("v1beta", "gemini-2.0-flash"),
-            ("v1beta", "gemini-3.5-flash"),
-            ("v1", "gemini-1.5-flash-latest")
         ]
-        
+
         last_error_code = 500
         last_error_msg = "No se pudo conectar a ningún modelo de Gemini."
-        
+        last_model_tried = ""
+
         for api_version, model_name in endpoints_to_try:
             url = f"https://generativelanguage.googleapis.com/{api_version}/models/{model_name}:generateContent?key={gemini_key}"
-            
-            # Realizar llamada HTTP nativa
+            last_model_tried = f"{api_version}/{model_name}"
+            print(f"[IA] Intentando modelo: {last_model_tried}")
+
             req = urllib.request.Request(
                 url,
                 data=json.dumps(req_data).encode('utf-8'),
                 headers={'Content-Type': 'application/json'},
                 method='POST'
             )
-            
+
             try:
                 with urllib.request.urlopen(req) as response:
                     res_body = response.read().decode('utf-8')
                     res_json = json.loads(res_body)
-                    
+                    print(f"[IA] Respuesta OK de {last_model_tried}")
+
                     candidates = res_json.get("candidates", [])
                     if not candidates:
+                        print(f"[IA] Sin candidatos en {last_model_tried}, probando siguiente.")
                         continue
-                        
+
                     text_response = candidates[0]["content"]["parts"][0]["text"].strip()
+                    # Limpiar posible bloque markdown que el modelo añada a pesar del prompt
+                    if text_response.startswith("```"):
+                        text_response = text_response.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
+
                     parsed_ia = json.loads(text_response)
-                    return {
-                        "status": "success",
-                        "data": parsed_ia
-                    }
+                    print(f"[IA] JSON parseado correctamente desde {last_model_tried}")
+                    return {"status": "success", "modelo": last_model_tried, "data": parsed_ia}
+
             except urllib.error.HTTPError as he:
                 last_error_code = he.code
-                last_error_msg = he.read().decode('utf-8')
-                
-                # Si el error es 404 (modelo no disponible) o 400 (Bad Request de un modelo específico),
-                # continuamos buscando otras combinaciones en la lista.
+                try:
+                    last_error_msg = he.read().decode('utf-8')
+                except Exception:
+                    last_error_msg = str(he)
+                print(f"[IA] Error HTTP {he.code} en {last_model_tried}: {last_error_msg[:300]}")
                 if he.code in [400, 404]:
-                    print(f"Error {he.code} en {api_version}/{model_name}: {last_error_msg[:150]}...")
                     continue
-                else:
-                    # Si es otro error crítico (ej: 403 por clave de API inválida), fallamos inmediatamente.
-                    raise HTTPException(status_code=he.code, detail=f"API de Gemini falló: {last_error_msg}")
+                # 403 = API key inválida — no tiene sentido seguir intentando
+                raise HTTPException(status_code=he.code, detail=f"Gemini rechazó la solicitud ({he.code}): {last_error_msg[:500]}")
+            except json.JSONDecodeError as je:
+                last_error_msg = f"Respuesta no es JSON válido: {je}"
+                print(f"[IA] {last_error_msg}")
+                continue
             except Exception as e:
                 last_error_code = 500
                 last_error_msg = str(e)
+                print(f"[IA] Excepción en {last_model_tried}: {last_error_msg}")
                 continue
-                
-        # Si ninguna combinación funcionó
+
         raise HTTPException(
-            status_code=last_error_code, 
-            detail=f"API de Gemini falló en todas las versiones (último error: {last_error_msg})"
+            status_code=last_error_code,
+            detail=f"No se pudo analizar la imagen con IA (último modelo probado: {last_model_tried}, error: {last_error_msg[:400]})"
         )
-            
+
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error en el análisis de IA: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"No se pudo analizar la imagen con IA: {str(e)}")
