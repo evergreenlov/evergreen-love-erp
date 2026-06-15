@@ -1,24 +1,24 @@
 {
-  "name": "Evergreen Love Catálogo",
+  "name": "Evergreen Love ERP",
   "short_name": "Evergreen",
-  "description": "Catálogo de productos de grabado y corte láser.",
-  "start_url": "/catalogo_publico.html",
+  "description": "Sistema de gestión para taller de corte y grabado láser.",
+  "start_url": "/",
   "display": "standalone",
-  "background_color": "#fdfaf5",
-  "theme_color": "#5f5a30",
+  "background_color": "#F2E9DE",
+  "theme_color": "#5F5A30",
   "orientation": "portrait",
   "icons": [
     {
-      "src": "img/apple-touch-icon.png?v=2",
+      "src": "/img/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any"
+      "purpose": "any maskable"
     },
     {
-      "src": "img/logo_app.png?v=2",
+      "src": "/img/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any"
+      "purpose": "any maskable"
     }
   ]
 }
