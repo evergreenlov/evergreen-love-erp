@@ -1037,26 +1037,26 @@ const CostosComponent = {
 
                     ${isEditing ? `
                     <div style="background:#f7f3ee; border-radius:10px; padding:14px; border:1px solid #e8e0d5;">
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                            <h4 style="font-size:13px; font-weight:600; color:#5f7830; margin:0; display:flex; align-items:center; gap:6px;">
-                                <i data-lucide="images" style="width:14px;height:14px;"></i> Galería de Fotos
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                            <h4 style="font-size:13px; font-weight:600; color:#8a6a3c; margin:0; display:flex; align-items:center; gap:6px;">
+                                <i data-lucide="file-image" style="width:14px;height:14px;"></i> Fotos Técnicas
                             </h4>
-                            <span style="font-size:11px; color:#8c8270;">Se muestran en el catálogo en orden de galería</span>
+                            <span style="font-size:10px; color:#c0634c; font-weight:600; background:#fff5f5; border:1px solid #f5c6cb; border-radius:4px; padding:2px 7px;">Solo uso interno</span>
                         </div>
+                        <p style="font-size:11px; color:#8c8270; margin:0 0 10px;">Fotos de proceso y referencia interna. <strong>No se muestran en el catálogo público.</strong> La galería comercial se gestiona abajo en "Galería del Producto".</p>
                         <div id="foto-galeria-grid" style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px; min-height:40px;">
                             <div style="font-size:12px; color:#aaa; font-style:italic; padding:8px 0;">Cargando fotos...</div>
                         </div>
                         <div style="border-top:1px solid #e8e0d5; padding-top:12px;">
-                            <div style="font-size:12px; font-weight:600; color:#555; margin-bottom:8px;">+ Agregar foto</div>
+                            <div style="font-size:12px; font-weight:600; color:#555; margin-bottom:8px;">+ Agregar foto técnica</div>
                             <div style="display:grid; grid-template-columns:1fr 1.5fr auto; gap:8px; align-items:end;">
                                 <div style="display:flex; flex-direction:column; gap:3px;">
                                     <label style="font-size:11px; font-weight:500; color:#666;">Tipo</label>
                                     <select id="nueva-foto-tipo" style="padding:6px 8px; border-radius:6px; border:1px solid #ddd; font-size:12px; font-family:var(--font-primary); background:white;">
-                                        <option value="frontal">Frontal</option>
-                                        <option value="lateral">Lateral</option>
-                                        <option value="detalle">Detalle</option>
-                                        <option value="empaque">Empaque</option>
                                         <option value="referencia" selected>Referencia</option>
+                                        <option value="material">Material</option>
+                                        <option value="antes">Antes</option>
+                                        <option value="final">Final</option>
                                     </select>
                                 </div>
                                 <div style="display:flex; flex-direction:column; gap:3px;">
