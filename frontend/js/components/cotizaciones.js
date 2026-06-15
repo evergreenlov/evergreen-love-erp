@@ -212,6 +212,7 @@ const CotizacionesComponent = {
                         <div><span style="color:#888;">Email:</span> <a href="mailto:${c.email}" style="color:var(--color-moss-green);">${c.email}</a></div>
                         ${c.telefono ? `<div><span style="color:#888;">Teléfono:</span> ${c.telefono}</div>` : ''}
                         ${c.presupuesto_aprox ? `<div><span style="color:#888;">Presupuesto:</span> $${parseFloat(c.presupuesto_aprox).toFixed(2)}</div>` : ''}
+                        ${c.tipo_evento ? `<div><span style="color:#888;">Evento:</span> <span style="background:#f0f7e6;color:#5f7830;padding:2px 9px;border-radius:10px;font-size:11px;font-weight:600;">🎉 ${c.tipo_evento}</span></div>` : ''}
                         <div><span style="color:#888;">Fuente:</span>
                             <span style="font-size:11px;background:${c.fuente==='b2b'?'#e8f5e9':'#f3e5f5'};color:${c.fuente==='b2b'?'#388e3c':'#7b1fa2'};padding:2px 8px;border-radius:10px;font-weight:600;margin-left:4px;">
                                 ${c.fuente === 'b2b' ? 'B2B' : 'Público'}

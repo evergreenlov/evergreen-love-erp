@@ -501,6 +501,13 @@ def init_db(force_reset=False):
         cursor.execute("DROP TABLE _cotizaciones_rebuild")
         print("Tabla cotizaciones reconstruida con CHECK ampliado.")
 
+    # Migración: cotizaciones.tipo_evento — evento para el que es el pedido
+    try:
+        cursor.execute("ALTER TABLE cotizaciones ADD COLUMN tipo_evento TEXT")
+        print("Columna 'tipo_evento' añadida a cotizaciones.")
+    except Exception:
+        pass  # Ya existe
+
     # Migración: facturas.cotizacion_id → origen de la factura
     try:
         cursor.execute("ALTER TABLE facturas ADD COLUMN cotizacion_id INTEGER REFERENCES cotizaciones(id)")

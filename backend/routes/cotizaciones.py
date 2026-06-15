@@ -67,6 +67,7 @@ async def crear_cotizacion(
     presupuesto_aprox: Optional[float] = Form(None),
     fuente: str = Form("publico"),
     cliente_b2b_id: Optional[int] = Form(None),
+    tipo_evento: Optional[str] = Form(None),
     archivos: List[UploadFile] = File(default=[]),
 ):
     descripcion = (descripcion or "").strip()
@@ -89,10 +90,10 @@ async def crear_cotizacion(
         cursor.execute("""
             INSERT INTO cotizaciones
                 (producto_id, nombre_cliente, email, telefono, descripcion,
-                 presupuesto_aprox, fuente, cliente_b2b_id)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                 presupuesto_aprox, fuente, cliente_b2b_id, tipo_evento)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (producto_id, nombre_cliente, email, telefono, descripcion,
-               presupuesto_aprox, fuente, cliente_b2b_id))
+               presupuesto_aprox, fuente, cliente_b2b_id, tipo_evento or None))
         cotizacion_id = cursor.lastrowid
 
         os.makedirs(COTIZACIONES_DIR, exist_ok=True)

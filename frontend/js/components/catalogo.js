@@ -201,6 +201,12 @@ const CatalogoComponent = {
                 productoId: prod ? prod.id : null,
                 productoNombre: prod ? prod.nombre : null,
                 precioFinal: prod ? prod.precio_final : null,
+                preciosVolumen: prod ? {
+                    p1:  prod.precio_final || null,
+                    p12: prod.precio_wholesale_12 || null,
+                    p24: prod.precio_wholesale_24 || null,
+                    p50: prod.precio_wholesale_50 || null,
+                } : null,
                 imagenUrl: prod ? (prod.foto_ruta || null) : null,
                 galeria: prod ? (prod.galeria || []) : [],
                 fuente: 'publico'

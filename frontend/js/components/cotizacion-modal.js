@@ -1,9 +1,9 @@
 /**
  * CotizacionModal — Modal de solicitud de cotización para catálogo público y B2B.
- * Uso: CotizacionModal.open({ productoId, productoNombre, precioFinal, imagenUrl, fuente, clienteB2bId })
+ * Uso: CotizacionModal.open({ productoId, productoNombre, precioFinal, preciosVolumen,
+ *                             imagenUrl, galeria, fuente, clienteB2bId })
  *
- * v4: layout 40/60 con preview del producto, tarjetas de material,
- * chips de tamaño y actualización de texto en tiempo real.
+ * v6: + tabla de precios por volumen, + tipo de evento, + botones WhatsApp / Cotización.
  * El flujo de submit, los endpoints y el guardado de respuestas NO cambian.
  */
 const CotizacionModal = {
@@ -12,9 +12,11 @@ const CotizacionModal = {
     _campos: [],
     _materialSel: null,
     _tamanoSel: null,
+    _tipoEvento: null,
     _showMaterial: false,
     _showTamano: false,
     _galeria: [],
+    _preciosVolumen: null,
 
     _MATERIALES: [
         { id: 'basswood',              nombre: 'Basswood',              bg: '#D4B48C', desc: 'Madera de tilo' },
@@ -26,6 +28,10 @@ const CotizacionModal = {
     ],
 
     _TAMANOS: ['4"', '6"', '8"', '10"', 'Personalizado'],
+
+    _EVENTOS: ['Cumpleaños', 'Boda', 'Iglesia', 'Escuela', 'Corporativo', 'Regalo Personal', 'Otro'],
+
+    _WHATSAPP_NUMBER: '17873334444',
 
     _init() {
         if (this._ready) return;
@@ -115,6 +121,38 @@ const CotizacionModal = {
                 font-weight: 600;
             }
 
+            /* ── Volume pricing table ── */
+            #cotiz-vol-wrap {
+                background: #fff; border: 1px solid #e8e0d5; border-radius: 10px;
+                overflow: hidden; display: none;
+            }
+            #cotiz-vol-wrap table {
+                width: 100%; border-collapse: collapse; font-size: 11px;
+            }
+            #cotiz-vol-wrap thead th {
+                background: #f3eddf; color: #7a6840; font-weight: 700;
+                padding: 5px 7px; text-align: center; font-size: 10px;
+                text-transform: uppercase; letter-spacing: 0.4px;
+            }
+            #cotiz-vol-wrap tbody td {
+                padding: 5px 7px; text-align: center; border-top: 1px solid #f0ece4;
+                color: #3a3228; font-weight: 500;
+            }
+            #cotiz-vol-wrap tbody tr:nth-child(even) td { background: #faf8f5; }
+            #cotiz-vol-wrap tbody tr.cotiz-vol-best td {
+                color: #5f7830; font-weight: 700; background: #f0f7e6;
+            }
+            .cotiz-vol-save {
+                font-size: 10px; color: #5f7830; font-weight: 700;
+                background: #e8f2d8; border-radius: 20px; padding: 2px 7px;
+                display: inline-block;
+            }
+            #cotiz-vol-msg {
+                font-size: 10.5px; color: #5f7830; font-weight: 600;
+                text-align: center; padding: 6px 8px; background: #f0f7e6;
+                border-top: 1px solid #d4e6b5;
+            }
+
             /* Thumbnail strip */
             #cotiz-thumbs {
                 display: none; flex-wrap: wrap; gap: 6px; margin-top: 4px;
@@ -130,6 +168,7 @@ const CotizacionModal = {
             .cotiz-thumb:hover:not(.active) { border-color: #c5d9a8; transform: scale(1.05); }
             @media(max-width:640px) {
                 #cotiz-thumbs { display: none !important; }
+                #cotiz-vol-wrap { display: none !important; }
             }
 
             /* ── RIGHT: Form column ── */
@@ -202,6 +241,18 @@ const CotizacionModal = {
             #cotiz-tamano-custom input:focus { border-color: #5f7830; }
             #cotiz-tamano-custom span { font-size: 12px; color: #777; }
 
+            /* ── Tipo de evento ── */
+            #cotiz-evento-grid {
+                display: flex; flex-wrap: wrap; gap: 6px;
+            }
+            .cotiz-evento-chip {
+                padding: 5px 13px; border-radius: 20px; border: 1.5px solid #d4c9b8;
+                background: #fff; font-size: 12px; font-weight: 500; color: #555;
+                cursor: pointer; transition: all 0.15s; user-select: none;
+            }
+            .cotiz-evento-chip:hover { border-color: #5f7830; color: #5f7830; }
+            .cotiz-evento-chip.selected { background: #5f7830; color: #fff; border-color: #5f7830; }
+
             /* ── Dynamic campos section ── */
             #cotiz-campos-wrap {
                 border: 1.5px solid #c5d9a8; border-radius: 12px;
@@ -240,17 +291,31 @@ const CotizacionModal = {
                 background: #eef4e6; color: #5f7830; border-radius: 20px;
                 padding: 2px 10px; font-size: 10.5px; font-weight: 600;
             }
-            #cotiz-btn-submit {
+
+            /* ── Action buttons ── */
+            #cotiz-actions { display: flex; gap: 8px; margin-top: 6px; flex-direction: column; }
+            #cotiz-btn-whatsapp {
                 width: 100%; padding: 13px;
-                background: var(--color-terracotta,#c0634c);
+                background: #25d366;
                 color: white; border: none; border-radius: 12px;
                 font-family: inherit; font-size: 14px; font-weight: 700;
-                cursor: pointer; margin-top: 6px;
+                cursor: pointer;
                 display: flex; align-items: center; justify-content: center; gap: 8px;
                 transition: filter 0.2s, transform 0.15s;
             }
-            #cotiz-btn-submit:hover:not(:disabled) { filter: brightness(1.08); transform: translateY(-1px); }
-            #cotiz-btn-submit:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+            #cotiz-btn-whatsapp:hover:not(:disabled) { filter: brightness(1.08); transform: translateY(-1px); }
+            #cotiz-btn-cotizacion {
+                width: 100%; padding: 12px;
+                background: var(--color-terracotta,#c0634c);
+                color: white; border: none; border-radius: 12px;
+                font-family: inherit; font-size: 13px; font-weight: 700;
+                cursor: pointer;
+                display: flex; align-items: center; justify-content: center; gap: 8px;
+                transition: filter 0.2s, transform 0.15s;
+            }
+            #cotiz-btn-cotizacion:hover:not(:disabled) { filter: brightness(1.08); transform: translateY(-1px); }
+            #cotiz-btn-cotizacion:disabled,
+            #cotiz-btn-whatsapp:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
             #cotiz-error {
                 display: none; color: #c0634c; font-size: 12px;
                 background: #fff5f5; border-radius: 8px; padding: 9px 13px; margin-bottom: 8px;
@@ -332,6 +397,22 @@ const CotizacionModal = {
                             <div id="cotiz-preview-mat-badge"></div>
                             <div id="cotiz-preview-tam-badge"></div>
                         </div>
+
+                        <!-- Tabla de precios por volumen -->
+                        <div id="cotiz-vol-wrap">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Cantidad</th>
+                                        <th>Precio c/u</th>
+                                        <th>Ahorro</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="cotiz-vol-tbody"></tbody>
+                            </table>
+                            <div id="cotiz-vol-msg" style="display:none;"></div>
+                        </div>
+
                         <!-- Thumbnail strip -->
                         <div id="cotiz-thumbs"></div>
                     </div>
@@ -363,6 +444,12 @@ const CotizacionModal = {
                             <div id="cotiz-material-wrap" class="cotiz-section-block" style="display:none;">
                                 <div class="cotiz-section-title">🪵 Material</div>
                                 <div id="cotiz-material-grid"></div>
+                            </div>
+
+                            <!-- Tipo de evento -->
+                            <div id="cotiz-evento-wrap" class="cotiz-section-block">
+                                <div class="cotiz-section-title">🎉 Tipo de Evento</div>
+                                <div id="cotiz-evento-grid"></div>
                             </div>
 
                             <!-- Campos de personalización dinámicos -->
@@ -407,10 +494,14 @@ const CotizacionModal = {
 
                             <div id="cotiz-error"></div>
 
-                            <button id="cotiz-btn-submit" type="button">
-                                <i data-lucide="send" style="width:15px;height:15px;"></i>
-                                Enviar Solicitud
-                            </button>
+                            <div id="cotiz-actions">
+                                <button id="cotiz-btn-whatsapp" type="button">
+                                    🟢 Solicitar por WhatsApp
+                                </button>
+                                <button id="cotiz-btn-cotizacion" type="button">
+                                    🟫 Solicitar Cotización Formal
+                                </button>
+                            </div>
                         </div>
 
                         <div id="cotiz-success">
@@ -438,7 +529,8 @@ const CotizacionModal = {
                 files.map(f => `<span class="cotiz-file-chip">📎 ${f.name}</span>`).join('');
         });
 
-        document.getElementById('cotiz-btn-submit').addEventListener('click', () => this._submit());
+        document.getElementById('cotiz-btn-whatsapp').addEventListener('click', () => this._submitWhatsApp());
+        document.getElementById('cotiz-btn-cotizacion').addEventListener('click', () => this._submit());
 
         // Material card selection (event delegation)
         document.getElementById('cotiz-material-grid').addEventListener('click', e => {
@@ -450,6 +542,12 @@ const CotizacionModal = {
         document.getElementById('cotiz-tamano-chips').addEventListener('click', e => {
             const chip = e.target.closest('.cotiz-tam-chip');
             if (chip) this._selectTamano(chip.dataset.tam);
+        });
+
+        // Tipo de evento selection (event delegation)
+        document.getElementById('cotiz-evento-grid').addEventListener('click', e => {
+            const chip = e.target.closest('.cotiz-evento-chip');
+            if (chip) this._selectEvento(chip.dataset.evento);
         });
 
         // Custom size inputs → update preview badge
@@ -495,6 +593,58 @@ const CotizacionModal = {
         ).join('');
     },
 
+    // ── Render tipo de evento chips ──
+    _renderEventoChips() {
+        const grid = document.getElementById('cotiz-evento-grid');
+        if (!grid) return;
+        grid.innerHTML = this._EVENTOS.map(ev =>
+            `<div class="cotiz-evento-chip" data-evento="${ev}">${ev}</div>`
+        ).join('');
+    },
+
+    // ── Render volume pricing table ──
+    _renderVolumen(precios) {
+        const wrap = document.getElementById('cotiz-vol-wrap');
+        const tbody = document.getElementById('cotiz-vol-tbody');
+        const msg   = document.getElementById('cotiz-vol-msg');
+        if (!wrap || !tbody || !precios) return;
+
+        const rows = [
+            { qty: '1 ud',   price: precios.p1  },
+            { qty: '12 uds', price: precios.p12 },
+            { qty: '24 uds', price: precios.p24 },
+            { qty: '50 uds', price: precios.p50 },
+        ].filter(r => r.price != null && r.price > 0);
+
+        if (rows.length < 2) { wrap.style.display = 'none'; return; }
+
+        const base = rows[0].price;
+        tbody.innerHTML = rows.map((r, i) => {
+            const pct = i === 0 ? 0 : Math.round((1 - r.price / base) * 100);
+            const isBest = i === rows.length - 1;
+            const saveHtml = pct > 0
+                ? `<span class="cotiz-vol-save">-${pct}%</span>`
+                : '<span style="color:#bbb;font-size:10px;">—</span>';
+            return `<tr${isBest ? ' class="cotiz-vol-best"' : ''}>
+                <td>${r.qty}</td>
+                <td>$${Number(r.price).toFixed(2)}</td>
+                <td>${saveHtml}</td>
+            </tr>`;
+        }).join('');
+
+        // Savings message for best tier
+        const best = rows[rows.length - 1];
+        if (rows.length > 1 && best.price < base) {
+            const pct = Math.round((1 - best.price / base) * 100);
+            msg.textContent = `🎉 Ahorra ${pct}% al ordenar ${rows[rows.length - 1].qty}`;
+            msg.style.display = 'block';
+        } else {
+            msg.style.display = 'none';
+        }
+
+        wrap.style.display = 'block';
+    },
+
     // ── Select material ──
     _selectMaterial(id) {
         this._materialSel = id;
@@ -518,6 +668,14 @@ const CotizacionModal = {
         const customWrap = document.getElementById('cotiz-tamano-custom');
         if (customWrap) customWrap.style.display = t === 'Personalizado' ? 'flex' : 'none';
         this._updateTamanoBadge();
+    },
+
+    // ── Select tipo de evento ──
+    _selectEvento(ev) {
+        this._tipoEvento = ev;
+        document.querySelectorAll('.cotiz-evento-chip').forEach(c => {
+            c.classList.toggle('selected', c.dataset.evento === ev);
+        });
     },
 
     // ── Update size badge in preview ──
@@ -583,7 +741,7 @@ const CotizacionModal = {
         });
     },
 
-    // ── Campo input renderer (sin cambios respecto a v3) ──
+    // ── Campo input renderer ──
     _renderCampoInput(c) {
         const req   = c.requerido ? ' <span style="color:#c0634c;">*</span>' : '';
         const extra = c.costo_adicional > 0
@@ -605,17 +763,83 @@ const CotizacionModal = {
         return `<div style="margin-bottom:10px;" data-campo-id="${c.id}" data-campo-tipo="${c.tipo}" data-campo-etiqueta="${c.etiqueta.replace(/"/g,'&quot;')}" data-campo-requerido="${c.requerido}">${labelHtml}${input}</div>`;
     },
 
+    // ── Build WhatsApp message ──
+    _buildWhatsAppMsg() {
+        const nombre  = document.getElementById('cotiz-nombre').value.trim();
+        const email   = document.getElementById('cotiz-email').value.trim();
+        const tel     = document.getElementById('cotiz-telefono').value.trim();
+        const desc    = document.getElementById('cotiz-desc').value.trim();
+        const presu   = document.getElementById('cotiz-presupuesto').value.trim();
+
+        const prod    = this._context.productoNombre || '';
+        const precio  = this._context.precioFinal
+            ? ` ($${parseFloat(this._context.precioFinal).toFixed(2)})` : '';
+        const mat     = this._materialSel
+            ? this._MATERIALES.find(m => m.id === this._materialSel)?.nombre : null;
+        const tam     = this._tamanoSel
+            ? (this._tamanoSel === 'Personalizado'
+                ? (() => {
+                    const a = document.getElementById('cotiz-tamano-ancho')?.value || '';
+                    const h = document.getElementById('cotiz-tamano-alto')?.value || '';
+                    return (a && h) ? `${a}" × ${h}"` : 'Personalizado';
+                  })()
+                : this._tamanoSel)
+            : null;
+
+        let lines = ['🌿 *Solicitud de Cotización — Evergreen Love*', ''];
+        if (nombre) lines.push(`👤 *Nombre:* ${nombre}`);
+        if (email)  lines.push(`📧 *Email:* ${email}`);
+        if (tel)    lines.push(`📞 *Teléfono:* ${tel}`);
+        lines.push('');
+        if (prod)   lines.push(`📦 *Producto:* ${prod}${precio}`);
+        if (mat)    lines.push(`🪵 *Material:* ${mat}`);
+        if (tam)    lines.push(`📐 *Tamaño:* ${tam}`);
+        if (this._tipoEvento) lines.push(`🎉 *Evento:* ${this._tipoEvento}`);
+        if (presu)  lines.push(`💰 *Presupuesto:* $${presu}`);
+        if (desc) { lines.push(''); lines.push(`📝 *Descripción:*\n${desc}`); }
+
+        // Dynamic campos
+        for (const c of (this._campos || [])) {
+            if (c.tipo === 'archivo') continue;
+            const el = document.getElementById(`cotiz-campo-${c.id}`);
+            if (!el) continue;
+            const val = c.tipo === 'checkbox' ? (el.checked ? 'Sí' : '') : el.value.trim();
+            if (val) lines.push(`• *${c.etiqueta}:* ${val}`);
+        }
+
+        return lines.join('\n');
+    },
+
+    // ── WhatsApp submit ──
+    _submitWhatsApp() {
+        const nombre = document.getElementById('cotiz-nombre').value.trim();
+        const email  = document.getElementById('cotiz-email').value.trim();
+        const errorEl = document.getElementById('cotiz-error');
+        if (!nombre || !email) {
+            errorEl.textContent = 'Por favor completa nombre y email antes de continuar.';
+            errorEl.style.display = 'block';
+            return;
+        }
+        errorEl.style.display = 'none';
+        const msg = this._buildWhatsAppMsg();
+        const url = `https://wa.me/${this._WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`;
+        window.open(url, '_blank');
+    },
+
     // ── Open modal ──
     async open({ productoId = null, productoNombre = null, precioFinal = null,
-                 imagenUrl = null, galeria = [], fuente = 'publico', clienteB2bId = null } = {}) {
+                 preciosVolumen = null, imagenUrl = null, galeria = [],
+                 fuente = 'publico', clienteB2bId = null } = {}) {
         this._init();
         this._context = { productoId, productoNombre, precioFinal, fuente, clienteB2bId };
         this._campos = [];
         this._materialSel = null;
         this._tamanoSel = null;
+        this._tipoEvento = null;
         this._showMaterial = false;
         this._showTamano = false;
         this._galeria = Array.isArray(galeria) ? galeria : [];
+        this._preciosVolumen = preciosVolumen || null;
 
         // Reset form fields
         ['cotiz-nombre','cotiz-email','cotiz-telefono','cotiz-desc','cotiz-presupuesto'].forEach(id => {
@@ -641,6 +865,9 @@ const CotizacionModal = {
         textVal.textContent = '';
         textVal.style.display = 'none';
 
+        // Tipo de evento chips always rendered
+        this._renderEventoChips();
+
         // Preview: product info
         const nombre = document.getElementById('cotiz-preview-nombre');
         const precio = document.getElementById('cotiz-preview-precio');
@@ -648,6 +875,7 @@ const CotizacionModal = {
         if (precio) precio.textContent = precioFinal ? `$${parseFloat(precioFinal).toFixed(2)}` : '';
         this._updatePreviewImg(imagenUrl);
         this._renderThumbs();
+        this._renderVolumen(this._preciosVolumen);
 
         // Producto label (right column)
         const prodWrap  = document.getElementById('cotiz-producto-wrap');
@@ -724,7 +952,7 @@ const CotizacionModal = {
         document.body.style.overflow = '';
     },
 
-    // ── Submit (lógica de endpoints sin cambios) ──
+    // ── Submit (cotización formal) ──
     async _submit() {
         const nombre  = document.getElementById('cotiz-nombre').value.trim();
         const email   = document.getElementById('cotiz-email').value.trim();
@@ -811,11 +1039,14 @@ const CotizacionModal = {
         if (presu) formData.append('presupuesto_aprox', parseFloat(presu));
         formData.append('fuente', this._context.fuente || 'publico');
         if (this._context.clienteB2bId) formData.append('cliente_b2b_id', this._context.clienteB2bId);
+        if (this._tipoEvento) formData.append('tipo_evento', this._tipoEvento);
         refFiles.forEach(f => formData.append('archivos', f));
 
-        const btn = document.getElementById('cotiz-btn-submit');
-        btn.disabled = true;
-        btn.innerHTML = '<i data-lucide="loader" style="width:15px;height:15px;"></i> Enviando…';
+        const btnWa  = document.getElementById('cotiz-btn-whatsapp');
+        const btnCot = document.getElementById('cotiz-btn-cotizacion');
+        if (btnWa)  btnWa.disabled  = true;
+        if (btnCot) btnCot.disabled = true;
+        if (btnCot) btnCot.innerHTML = '⏳ Enviando…';
         errorEl.style.display = 'none';
 
         try {
@@ -850,9 +1081,9 @@ const CotizacionModal = {
             errorEl.textContent = 'Error: ' + err.message;
             errorEl.style.display = 'block';
         } finally {
-            btn.disabled = false;
-            btn.innerHTML = '<i data-lucide="send" style="width:15px;height:15px;"></i> Enviar Solicitud';
-            if (typeof lucide !== 'undefined') lucide.createIcons();
+            if (btnWa)  btnWa.disabled  = false;
+            if (btnCot) btnCot.disabled = false;
+            if (btnCot) btnCot.innerHTML = '🟫 Solicitar Cotización Formal';
         }
     }
 };
