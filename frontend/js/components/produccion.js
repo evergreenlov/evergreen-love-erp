@@ -447,6 +447,12 @@ const ProduccionComponent = {
                     </div>
                 </div>` : ''}
 
+                <!-- Personalización del cliente -->
+                <div id="prod-detalle-personal-wrap" style="display:none;">
+                    <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#bbb;margin-bottom:6px;">Personalización del Cliente</div>
+                    <div id="prod-detalle-personal" style="display:flex;flex-direction:column;gap:6px;"></div>
+                </div>
+
             </div>
 
             <!-- Footer con acciones -->
@@ -558,6 +564,36 @@ const ProduccionComponent = {
         } catch(e) {
             fotosContainer.innerHTML = '<span style="font-size:11px;color:#bbb;">No se pudieron cargar las fotos.</span>';
         }
+
+        // Load personalization responses for each item
+        (async () => {
+            const allRespuestas = [];
+            for (const item of c.items) {
+                try {
+                    const res = await EvergreenAPI.getPersonalizacionOrden(item.id);
+                    const respuestas = res.data || res.respuestas || [];
+                    if (respuestas.length > 0) allRespuestas.push(...respuestas);
+                } catch (_) {}
+            }
+            const wrap = document.getElementById('prod-detalle-personal-wrap');
+            const container = document.getElementById('prod-detalle-personal');
+            if (!wrap || !container) return;
+            if (allRespuestas.length === 0) return;
+            wrap.style.display = 'block';
+            container.innerHTML = allRespuestas.map(r => {
+                const isArchivo = r.tipo === 'archivo' && r.archivo_ruta;
+                const valorHtml = isArchivo
+                    ? `<a href="${r.archivo_ruta}" target="_blank"
+                        style="display:inline-flex;align-items:center;gap:5px;color:#1565c0;font-size:12px;font-weight:600;text-decoration:none;">
+                        📎 Ver archivo adjunto
+                       </a>`
+                    : `<span style="font-size:12.5px;color:#2d2d2d;">${r.valor || '—'}</span>`;
+                return `<div style="display:flex;flex-direction:column;gap:2px;background:#fafaf8;border:1px solid #ede8df;border-radius:8px;padding:8px 12px;">
+                    <span style="font-size:10px;font-weight:700;text-transform:uppercase;color:#bbb;">${r.etiqueta}</span>
+                    ${valorHtml}
+                </div>`;
+            }).join('');
+        })();
 
         // Load cotización images if this order came from a cotización
         if (c.cotizacion_id) {

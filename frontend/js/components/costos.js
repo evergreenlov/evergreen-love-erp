@@ -1045,6 +1045,17 @@ const CostosComponent = {
                         </div>
                     </div>
 
+                    <!-- Campos de Personalización -->
+                    <div id="seccion-campos-personalizacion" style="background-color: #f0f5eb; padding: 12px; border-radius: var(--radius-md); border: 1px solid #c5d9a8; margin-top: 2px; display: ${defPersonal === 1 ? 'block' : 'none'};">
+                        <h4 style="font-size: 13px; font-weight: 600; color: var(--color-moss-green); margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between;">
+                            <span style="display:flex;align-items:center;gap:6px;"><i data-lucide="sliders" style="width: 14px; height: 14px;"></i> Campos de Personalización</span>
+                            <button type="button" id="btn-agregar-campo" style="font-size:11px;padding:3px 10px;background:var(--color-moss-green);color:#fff;border:none;border-radius:4px;cursor:pointer;">+ Agregar campo</button>
+                        </h4>
+                        <div id="lista-campos-personalizacion" style="display:flex;flex-direction:column;gap:8px;min-height:24px;">
+                            <p id="campos-vacio-msg" style="font-size:12px;color:#8c8270;margin:0;">Sin campos configurados. Presiona <strong>+ Agregar campo</strong> para añadir.</p>
+                        </div>
+                    </div>
+
                     <!-- Asignación Opcional a Cliente B2B + Precios Wholesale -->
                     <div style="background-color: var(--color-gray-light); padding: 12px; border-radius: var(--radius-md); border: 1px solid var(--color-gray-border); margin-top: 2px;">
                         <h4 style="font-size: 13px; font-weight: 600; color: var(--color-moss-green); margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
@@ -1176,6 +1187,119 @@ const CostosComponent = {
             }
         }
 
+        // ─── CAMPOS DE PERSONALIZACIÓN ────────────────────────────────────────────
+        const productoIdActual = isEditing ? this.editingProductoId : null;
+        // Array temporal que vive mientras el modal está abierto
+        if (!this._camposTemp) this._camposTemp = [];
+        this._camposTemp = [];
+
+        const seccionCampos   = document.getElementById('seccion-campos-personalizacion');
+        const listaCampos     = document.getElementById('lista-campos-personalizacion');
+        const vacioMsg        = document.getElementById('campos-vacio-msg');
+        const selectPersonal  = document.getElementById('prod-personalizado');
+
+        // Mostrar/ocultar sección según tipo de venta
+        selectPersonal.addEventListener('change', () => {
+            seccionCampos.style.display = selectPersonal.value === '1' ? 'block' : 'none';
+        });
+
+        // Renderiza la lista de campos temporales en el modal
+        const renderCamposTemp = () => {
+            if (this._camposTemp.length === 0) {
+                listaCampos.innerHTML = '<p id="campos-vacio-msg" style="font-size:12px;color:#8c8270;margin:0;">Sin campos configurados. Presiona <strong>+ Agregar campo</strong> para añadir.</p>';
+                return;
+            }
+            listaCampos.innerHTML = this._camposTemp.map((c, i) => `
+                <div style="display:grid;grid-template-columns:1fr auto auto;gap:6px;align-items:center;background:#fff;border:1px solid #d4e6b5;border-radius:6px;padding:6px 10px;font-size:12px;">
+                    <span><strong>${c.etiqueta}</strong> <span style="color:#8c8270;">[${c.tipo}${c.requerido ? ' · requerido' : ''}${c.costo_adicional > 0 ? ` · +$${c.costo_adicional}` : ''}]</span></span>
+                    <button type="button" data-idx="${i}" class="btn-edit-campo" style="padding:2px 8px;font-size:11px;background:#f0f5eb;border:1px solid #c5d9a8;border-radius:3px;cursor:pointer;">Editar</button>
+                    <button type="button" data-idx="${i}" class="btn-del-campo" style="padding:2px 8px;font-size:11px;background:#fce4ec;border:1px solid #e57373;border-radius:3px;cursor:pointer;color:#c0392b;">✕</button>
+                </div>`).join('');
+
+            listaCampos.querySelectorAll('.btn-del-campo').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    this._camposTemp.splice(parseInt(btn.dataset.idx), 1);
+                    renderCamposTemp();
+                });
+            });
+            listaCampos.querySelectorAll('.btn-edit-campo').forEach(btn => {
+                btn.addEventListener('click', () => abrirFormCampo(parseInt(btn.dataset.idx)));
+            });
+        };
+
+        // Abre un mini-formulario flotante para añadir/editar un campo
+        const abrirFormCampo = (editIdx = null) => {
+            const c = editIdx !== null ? { ...this._camposTemp[editIdx] } : { etiqueta: '', tipo: 'texto', requerido: 0, opciones: '', costo_adicional: 0, orden: this._camposTemp.length };
+            const formId = 'modal-campo-form';
+            let existing = document.getElementById(formId);
+            if (existing) existing.remove();
+
+            const div = document.createElement('div');
+            div.id = formId;
+            div.style.cssText = 'background:#f0f5eb;border:1px solid #c5d9a8;border-radius:8px;padding:12px;margin-top:8px;display:flex;flex-direction:column;gap:8px;';
+            div.innerHTML = `
+                <div style="font-size:12px;font-weight:600;color:var(--color-moss-green);">${editIdx !== null ? 'Editar' : 'Nuevo'} campo</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                    <div><label style="font-size:11px;font-weight:500;">Etiqueta</label><br>
+                    <input id="cf-etiqueta" value="${c.etiqueta}" style="width:100%;padding:5px 8px;border:1px solid #ccc;border-radius:4px;font-size:12px;box-sizing:border-box;"></div>
+                    <div><label style="font-size:11px;font-weight:500;">Tipo</label><br>
+                    <select id="cf-tipo" style="width:100%;padding:5px 8px;border:1px solid #ccc;border-radius:4px;font-size:12px;">
+                        ${['texto','textarea','fecha','select','checkbox','archivo'].map(t => `<option value="${t}" ${c.tipo===t?'selected':''}>${t}</option>`).join('')}
+                    </select></div>
+                </div>
+                <div id="cf-opciones-wrap" style="display:${c.tipo==='select'?'block':'none'}">
+                    <label style="font-size:11px;font-weight:500;">Opciones (separadas por coma)</label><br>
+                    <input id="cf-opciones" value="${c.opciones||''}" placeholder="Rojo, Azul, Verde" style="width:100%;padding:5px 8px;border:1px solid #ccc;border-radius:4px;font-size:12px;box-sizing:border-box;">
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;align-items:center;">
+                    <label style="font-size:12px;display:flex;align-items:center;gap:6px;cursor:pointer;">
+                        <input type="checkbox" id="cf-requerido" ${c.requerido?'checked':''} style="width:14px;height:14px;"> Requerido
+                    </label>
+                    <div><label style="font-size:11px;font-weight:500;">Costo adicional ($)</label><br>
+                    <input type="number" id="cf-costo" value="${c.costo_adicional||0}" step="0.01" min="0" style="width:100%;padding:5px 8px;border:1px solid #ccc;border-radius:4px;font-size:12px;box-sizing:border-box;"></div>
+                </div>
+                <div style="display:flex;gap:8px;justify-content:flex-end;">
+                    <button type="button" id="cf-cancel" style="padding:4px 12px;font-size:12px;border:1px solid #ccc;border-radius:4px;cursor:pointer;background:#fff;">Cancelar</button>
+                    <button type="button" id="cf-save" style="padding:4px 12px;font-size:12px;background:var(--color-moss-green);color:#fff;border:none;border-radius:4px;cursor:pointer;">Guardar campo</button>
+                </div>`;
+            listaCampos.parentElement.appendChild(div);
+
+            document.getElementById('cf-tipo').addEventListener('change', function() {
+                document.getElementById('cf-opciones-wrap').style.display = this.value === 'select' ? 'block' : 'none';
+            });
+            document.getElementById('cf-cancel').addEventListener('click', () => div.remove());
+            document.getElementById('cf-save').addEventListener('click', () => {
+                const etiqueta = document.getElementById('cf-etiqueta').value.trim();
+                if (!etiqueta) { alert('La etiqueta es obligatoria.'); return; }
+                const nuevo = {
+                    etiqueta,
+                    tipo: document.getElementById('cf-tipo').value,
+                    requerido: document.getElementById('cf-requerido').checked ? 1 : 0,
+                    opciones: document.getElementById('cf-opciones').value.trim() || null,
+                    costo_adicional: parseFloat(document.getElementById('cf-costo').value) || 0,
+                    orden: editIdx !== null ? c.orden : this._camposTemp.length,
+                    id: editIdx !== null ? c.id : null,
+                };
+                if (editIdx !== null) this._camposTemp[editIdx] = nuevo;
+                else this._camposTemp.push(nuevo);
+                div.remove();
+                renderCamposTemp();
+            });
+        };
+
+        document.getElementById('btn-agregar-campo').addEventListener('click', () => abrirFormCampo());
+
+        // Cargar campos existentes si estamos editando
+        if (isEditing && productoIdActual) {
+            EvergreenAPI.getCamposPersonalizacion(productoIdActual).then(res => {
+                if (res.status === 'success') {
+                    this._camposTemp = res.data;
+                    renderCamposTemp();
+                }
+            }).catch(() => {});
+        }
+        // ──────────────────────────────────────────────────────────────────────────
+
         // Evento para auto-generar SKU
         document.getElementById('btn-auto-sku').addEventListener('click', () => {
             const nombre = document.getElementById('prod-nombre').value.trim() || 'EVG';
@@ -1263,6 +1387,9 @@ const CostosComponent = {
                         await EvergreenAPI.subirFoto(fotoFileInput.files[0], null, this.editingProductoId, 'referencia');
                     }
 
+                    // Guardar campos de personalización
+                    await this._guardarCamposPersonalizacion(this.editingProductoId);
+
                     modal.style.display = 'none';
                     this.editingProductoId = null;
                     await this.render('costos-container');
@@ -1336,6 +1463,9 @@ const CostosComponent = {
                         });
                     }
 
+                    // Guardar campos de personalización del nuevo producto
+                    await this._guardarCamposPersonalizacion(nuevoProductoId);
+
                     modal.style.display = 'none';
                     this.render('costos-container');
                 } catch (err) {
@@ -1343,6 +1473,36 @@ const CostosComponent = {
                 }
             }
         });
+    },
+
+    async _guardarCamposPersonalizacion(productoId) {
+        if (!this._camposTemp || this._camposTemp.length === 0) return;
+        try {
+            // Obtener campos actuales para saber cuáles eliminar / actualizar
+            const existentes = await EvergreenAPI.getCamposPersonalizacion(productoId).then(r => r.data || []).catch(() => []);
+            const existentesIds = new Set(existentes.map(c => c.id));
+            const tempIds = new Set(this._camposTemp.filter(c => c.id).map(c => c.id));
+
+            // Eliminar (desactivar) los que ya no están en la lista temporal
+            for (const ex of existentes) {
+                if (!tempIds.has(ex.id)) {
+                    await EvergreenAPI.deleteCampoPersonalizacion(productoId, ex.id).catch(() => {});
+                }
+            }
+
+            // Crear o actualizar
+            for (let i = 0; i < this._camposTemp.length; i++) {
+                const c = { ...this._camposTemp[i], orden: i };
+                if (c.id && existentesIds.has(c.id)) {
+                    await EvergreenAPI.updateCampoPersonalizacion(productoId, c.id, c).catch(() => {});
+                } else {
+                    await EvergreenAPI.createCampoPersonalizacion(productoId, c).catch(() => {});
+                }
+            }
+        } catch (err) {
+            console.warn('Error al guardar campos de personalización:', err.message);
+        }
+        this._camposTemp = [];
     },
 
     openGeminiConfigModal() {

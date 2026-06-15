@@ -476,3 +476,97 @@ def update_producto(producto_id: int, item: ProductoUpdateSchema, current_user: 
         raise he
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ─── PERSONALIZACIÓN DE PRODUCTOS ─────────────────────────────────────────────
+
+class CampoPersonalizacionSchema(BaseModel):
+    etiqueta: str
+    tipo: str                          # texto|textarea|fecha|select|checkbox|archivo
+    requerido: int = 0
+    opciones: Optional[str] = None     # JSON string para tipo=select
+    costo_adicional: float = 0.0
+    orden: int = 0
+    activo: int = 1
+
+
+@router.get("/productos/{producto_id}/campos-personalizacion")
+def get_campos(producto_id: int, current_user: dict = Depends(get_current_admin)):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT * FROM producto_personalizacion_campos WHERE producto_id = ? AND activo = 1 ORDER BY orden",
+        (producto_id,)
+    )
+    campos = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+    return {"status": "success", "data": campos}
+
+
+@router.get("/productos/{producto_id}/campos-personalizacion/publico")
+def get_campos_publico(producto_id: int):
+    """Endpoint sin auth para catálogos B2B / público."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT id, etiqueta, tipo, requerido, opciones, costo_adicional, orden FROM producto_personalizacion_campos WHERE producto_id = ? AND activo = 1 ORDER BY orden",
+        (producto_id,)
+    )
+    campos = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+    return {"status": "success", "data": campos}
+
+
+@router.post("/productos/{producto_id}/campos-personalizacion", status_code=201)
+def create_campo(producto_id: int, campo: CampoPersonalizacionSchema, current_user: dict = Depends(get_current_admin)):
+    TIPOS_VALIDOS = {"texto", "textarea", "fecha", "select", "checkbox", "archivo"}
+    if campo.tipo not in TIPOS_VALIDOS:
+        raise HTTPException(status_code=400, detail=f"Tipo inválido. Usa: {', '.join(TIPOS_VALIDOS)}")
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT id FROM productos WHERE id = ?", (producto_id,))
+    if not cursor.fetchone():
+        conn.close()
+        raise HTTPException(status_code=404, detail="Producto no encontrado")
+    cursor.execute("""
+        INSERT INTO producto_personalizacion_campos
+            (producto_id, etiqueta, tipo, requerido, opciones, costo_adicional, orden, activo)
+        VALUES (?, ?, ?, ?, ?, ?, ?, 1)
+    """, (producto_id, campo.etiqueta, campo.tipo, campo.requerido,
+          campo.opciones, campo.costo_adicional, campo.orden))
+    new_id = cursor.lastrowid
+    conn.commit()
+    conn.close()
+    return {"status": "success", "id": new_id}
+
+
+@router.put("/productos/{producto_id}/campos-personalizacion/{campo_id}")
+def update_campo(producto_id: int, campo_id: int, campo: CampoPersonalizacionSchema, current_user: dict = Depends(get_current_admin)):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT id FROM producto_personalizacion_campos WHERE id = ? AND producto_id = ?", (campo_id, producto_id))
+    if not cursor.fetchone():
+        conn.close()
+        raise HTTPException(status_code=404, detail="Campo no encontrado")
+    cursor.execute("""
+        UPDATE producto_personalizacion_campos
+        SET etiqueta=?, tipo=?, requerido=?, opciones=?, costo_adicional=?, orden=?, activo=?
+        WHERE id = ? AND producto_id = ?
+    """, (campo.etiqueta, campo.tipo, campo.requerido, campo.opciones,
+          campo.costo_adicional, campo.orden, campo.activo, campo_id, producto_id))
+    conn.commit()
+    conn.close()
+    return {"status": "success"}
+
+
+@router.delete("/productos/{producto_id}/campos-personalizacion/{campo_id}")
+def delete_campo(producto_id: int, campo_id: int, current_user: dict = Depends(get_current_admin)):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        "UPDATE producto_personalizacion_campos SET activo = 0 WHERE id = ? AND producto_id = ?",
+        (campo_id, producto_id)
+    )
+    conn.commit()
+    conn.close()
+    return {"status": "success"}

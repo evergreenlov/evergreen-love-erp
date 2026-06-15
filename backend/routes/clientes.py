@@ -398,6 +398,7 @@ def crear_pedido_publico(codigo_b2b: str, pedido: PedidoB2BSchema, background_ta
         pedido_b2b_id = f"PED-{cliente_id}-{ts_pedido}"
         ts_base = ts_pedido % 10000000
 
+        ordenes_ids_publico = []
         for idx, item in enumerate(pedido.items):
             notas_orden = (
                 f"[PEDIDO B2B] Cliente: {cliente_nombre} | "
@@ -414,6 +415,7 @@ def crear_pedido_publico(codigo_b2b: str, pedido: PedidoB2BSchema, background_ta
                     (codigo_orden, cliente, producto_id, cantidad, estado, material_descontado, cliente_b2b_id, pedido_b2b_id)
                 VALUES (?, ?, ?, ?, 'Pendiente', 0, ?, ?)
             """, (codigo_orden, notas_orden, item.producto_id, item.cantidad, cliente_id, pedido_b2b_id))
+            ordenes_ids_publico.append({"producto_id": item.producto_id, "orden_id": cursor.lastrowid})
 
         subtotal = sum(item.cantidad * item.precio_unitario for item in pedido.items)
         is_exempt = pedido.notas and "EXENTO" in pedido.notas
@@ -471,6 +473,7 @@ def crear_pedido_publico(codigo_b2b: str, pedido: PedidoB2BSchema, background_ta
             "numero_factura": num_factura,
             "pedido_b2b_id": pedido_b2b_id,
             "total": round(total_factura, 2),
+            "ordenes_ids": ordenes_ids_publico,
         }
     except HTTPException:
         raise
@@ -503,6 +506,7 @@ def crear_pedido_b2b(cliente_id: int, pedido: PedidoB2BSchema, background_tasks:
         pedido_b2b_id = f"PED-{cliente_id}-{ts_pedido}"
         ts_base = ts_pedido % 10000000
 
+        ordenes_ids_b2b = []
         for idx, item in enumerate(pedido.items):
             notas_orden = (
                 f"[PEDIDO B2B] Cliente: {cliente['nombre']} | "
@@ -518,6 +522,7 @@ def crear_pedido_b2b(cliente_id: int, pedido: PedidoB2BSchema, background_tasks:
                 INSERT INTO ordenes_produccion (codigo_orden, cliente, producto_id, cantidad, estado, material_descontado, cliente_b2b_id, pedido_b2b_id)
                 VALUES (?, ?, ?, ?, 'Pendiente', 0, ?, ?)
             """, (codigo_orden, notas_orden, item.producto_id, item.cantidad, cliente_id, pedido_b2b_id))
+            ordenes_ids_b2b.append({"producto_id": item.producto_id, "orden_id": cursor.lastrowid})
 
         # --- REGISTRO AUTOMÁTICO DE FACTURA ---
         import datetime
@@ -623,7 +628,8 @@ def crear_pedido_b2b(cliente_id: int, pedido: PedidoB2BSchema, background_tasks:
             "message": f"Pedido registrado correctamente para {cliente['nombre']}",
             "total": total_pedido,
             "numero_factura": num_factura,
-            "factura_id": factura_id
+            "factura_id": factura_id,
+            "ordenes_ids": ordenes_ids_b2b,
         }
     except HTTPException as he:
         raise he

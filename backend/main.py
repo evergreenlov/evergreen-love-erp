@@ -24,6 +24,7 @@ from routes import backups
 from routes import cotizaciones
 from routes import dashboard
 from routes import b2b
+from routes import personalizacion
 
 
 app = FastAPI(
@@ -46,6 +47,7 @@ app.include_router(facturas.router)
 app.include_router(cotizaciones.router)
 app.include_router(dashboard.router)
 app.include_router(b2b.router)
+app.include_router(personalizacion.router)
 
 # Orígenes permitidos: leer desde variable de entorno, con fallback para desarrollo local
 _raw_origins = os.environ.get(
@@ -166,6 +168,11 @@ app.mount("/fotos_import", StaticFiles(directory=FOTOS_IMPORT_DIR), name="fotos_
 COTIZACIONES_IMGS_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "cotizaciones"))
 os.makedirs(COTIZACIONES_IMGS_DIR, exist_ok=True)
 app.mount("/cotizaciones_imgs", StaticFiles(directory=COTIZACIONES_IMGS_DIR), name="cotizaciones_imgs")
+
+# Archivos adjuntos de personalización de pedidos
+PERSONALIZACION_ARCHIVOS_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "personalizacion_archivos"))
+os.makedirs(PERSONALIZACION_ARCHIVOS_DIR, exist_ok=True)
+app.mount("/personalizacion_archivos", StaticFiles(directory=PERSONALIZACION_ARCHIVOS_DIR), name="personalizacion_archivos")
 
 # Fotos con fondo removido (rembg)
 if os.path.exists("/Volumes/MYRIAM SEAG/evergreen-love"):

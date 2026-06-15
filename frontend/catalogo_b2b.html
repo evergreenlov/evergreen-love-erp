@@ -1232,6 +1232,27 @@
     </div>
 </div>
 
+<!-- PERSONALIZATION MODAL -->
+<div id="personal-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:3000;display:none;align-items:center;justify-content:center;padding:16px;">
+    <div id="personal-modal" style="background:#fff;border-radius:16px;max-width:540px;width:100%;max-height:90vh;overflow-y:auto;padding:28px 24px;position:relative;font-family:var(--font-primary);">
+        <button onclick="closePersonalModal()" style="position:absolute;top:14px;right:14px;background:none;border:none;cursor:pointer;color:#888;padding:4px;">
+            <i data-lucide="x" style="width:20px;height:20px;"></i>
+        </button>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+            <i data-lucide="sparkles" style="width:20px;height:20px;color:var(--color-terracotta,#c0634c);flex-shrink:0;"></i>
+            <h3 id="personal-modal-title" style="margin:0;font-size:17px;color:#2d2d2d;"></h3>
+        </div>
+        <p style="margin:0 0 18px;font-size:13px;color:#888;">Completa los detalles de personalización para este producto.</p>
+        <div id="personal-campos-container"></div>
+        <div style="display:flex;gap:10px;margin-top:20px;justify-content:flex-end;">
+            <button onclick="closePersonalModal()" style="padding:10px 20px;border:1.5px solid #ddd;background:#fff;border-radius:8px;cursor:pointer;font-family:var(--font-primary);font-size:13px;">Cancelar</button>
+            <button id="btn-personal-confirm" style="padding:10px 22px;background:var(--color-terracotta,#c0634c);color:#fff;border:none;border-radius:8px;cursor:pointer;font-family:var(--font-primary);font-size:13px;font-weight:600;">
+                <i data-lucide="plus" style="width:13px;height:13px;display:inline;vertical-align:-2px;margin-right:4px;"></i>Agregar al Pedido
+            </button>
+        </div>
+    </div>
+</div>
+
 <script src="js/api.js?v=57"></script>
 <script src="js/components/cotizacion-modal.js?v=1"></script>
 <script>
@@ -1741,20 +1762,157 @@
         lucide.createIcons();
     }
 
+    /* ── PERSONALIZATION MODAL ───────────────── */
+    let _personalProductoActual = null;
+    let _personalCampos = [];
+    let _personalArchivos = {}; // campo_id -> File
+
     async function personalizarB2BProducto(productoId) {
-        // Buscar el producto en el catálogo cargado
         const item = _allCatalogItems.find(p => p.producto_id === productoId);
-        if (typeof CotizacionModal !== 'undefined') {
-            CotizacionModal.open({
-                productoId: item ? item.producto_id : productoId,
-                productoNombre: item ? item.producto_nombre : null,
-                precioFinal: item ? getPrecioItem(item) : null,
-                fuente: 'b2b',
-                clienteB2bId: clienteId || null
-            });
-        } else {
-            alert("El formulario de cotización no está disponible en este momento.");
+        if (!item) return;
+
+        // Fetch campos públicos
+        let campos = [];
+        try {
+            const res = await fetch(`${API}/productos/${productoId}/campos-personalizacion/publico`);
+            if (res.ok) {
+                const data = await res.json();
+                campos = data.campos || [];
+            }
+        } catch (_) {}
+
+        // Si no hay campos configurados, agregar al carrito normalmente
+        if (campos.length === 0) {
+            const qty = parseInt(document.getElementById(`qty-${productoId}`)?.value) || 1;
+            addToCart(productoId, item.producto_nombre, item.producto_sku, getPrecioItem(item), item.foto_ruta || '');
+            return;
         }
+
+        _personalProductoActual = item;
+        _personalCampos = campos;
+        _personalArchivos = {};
+
+        document.getElementById('personal-modal-title').textContent = item.producto_nombre;
+        renderPersonalCampos(campos);
+
+        const overlay = document.getElementById('personal-overlay');
+        overlay.style.display = 'flex';
+        lucide.createIcons();
+
+        document.getElementById('btn-personal-confirm').onclick = confirmarPersonalizacion;
+    }
+
+    function renderPersonalCampos(campos) {
+        const container = document.getElementById('personal-campos-container');
+        container.innerHTML = campos.map(c => {
+            const req = c.requerido ? ' *' : '';
+            const labelHtml = `<label style="display:block;font-size:13px;font-weight:600;color:#444;margin-bottom:5px;">${c.etiqueta}${req}${c.costo_adicional > 0 ? ` <span style="color:#c0634c;font-size:11px;">(+$${Number(c.costo_adicional).toFixed(2)})</span>` : ''}</label>`;
+
+            let inputHtml = '';
+            if (c.tipo === 'texto') {
+                inputHtml = `<input type="text" id="pf-${c.id}" ${c.requerido ? 'required' : ''} style="width:100%;padding:9px 12px;border:1.5px solid #ddd;border-radius:8px;font-family:var(--font-primary);font-size:13px;box-sizing:border-box;">`;
+            } else if (c.tipo === 'textarea') {
+                inputHtml = `<textarea id="pf-${c.id}" rows="3" ${c.requerido ? 'required' : ''} style="width:100%;padding:9px 12px;border:1.5px solid #ddd;border-radius:8px;font-family:var(--font-primary);font-size:13px;resize:vertical;box-sizing:border-box;"></textarea>`;
+            } else if (c.tipo === 'fecha') {
+                inputHtml = `<input type="date" id="pf-${c.id}" ${c.requerido ? 'required' : ''} style="width:100%;padding:9px 12px;border:1.5px solid #ddd;border-radius:8px;font-family:var(--font-primary);font-size:13px;box-sizing:border-box;">`;
+            } else if (c.tipo === 'select') {
+                const opciones = (c.opciones || '').split(',').map(o => o.trim()).filter(Boolean);
+                inputHtml = `<select id="pf-${c.id}" style="width:100%;padding:9px 12px;border:1.5px solid #ddd;border-radius:8px;font-family:var(--font-primary);font-size:13px;background:#fff;">
+                    <option value="">-- Selecciona --</option>
+                    ${opciones.map(o => `<option value="${o}">${o}</option>`).join('')}
+                </select>`;
+            } else if (c.tipo === 'checkbox') {
+                inputHtml = `<label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;font-weight:normal;">
+                    <input type="checkbox" id="pf-${c.id}" style="width:16px;height:16px;cursor:pointer;"> Sí
+                </label>`;
+            } else if (c.tipo === 'archivo') {
+                inputHtml = `<input type="file" id="pf-${c.id}" accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.svg" style="width:100%;font-size:13px;">`;
+            }
+
+            return `<div style="margin-bottom:14px;" data-campo-id="${c.id}" data-campo-tipo="${c.tipo}" data-campo-requerido="${c.requerido}">${labelHtml}${inputHtml}</div>`;
+        }).join('');
+    }
+
+    function closePersonalModal() {
+        document.getElementById('personal-overlay').style.display = 'none';
+        _personalProductoActual = null;
+        _personalCampos = [];
+        _personalArchivos = {};
+    }
+
+    function confirmarPersonalizacion() {
+        const item = _personalProductoActual;
+        if (!item) return;
+
+        // Validate required fields
+        let valid = true;
+        const respuestas = [];
+        for (const c of _personalCampos) {
+            const el = document.getElementById(`pf-${c.id}`);
+            if (!el) continue;
+            let valor = null;
+            if (c.tipo === 'checkbox') {
+                valor = el.checked ? 'Sí' : 'No';
+            } else if (c.tipo === 'archivo') {
+                if (c.requerido && (!el.files || el.files.length === 0)) {
+                    el.style.outline = '2px solid #e74c3c';
+                    valid = false;
+                    continue;
+                }
+                if (el.files && el.files.length > 0) {
+                    _personalArchivos[c.id] = { file: el.files[0], campo: c };
+                }
+                respuestas.push({ campo_id: c.id, etiqueta: c.etiqueta, tipo: 'archivo', valor: null });
+                continue;
+            } else {
+                valor = el.value.trim();
+            }
+            if (c.requerido && !valor) {
+                el.style.borderColor = '#e74c3c';
+                el.style.outline = '2px solid #e74c3c';
+                valid = false;
+                continue;
+            }
+            el.style.borderColor = '';
+            el.style.outline = '';
+            respuestas.push({ campo_id: c.id, etiqueta: c.etiqueta, tipo: c.tipo, valor });
+        }
+        if (!valid) return;
+
+        // Add to cart with personalization data attached
+        const qty = parseInt(document.getElementById(`qty-${item.producto_id}`)?.value) || 1;
+        const precio = getPrecioItem(item);
+        const existing = cart.find(c => c.producto_id === item.producto_id);
+        if (existing) {
+            existing.cantidad += qty;
+            existing.personalizacion = { respuestas, archivos: _personalArchivos };
+        } else {
+            cart.push({
+                producto_id: item.producto_id,
+                nombre: item.producto_nombre,
+                sku: item.producto_sku,
+                precio,
+                cantidad: qty,
+                foto: item.foto_ruta || '',
+                personalizacion: { respuestas, archivos: _personalArchivos },
+            });
+        }
+
+        // Button feedback
+        const btn = document.getElementById(`btn-add-${item.producto_id}`);
+        if (btn) {
+            btn.classList.add('added');
+            btn.innerHTML = `<i data-lucide="check" style="width:14px;height:14px;"></i> ¡Añadido!`;
+            lucide.createIcons();
+            setTimeout(() => {
+                btn.classList.remove('added');
+                btn.innerHTML = `<i data-lucide="sparkles" style="width:14px;height:14px;"></i> Personalizar & Pedir`;
+                lucide.createIcons();
+            }, 1800);
+        }
+
+        updateCartUI();
+        closePersonalModal();
     }
 
     /* ── CART LOGIC ───────────────────────────── */
@@ -2041,6 +2199,42 @@
                 btnWhatsapp.onclick = () => {
                     window.open(`https://wa.me/17879601431?text=${encodeURIComponent(messageText)}`, '_blank');
                 };
+            }
+
+            // Save personalization responses for each item that has them
+            const ordenesIds = data.ordenes_ids || [];
+            if (ordenesIds.length > 0) {
+                for (const cartItem of cart) {
+                    if (!cartItem.personalizacion) continue;
+                    const ordenEntry = ordenesIds.find(o => o.producto_id === cartItem.producto_id);
+                    if (!ordenEntry) continue;
+                    const ordenId = ordenEntry.orden_id;
+                    const { respuestas, archivos } = cartItem.personalizacion;
+
+                    // Upload files
+                    for (const [campoId, archivoData] of Object.entries(archivos || {})) {
+                        try {
+                            const fd = new FormData();
+                            fd.append('file', archivoData.file);
+                            fd.append('orden_id', String(ordenId));
+                            fd.append('campo_id', String(campoId));
+                            fd.append('etiqueta', archivoData.campo.etiqueta);
+                            await fetch(`${API}/personalizacion/upload-archivo`, { method: 'POST', body: fd });
+                        } catch (_) {}
+                    }
+
+                    // Save text responses
+                    const textResp = respuestas.filter(r => r.tipo !== 'archivo');
+                    if (textResp.length > 0) {
+                        try {
+                            await fetch(`${API}/personalizacion/respuestas`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ orden_id: ordenId, respuestas: textResp }),
+                            });
+                        } catch (_) {}
+                    }
+                }
             }
 
             closeOrderModal();

@@ -3582,5 +3582,67 @@ const EvergreenAPI = {
             throw error;
         }
     },
+
+    // ─── CAMPOS DE PERSONALIZACIÓN ──────────────────────────────────────────────
+    async getCamposPersonalizacion(productoId) {
+        const r = await fetch(`${API_BASE_URL}/productos/${productoId}/campos-personalizacion`, {
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('ev_token')}` }
+        });
+        if (!r.ok) throw new Error('Error al obtener campos');
+        return r.json();
+    },
+
+    async getCamposPersonalizacionPublico(productoId) {
+        const r = await fetch(`${API_BASE_URL}/productos/${productoId}/campos-personalizacion/publico`);
+        if (!r.ok) throw new Error('Error al obtener campos');
+        return r.json();
+    },
+
+    async createCampoPersonalizacion(productoId, campo) {
+        const r = await fetch(`${API_BASE_URL}/productos/${productoId}/campos-personalizacion`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('ev_token')}` },
+            body: JSON.stringify(campo)
+        });
+        if (!r.ok) throw new Error('Error al crear campo');
+        return r.json();
+    },
+
+    async updateCampoPersonalizacion(productoId, campoId, campo) {
+        const r = await fetch(`${API_BASE_URL}/productos/${productoId}/campos-personalizacion/${campoId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('ev_token')}` },
+            body: JSON.stringify(campo)
+        });
+        if (!r.ok) throw new Error('Error al actualizar campo');
+        return r.json();
+    },
+
+    async deleteCampoPersonalizacion(productoId, campoId) {
+        const r = await fetch(`${API_BASE_URL}/productos/${productoId}/campos-personalizacion/${campoId}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('ev_token')}` }
+        });
+        if (!r.ok) throw new Error('Error al eliminar campo');
+        return r.json();
+    },
+
+    async guardarRespuestasPersonalizacion(ordenId, respuestas) {
+        const r = await fetch(`${API_BASE_URL}/personalizacion/respuestas`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ orden_id: ordenId, respuestas })
+        });
+        if (!r.ok) throw new Error('Error al guardar respuestas');
+        return r.json();
+    },
+
+    async getPersonalizacionOrden(ordenId) {
+        const r = await fetch(`${API_BASE_URL}/ordenes/${ordenId}/personalizacion`, {
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('ev_token')}` }
+        });
+        if (!r.ok) throw new Error('Error al obtener personalización');
+        return r.json();
+    },
 };
 

@@ -286,3 +286,23 @@ def create_or_update_evaluacion(evaluacion: EvaluacionSchema, current_user: dict
         raise he
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ─── RESPUESTAS DE PERSONALIZACIÓN POR ORDEN ──────────────────────────────────
+
+@router.get("/ordenes/{orden_id}/personalizacion")
+def get_personalizacion_orden(orden_id: int, current_user: dict = Depends(get_current_admin)):
+    """Devuelve todas las respuestas de personalización de una orden."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT id FROM ordenes_produccion WHERE id = ?", (orden_id,))
+    if not cursor.fetchone():
+        conn.close()
+        raise HTTPException(status_code=404, detail="Orden no encontrada")
+    cursor.execute(
+        "SELECT id, campo_id, etiqueta, tipo, valor, archivo_ruta FROM pedido_personalizacion_respuestas WHERE orden_id = ? ORDER BY id",
+        (orden_id,)
+    )
+    respuestas = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+    return {"status": "success", "data": respuestas}

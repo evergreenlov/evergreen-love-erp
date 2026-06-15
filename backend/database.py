@@ -610,6 +610,41 @@ def init_db(force_reset=False):
         except Exception:
             pass
 
+    # Tabla de campos de personalización por producto
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS producto_personalizacion_campos (
+        id              INTEGER PRIMARY KEY AUTOINCREMENT,
+        producto_id     INTEGER NOT NULL REFERENCES productos(id) ON DELETE CASCADE,
+        etiqueta        TEXT NOT NULL,
+        tipo            TEXT NOT NULL CHECK(tipo IN ('texto','textarea','fecha','select','checkbox','archivo')),
+        requerido       INTEGER NOT NULL DEFAULT 0,
+        opciones        TEXT,
+        costo_adicional REAL NOT NULL DEFAULT 0.0,
+        orden           INTEGER NOT NULL DEFAULT 0,
+        activo          INTEGER NOT NULL DEFAULT 1
+    );
+    """)
+
+    # Tabla de respuestas de personalización por orden de producción
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS pedido_personalizacion_respuestas (
+        id           INTEGER PRIMARY KEY AUTOINCREMENT,
+        orden_id     INTEGER NOT NULL REFERENCES ordenes_produccion(id) ON DELETE CASCADE,
+        campo_id     INTEGER REFERENCES producto_personalizacion_campos(id),
+        etiqueta     TEXT NOT NULL,
+        tipo         TEXT NOT NULL,
+        valor        TEXT,
+        archivo_ruta TEXT
+    );
+    """)
+
+    # Migración: campo personalizacion_json en carrito
+    try:
+        cursor.execute("ALTER TABLE carrito ADD COLUMN personalizacion_json TEXT")
+        print("Columna 'personalizacion_json' añadida a carrito.")
+    except Exception:
+        pass  # Ya existe
+
     # Crear carpeta de recibos si no existe
     import os as _os
     _recibos_dir = _os.path.abspath(_os.path.join(_os.path.dirname(__file__), "..", "data", "recibos_gastos"))
@@ -618,6 +653,10 @@ def init_db(force_reset=False):
     # Crear carpeta de imágenes de cotizaciones
     _cotiz_dir = _os.path.abspath(_os.path.join(_os.path.dirname(__file__), "..", "data", "cotizaciones"))
     _os.makedirs(_cotiz_dir, exist_ok=True)
+
+    # Crear carpeta de archivos de personalización del cliente
+    _personal_dir = _os.path.abspath(_os.path.join(_os.path.dirname(__file__), "..", "data", "personalizacion_archivos"))
+    _os.makedirs(_personal_dir, exist_ok=True)
 
     conn.commit()
     conn.close()
