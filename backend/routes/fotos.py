@@ -6,6 +6,10 @@ import json
 import base64
 import urllib.request
 import urllib.error
+from datetime import date
+
+# Daily Gemini call counter: {"2025-01-01": 3}
+_gemini_daily_calls: dict = {}
 
 from database import get_db_connection
 from utils.photo_scanner import scan_and_index_photos, FOTOS_IMPORT_DIR
@@ -498,6 +502,11 @@ async def estimar_costos_por_ia(
             ("v1", "gemini-1.5-flash"),
         ]
 
+        # Log daily call count
+        today = str(date.today())
+        _gemini_daily_calls[today] = _gemini_daily_calls.get(today, 0) + 1
+        print(f"[IA] Llamadas Gemini hoy ({today}): {_gemini_daily_calls[today]}")
+
         last_error_code = 500
         last_error_msg = "No se pudo conectar a ningún modelo de Gemini."
         last_model_tried = ""
@@ -543,6 +552,11 @@ async def estimar_costos_por_ia(
                 print(f"[IA] Error HTTP {he.code} en {last_model_tried}: {last_error_msg[:300]}")
                 if he.code in [400, 404]:
                     continue
+                if he.code == 429:
+                    raise HTTPException(
+                        status_code=429,
+                        detail="QUOTA_EXHAUSTED: La cuota de IA de Gemini se encuentra agotada temporalmente. Puede intentar nuevamente más tarde o completar los campos de costos manualmente."
+                    )
                 # 403 = API key inválida — no tiene sentido seguir intentando
                 raise HTTPException(status_code=he.code, detail=f"Gemini rechazó la solicitud ({he.code}): {last_error_msg[:500]}")
             except json.JSONDecodeError as je:

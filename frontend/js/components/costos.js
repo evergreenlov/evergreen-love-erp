@@ -442,6 +442,90 @@ const CostosComponent = {
     },
 
     // Rellena la calculadora con los datos del producto a editar
+    _resizeImage(file, maxPx) {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            const url = URL.createObjectURL(file);
+            img.onload = () => {
+                URL.revokeObjectURL(url);
+                const { width, height } = img;
+                if (width <= maxPx && height <= maxPx) { resolve(file); return; }
+                const scale = Math.min(maxPx / width, maxPx / height);
+                const canvas = document.createElement('canvas');
+                canvas.width = Math.round(width * scale);
+                canvas.height = Math.round(height * scale);
+                canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+                canvas.toBlob(blob => {
+                    if (!blob) { reject(new Error('resize failed')); return; }
+                    resolve(new File([blob], file.name, { type: blob.type || file.type }));
+                }, file.type || 'image/jpeg', 0.88);
+            };
+            img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('image load failed')); };
+            img.src = url;
+        });
+    }
+
+    _aplicarResultadoIA(res, checkboxes, btnCalcular, explBox) {
+        if (!(res.status === 'success' && res.data)) {
+            explBox.innerHTML = `<div style="color:#c0392b;font-size:13px;">No se pudo estructurar el análisis de la IA.</div>`;
+            explBox.style.display = 'block';
+            return;
+        }
+        const iaData = res.data;
+
+        explBox.innerHTML = `
+            <strong style="color: var(--color-moss-green); display: flex; align-items: center; gap: 4px;">
+                <i data-lucide="check-circle-2" style="width: 14px; height: 14px;"></i> Análisis de IA Completado
+            </strong>
+            <p style="margin-top: 6px; font-style: italic;">"${iaData.explicacion}"</p>
+            <div style="margin-top: 8px; font-size: 12px; color: #8c8270;">
+                • Material: <strong>${iaData.material_base}</strong><br>
+                • Herrajes: <strong>${iaData.herrajes_detectados.join(", ") || 'Ninguno'}</strong><br>
+                • Grabado: <strong>${iaData.densidad_grabado}</strong> (Corte: ${iaData.tiempo_corte_sugerido_minutos}m, Grabado: ${iaData.tiempo_grabado_sugerido_minutos}m)
+            </div>
+        `;
+        explBox.style.display = 'block';
+        lucide.createIcons();
+
+        const selectMat = document.getElementById('costo-material-select');
+        let materialEncontrado = false;
+        for (let i = 0; i < selectMat.options.length; i++) {
+            const optionText = selectMat.options[i].text.toLowerCase();
+            const matchText = iaData.material_base.toLowerCase();
+            if (optionText.includes(matchText) || matchText.includes(optionText.split(" (")[0].toLowerCase())) {
+                selectMat.selectedIndex = i;
+                materialEncontrado = true;
+                break;
+            }
+        }
+        if (!materialEncontrado && selectMat.options.length > 0) selectMat.selectedIndex = 0;
+
+        document.getElementById('laser-corte').value = iaData.tiempo_corte_sugerido_minutos || 1.5;
+        document.getElementById('laser-grabado').value = iaData.tiempo_grabado_sugerido_minutos || 1.0;
+
+        checkboxes.forEach(cb => {
+            cb.checked = false;
+            const qtyInput = cb.closest('div').parentElement.querySelector('.extra-qty-input');
+            qtyInput.setAttribute('disabled', 'true');
+            qtyInput.value = 1;
+        });
+
+        iaData.herrajes_detectados.forEach(iaHerr => {
+            checkboxes.forEach(cb => {
+                const hName = cb.getAttribute('data-nombre').toLowerCase();
+                const iaHName = iaHerr.toLowerCase();
+                if (hName.includes(iaHName) || iaHName.includes(hName.split(" de ")[0])) {
+                    cb.checked = true;
+                    const qtyInput = cb.closest('div').parentElement.querySelector('.extra-qty-input');
+                    qtyInput.removeAttribute('disabled');
+                    qtyInput.value = 1;
+                }
+            });
+        });
+
+        btnCalcular.click();
+    }
+
     _aplicarModoEdicion(p) {
         // Cancelar edición
         const btnCancelar = document.getElementById('btn-cancelar-edicion');
@@ -621,92 +705,52 @@ const CostosComponent = {
 
                 const loader = document.getElementById('ia-analizando-loader');
                 const explBox = document.getElementById('ia-explicacion-box');
-                
+
                 loader.style.display = 'flex';
                 explBox.style.display = 'none';
                 btnAnalizarIa.disabled = true;
 
+                // Verificar caché de sesión (evita llamadas repetidas con la misma imagen)
+                const cacheKey = `ia_cache_${file.name}_${file.size}_${file.lastModified}`;
+                const cached = sessionStorage.getItem(cacheKey);
+                if (cached) {
+                    try {
+                        const res = JSON.parse(cached);
+                        loader.style.display = 'none';
+                        btnAnalizarIa.disabled = false;
+                        this._aplicarResultadoIA(res, checkboxes, btnCalcular, explBox);
+                        return;
+                    } catch (_) { /* caché corrupta, ignorar */ }
+                }
+
+                // Redimensionar imagen a máximo 1024px antes de enviar
+                let fileToSend = file;
                 try {
-                    const res = await EvergreenAPI.estimarCostoPorIA(file, geminiKey);
-                    
-                    if (res.status === 'success' && res.data) {
-                        const iaData = res.data;
-                        
-                        // 1. Mostrar la explicación de la IA
-                        explBox.innerHTML = `
-                            <strong style="color: var(--color-moss-green); display: flex; align-items: center; gap: 4px;">
-                                <i data-lucide="check-circle-2" style="width: 14px; height: 14px;"></i> Análisis de IA Completado
-                            </strong>
-                            <p style="margin-top: 6px; font-style: italic;">"${iaData.explicacion}"</p>
-                            <div style="margin-top: 8px; font-size: 12px; color: #8c8270;">
-                                • Material: <strong>${iaData.material_base}</strong><br>
-                                • Herrajes: <strong>${iaData.herrajes_detectados.join(", ") || 'Ninguno'}</strong><br>
-                                • Grabado: <strong>${iaData.densidad_grabado}</strong> (Corte: ${iaData.tiempo_corte_sugerido_minutos}m, Grabado: ${iaData.tiempo_grabado_sugerido_minutos}m)
-                            </div>
-                        `;
-                        explBox.style.display = 'block';
-                        lucide.createIcons();
+                    fileToSend = await this._resizeImage(file, 1024);
+                } catch (_) { /* si falla el resize, usar original */ }
 
-                        // 2. Rellenar inputs de la calculadora automáticamente
-                        
-                        // Seleccionar material base
-                        const selectMat = document.getElementById('costo-material-select');
-                        let materialEncontrado = false;
-                        for (let i = 0; i < selectMat.options.length; i++) {
-                            const optionText = selectMat.options[i].text.toLowerCase();
-                            const matchText = iaData.material_base.toLowerCase();
-                            
-                            // Buscar coincidencias aproximadas (ej. "Basswood" o "Walnut")
-                            if (optionText.includes(matchText) || matchText.includes(optionText.split(" (")[0].toLowerCase())) {
-                                selectMat.selectedIndex = i;
-                                materialEncontrado = true;
-                                break;
-                            }
-                        }
-                        
-                        if (!materialEncontrado && selectMat.options.length > 0) {
-                            // Basswood por defecto si no lo encuentra de forma segura
-                            selectMat.selectedIndex = 0;
-                        }
-
-                        // Configurar Tiempos
-                        document.getElementById('laser-corte').value = iaData.tiempo_corte_sugerido_minutos || 1.5;
-                        document.getElementById('laser-grabado').value = iaData.tiempo_grabado_sugerido_minutos || 1.0;
-
-                        // Desmarcar todos los accesorios primero
-                        checkboxes.forEach(cb => {
-                            cb.checked = false;
-                            const parentDiv = cb.closest('div').parentElement;
-                            const qtyInput = parentDiv.querySelector('.extra-qty-input');
-                            qtyInput.setAttribute('disabled', 'true');
-                            qtyInput.value = 1;
-                        });
-
-                        // Marcar accesorios identificados por la IA
-                        iaData.herrajes_detectados.forEach(iaHerr => {
-                            checkboxes.forEach(cb => {
-                                const hName = cb.getAttribute('data-nombre').toLowerCase();
-                                const iaHName = iaHerr.toLowerCase();
-                                
-                                if (hName.includes(iaHName) || iaHName.includes(hName.split(" de ")[0])) {
-                                    cb.checked = true;
-                                    const parentDiv = cb.closest('div').parentElement;
-                                    const qtyInput = parentDiv.querySelector('.extra-qty-input');
-                                    qtyInput.removeAttribute('disabled');
-                                    qtyInput.value = 1;
-                                }
-                            });
-                        });
-
-                        // 3. Ejecutar cálculo inmediato
-                        btnCalcular.click();
-                        
-                    } else {
-                        alert("No se pudo estructurar el análisis de la IA.");
-                    }
-                    
+                try {
+                    const res = await EvergreenAPI.estimarCostoPorIA(fileToSend, geminiKey);
+                    sessionStorage.setItem(cacheKey, JSON.stringify(res));
+                    this._aplicarResultadoIA(res, checkboxes, btnCalcular, explBox);
                 } catch (err) {
-                    alert("Error en el análisis de IA: " + err.message);
+                    const msg = err.message || '';
+                    if (msg.includes('429') || msg.includes('QUOTA_EXHAUSTED')) {
+                        explBox.innerHTML = `
+                            <div style="background:#fff8e1;border:1px solid #f9a825;border-radius:6px;padding:10px 14px;">
+                                <strong style="color:#e65100;">⚠️ Cuota de IA agotada temporalmente</strong>
+                                <p style="margin:6px 0 8px;font-size:13px;color:#5d4037;">La cuota gratuita de Gemini se encuentra agotada. Puede intentar nuevamente más tarde o completar los campos manualmente.</p>
+                                <button id="btn-ia-fallback-manual" style="background:#795548;color:#fff;border:none;border-radius:4px;padding:6px 12px;cursor:pointer;font-size:12px;">Completar manualmente</button>
+                            </div>`;
+                        explBox.style.display = 'block';
+                        document.getElementById('btn-ia-fallback-manual')?.addEventListener('click', () => {
+                            explBox.innerHTML = `<p style="font-size:13px;color:#5d4037;">Complete los campos de la calculadora (material, tiempos, herrajes) y presione <strong>Calcular</strong>.</p>`;
+                            document.getElementById('costo-material-select')?.focus();
+                        });
+                    } else {
+                        explBox.innerHTML = `<div style="color:#c0392b;font-size:13px;">Error en análisis de IA: ${err.message}</div>`;
+                        explBox.style.display = 'block';
+                    }
                 } finally {
                     loader.style.display = 'none';
                     btnAnalizarIa.disabled = false;
