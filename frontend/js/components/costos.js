@@ -694,25 +694,48 @@ const CostosComponent = {
 
         // Estimar costos con IA (Llamada al backend)
         if (btnAnalizarIa && iaFileInput) {
+            console.log('[IA] Listener registrado en btn-analizar-foto-ia');
             btnAnalizarIa.addEventListener('click', async () => {
+                console.log('[IA] click recibido');
+
+                const loader = document.getElementById('ia-analizando-loader');
+                const explBox = document.getElementById('ia-explicacion-box');
+
+                // Función de limpieza garantizada para todos los caminos
+                const resetUI = () => {
+                    console.log('[IA] finally ejecutado — restaurando UI');
+                    if (loader) loader.style.display = 'none';
+                    btnAnalizarIa.disabled = false;
+                };
+
+                const showError = (html) => {
+                    if (!explBox) return;
+                    explBox.innerHTML = html;
+                    explBox.style.display = 'block';
+                    explBox.querySelector('.btn-ia-manual-fallback')?.addEventListener('click', () => {
+                        explBox.innerHTML = `<p style="font-size:13px;color:#5d4037;">Complete los campos (material, tiempos, herrajes) y presione <strong>Calcular</strong>.</p>`;
+                        document.getElementById('costo-material-select')?.focus();
+                    });
+                };
+
                 const file = iaFileInput.files[0];
                 if (!file) {
+                    console.log('[IA] sin archivo seleccionado');
                     alert("Por favor, selecciona una foto primero.");
                     return;
                 }
+                console.log('[IA] archivo seleccionado:', file.name, file.size, 'bytes', file.type);
 
                 const geminiKey = localStorage.getItem('evergreen_gemini_key');
                 if (!geminiKey) {
+                    console.log('[IA] sin API key configurada');
                     alert("Por favor, configura tu API Key de Gemini antes de realizar el análisis. Haz clic en 'Configurar Clave Gemini'.");
                     this.openGeminiConfigModal();
                     return;
                 }
 
-                const loader = document.getElementById('ia-analizando-loader');
-                const explBox = document.getElementById('ia-explicacion-box');
-
-                loader.style.display = 'flex';
-                explBox.style.display = 'none';
+                if (loader) { loader.style.display = 'flex'; }
+                if (explBox) { explBox.style.display = 'none'; }
                 btnAnalizarIa.disabled = true;
 
                 console.log('[IA] Inicio análisis. Archivo:', file.name, file.size, 'bytes');
@@ -724,8 +747,7 @@ const CostosComponent = {
                     try {
                         const res = JSON.parse(cached);
                         console.log('[IA] Resultado desde caché de sesión.');
-                        loader.style.display = 'none';
-                        btnAnalizarIa.disabled = false;
+                        resetUI();
                         this._aplicarResultadoIA(res, checkboxes, btnCalcular, explBox);
                         return;
                     } catch (_) {
@@ -736,60 +758,53 @@ const CostosComponent = {
                 // Redimensionar imagen a máximo 1024px antes de enviar
                 let fileToSend = file;
                 try {
+                    console.log('[IA] resize start');
                     fileToSend = await this._resizeImage(file, 1024);
-                    console.log('[IA] Después de resize:', fileToSend.name, fileToSend.size, 'bytes');
+                    console.log('[IA] resize end:', fileToSend.name, fileToSend.size, 'bytes');
                 } catch (resizeErr) {
-                    console.warn('[IA] Resize falló, usando imagen original:', resizeErr.message);
+                    console.warn('[IA] resize error — usando original:', resizeErr.message);
+                    fileToSend = file;
                 }
 
                 // AbortController: timeout de 45 segundos para el fetch
                 const abortCtrl = new AbortController();
                 const abortTimer = setTimeout(() => {
-                    console.warn('[IA] Timeout de 45s alcanzado, abortando fetch.');
+                    console.warn('[IA] Timeout 45s — abortando fetch');
                     abortCtrl.abort();
                 }, 45000);
 
                 try {
-                    console.log('[IA] Enviando a /api/ia/estimar …');
+                    console.log('[IA] fetch start → /api/ia/estimar');
                     const res = await EvergreenAPI.estimarCostoPorIA(fileToSend, geminiKey, abortCtrl.signal);
                     clearTimeout(abortTimer);
-                    console.log('[IA] Respuesta recibida:', res.status, res.modelo || '');
+                    console.log('[IA] fetch response OK:', res.status, res.modelo || '');
                     sessionStorage.setItem(cacheKey, JSON.stringify(res));
                     this._aplicarResultadoIA(res, checkboxes, btnCalcular, explBox);
                 } catch (err) {
                     clearTimeout(abortTimer);
-                    console.error('[IA] Error en fetch/análisis:', err.message);
+                    console.error('[IA] fetch error:', err.name, err.message);
                     const msg = err.message || '';
-                    let html = '';
-                    if (err.name === 'AbortError' || msg.includes('abort') || msg.includes('timeout') || msg.includes('Timeout')) {
-                        html = `<div style="background:#fff3e0;border:1px solid #fb8c00;border-radius:6px;padding:10px 14px;">
+                    if (err.name === 'AbortError' || msg.toLowerCase().includes('abort') || msg.toLowerCase().includes('timeout')) {
+                        showError(`<div style="background:#fff3e0;border:1px solid #fb8c00;border-radius:6px;padding:10px 14px;">
                             <strong style="color:#e65100;">⏱ La IA tardó demasiado</strong>
                             <p style="margin:6px 0 8px;font-size:13px;color:#5d4037;">El análisis no respondió a tiempo. Completa los campos manualmente.</p>
                             <button class="btn-ia-manual-fallback" style="background:#795548;color:#fff;border:none;border-radius:4px;padding:6px 12px;cursor:pointer;font-size:12px;">Completar manualmente</button>
-                        </div>`;
+                        </div>`);
                     } else if (msg.includes('429') || msg.includes('QUOTA_EXHAUSTED')) {
-                        html = `<div style="background:#fff8e1;border:1px solid #f9a825;border-radius:6px;padding:10px 14px;">
+                        showError(`<div style="background:#fff8e1;border:1px solid #f9a825;border-radius:6px;padding:10px 14px;">
                             <strong style="color:#e65100;">⚠️ Cuota de IA agotada temporalmente</strong>
                             <p style="margin:6px 0 8px;font-size:13px;color:#5d4037;">La cuota gratuita de Gemini se encuentra agotada. Intente más tarde o complete manualmente.</p>
                             <button class="btn-ia-manual-fallback" style="background:#795548;color:#fff;border:none;border-radius:4px;padding:6px 12px;cursor:pointer;font-size:12px;">Completar manualmente</button>
-                        </div>`;
+                        </div>`);
                     } else {
-                        html = `<div style="background:#fce4ec;border:1px solid #e57373;border-radius:6px;padding:10px 14px;">
+                        showError(`<div style="background:#fce4ec;border:1px solid #e57373;border-radius:6px;padding:10px 14px;">
                             <strong style="color:#c0392b;">Error en análisis de IA</strong>
-                            <p style="margin:6px 0;font-size:13px;color:#5d4037;">${msg || 'Error desconocido. Revisa la consola.'}</p>
+                            <p style="margin:6px 0;font-size:13px;color:#5d4037;">${msg || 'Error desconocido — revisa la consola.'}</p>
                             <button class="btn-ia-manual-fallback" style="background:#795548;color:#fff;border:none;border-radius:4px;padding:6px 12px;cursor:pointer;font-size:12px;">Completar manualmente</button>
-                        </div>`;
+                        </div>`);
                     }
-                    explBox.innerHTML = html;
-                    explBox.style.display = 'block';
-                    explBox.querySelector('.btn-ia-manual-fallback')?.addEventListener('click', () => {
-                        explBox.innerHTML = `<p style="font-size:13px;color:#5d4037;">Complete los campos (material, tiempos, herrajes) y presione <strong>Calcular</strong>.</p>`;
-                        document.getElementById('costo-material-select')?.focus();
-                    });
                 } finally {
-                    console.log('[IA] Finally: restaurando UI.');
-                    loader.style.display = 'none';
-                    btnAnalizarIa.disabled = false;
+                    resetUI();
                 }
             });
         }

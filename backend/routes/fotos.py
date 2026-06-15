@@ -6,6 +6,7 @@ import json
 import base64
 import urllib.request
 import urllib.error
+import socket
 from datetime import date
 
 # Daily Gemini call counter: {"2025-01-01": 3}
@@ -524,7 +525,7 @@ async def estimar_costos_por_ia(
             )
 
             try:
-                with urllib.request.urlopen(req) as response:
+                with urllib.request.urlopen(req, timeout=45) as response:
                     res_body = response.read().decode('utf-8')
                     res_json = json.loads(res_body)
                     print(f"[IA] Respuesta OK de {last_model_tried}")
@@ -559,6 +560,12 @@ async def estimar_costos_por_ia(
                     )
                 # 403 = API key inválida — no tiene sentido seguir intentando
                 raise HTTPException(status_code=he.code, detail=f"Gemini rechazó la solicitud ({he.code}): {last_error_msg[:500]}")
+            except (socket.timeout, TimeoutError) as te:
+                print(f"[IA] Timeout (45s) en {last_model_tried}: {te}")
+                raise HTTPException(
+                    status_code=504,
+                    detail="TIMEOUT: La IA tardó demasiado en responder. Completa los campos manualmente."
+                )
             except json.JSONDecodeError as je:
                 last_error_msg = f"Respuesta no es JSON válido: {je}"
                 print(f"[IA] {last_error_msg}")
