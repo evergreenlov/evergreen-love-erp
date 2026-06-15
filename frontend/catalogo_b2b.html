@@ -1777,7 +1777,7 @@
             const res = await fetch(`${API}/productos/${productoId}/campos-personalizacion/publico`);
             if (res.ok) {
                 const data = await res.json();
-                campos = data.campos || [];
+                campos = data.data || data.campos || [];
             }
         } catch (_) {}
 
@@ -2135,6 +2135,12 @@
         }
         document.getElementById('ord-nombre').style.borderColor = '#ddd';
 
+        console.log('[B2B submitOrder] carrito completo:', JSON.stringify(cart.map(i => ({
+            producto_id: i.producto_id, nombre: i.nombre, cantidad: i.cantidad,
+            tiene_personalizacion: !!i.personalizacion,
+            num_respuestas: i.personalizacion?.respuestas?.length || 0,
+        })), null, 2));
+
         const btn = document.getElementById('btn-confirm-order');
         btn.textContent = 'Enviando...';
         btn.disabled = true;
@@ -2202,6 +2208,7 @@
             }
 
             // Save personalization responses for each item that has them
+            console.log('[B2B submitOrder] respuesta backend:', JSON.stringify({ ordenes_ids: data.ordenes_ids, numero_factura: data.numero_factura }));
             const ordenesIds = data.ordenes_ids || [];
             if (ordenesIds.length > 0) {
                 for (const cartItem of cart) {
