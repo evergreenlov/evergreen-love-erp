@@ -260,7 +260,10 @@ def editar_cotizacion(
     payload: CotizacionEditSchema,
     current_user: dict = Depends(get_current_admin),
 ):
-    estados_validos = {"nueva", "en_revision", "cotizada", "aprobada", "rechazada"}
+    estados_validos = {
+        "nueva", "en_revision", "cotizada", "aprobada", "rechazada",
+        "borrador", "enviada", "convertida_produccion", "facturada",
+    }
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
@@ -303,7 +306,10 @@ def actualizar_estado(
     payload: dict,
     current_user: dict = Depends(get_current_admin),
 ):
-    estados_validos = {"nueva", "en_revision", "cotizada", "aprobada", "rechazada"}
+    estados_validos = {
+        "nueva", "en_revision", "cotizada", "aprobada", "rechazada",
+        "borrador", "enviada", "convertida_produccion", "facturada",
+    }
     nuevo_estado = payload.get("estado", "")
     if nuevo_estado not in estados_validos:
         raise HTTPException(status_code=400, detail=f"Estado inválido: '{nuevo_estado}'")
@@ -328,13 +334,106 @@ def actualizar_estado(
         conn.close()
 
 
+def _crear_orden_desde_cotizacion(cursor, c: dict) -> dict:
+    """
+    Lógica interna compartida por /convertir y /crear-produccion-y-factura.
+    Recibe cursor y dict de la cotización. Devuelve {orden_id, codigo_orden}.
+    El caller hace commit.
+    """
+    cotizacion_id = c["id"]
+    ts = int(time.time()) % 100000
+    codigo_orden = f"COT-{cotizacion_id}-{ts}"
+
+    partes = [f"[COTIZACIÓN #{cotizacion_id}]", f"Cliente: {c['nombre_cliente']}"]
+    if c.get("email"):    partes.append(f"Email: {c['email']}")
+    if c.get("telefono"): partes.append(f"Tel: {c['telefono']}")
+    if c.get("descripcion"): partes.append(f"Proyecto: {c['descripcion'][:200]}")
+    cliente_str = " | ".join(partes)
+
+    notas_parts = []
+    if c.get("descripcion"):    notas_parts.append(f"Descripción: {c['descripcion']}")
+    if c.get("notas_internas"): notas_parts.append(f"Notas internas: {c['notas_internas']}")
+    notas_str = "\n\n".join(notas_parts) if notas_parts else None
+
+    cursor.execute("""
+        INSERT INTO ordenes_produccion
+            (codigo_orden, cliente, producto_id, cantidad, estado, cotizacion_id, notas)
+        VALUES (?, ?, ?, 1, 'En diseño', ?, ?)
+    """, (codigo_orden, cliente_str, c.get("producto_id"), cotizacion_id, notas_str))
+    orden_id = cursor.lastrowid
+
+    cursor.execute("""
+        UPDATE cotizaciones
+        SET orden_produccion_id = ?, fecha_actualizado = datetime('now','localtime')
+        WHERE id = ?
+    """, (orden_id, cotizacion_id))
+
+    # Copiar respuestas de personalización
+    cursor.execute("""
+        SELECT campo_id, etiqueta, tipo, valor, archivo_ruta
+        FROM cotizacion_personalizacion_respuestas WHERE cotizacion_id = ?
+    """, (cotizacion_id,))
+    for r in cursor.fetchall():
+        cursor.execute("""
+            INSERT INTO pedido_personalizacion_respuestas
+                (orden_id, campo_id, etiqueta, tipo, valor, archivo_ruta)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (orden_id, r["campo_id"], r["etiqueta"], r["tipo"], r["valor"], r["archivo_ruta"]))
+
+    return {"orden_id": orden_id, "codigo_orden": codigo_orden}
+
+
+def _crear_factura_desde_cotizacion(cursor, c: dict, orden_id: Optional[int] = None) -> dict:
+    """
+    Lógica interna compartida.  Devuelve {factura_id, numero_factura}.
+    """
+    import datetime as _dt
+    cotizacion_id = c["id"]
+
+    # Número de factura automático
+    anio = _dt.datetime.now().strftime("%Y")
+    cursor.execute(
+        "SELECT numero_factura FROM facturas WHERE numero_factura LIKE ? ORDER BY numero_factura DESC LIMIT 1",
+        (f"EV-{anio}-%",)
+    )
+    last = cursor.fetchone()
+    try:    seq = int(last["numero_factura"].split("-")[-1]) + 1 if last else 1
+    except: seq = 1
+    numero = f"EV-{anio}-{seq:04d}"
+
+    precio = float(c.get("precio_estimado") or 0.0)
+    subtotal = precio
+    ivu_est  = round(subtotal * 0.105, 2)
+    ivu_mun  = round(subtotal * 0.01,  2)
+    total    = round(subtotal + ivu_est + ivu_mun, 2)
+
+    notas_fac = f"[Cotización #{cotizacion_id}]"
+    if c.get("descripcion"):
+        notas_fac += f"\n{c['descripcion'][:300]}"
+
+    cursor.execute("""
+        INSERT INTO facturas
+            (numero_factura, cliente_id, cliente_nombre_manual,
+             fecha_emision, subtotal, ivu_estatal, ivu_municipal, total,
+             notas, estado, orden_produccion_id, codigo_orden, cotizacion_id)
+        VALUES (?, NULL, ?, date('now','localtime'), ?, ?, ?, ?, ?, 'Pendiente', ?, ?, ?)
+    """, (
+        numero,
+        c["nombre_cliente"],
+        subtotal, ivu_est, ivu_mun, total,
+        notas_fac,
+        orden_id, None, cotizacion_id,
+    ))
+    factura_id = cursor.lastrowid
+    return {"factura_id": factura_id, "numero_factura": numero}
+
+
 @router.post("/cotizaciones/{cotizacion_id}/convertir")
 def convertir_a_produccion(
     cotizacion_id: int,
     current_user: dict = Depends(get_current_admin),
 ):
     """Convierte una cotización aprobada en una orden de producción."""
-    import time
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
@@ -344,82 +443,150 @@ def convertir_a_produccion(
             raise HTTPException(status_code=404, detail="Cotización no encontrada")
         c = dict(row)
 
-        if c["estado"] != "aprobada":
+        if c["estado"] not in ("aprobada",):
             raise HTTPException(
                 status_code=400,
                 detail=f"Solo se pueden convertir cotizaciones aprobadas. Estado actual: '{c['estado']}'"
             )
 
         if c.get("orden_produccion_id"):
-            # Ya fue convertida — devolver el código existente
             cursor.execute(
                 "SELECT codigo_orden FROM ordenes_produccion WHERE id = ?",
                 (c["orden_produccion_id"],)
             )
             existing = cursor.fetchone()
             codigo = existing["codigo_orden"] if existing else ""
-            raise HTTPException(
-                status_code=409,
-                detail=f"Esta cotización ya fue convertida. Orden: {codigo}"
-            )
+            raise HTTPException(status_code=409, detail=f"Esta cotización ya fue convertida. Orden: {codigo}")
 
-        # Generar código único para la orden
-        ts = int(time.time()) % 100000
-        codigo_orden = f"COT-{cotizacion_id}-{ts}"
+        result = _crear_orden_desde_cotizacion(cursor, c)
 
-        # Construir string de cliente en formato estándar
-        partes = [f"[COTIZACIÓN #{cotizacion_id}]", f"Cliente: {c['nombre_cliente']}"]
-        if c.get("email"):
-            partes.append(f"Email: {c['email']}")
-        if c.get("telefono"):
-            partes.append(f"Tel: {c['telefono']}")
-        if c.get("descripcion"):
-            partes.append(f"Proyecto: {c['descripcion'][:200]}")
-        cliente_str = " | ".join(partes)
-
-        # Notas: descripción completa + notas internas
-        notas_parts = []
-        if c.get("descripcion"):
-            notas_parts.append(f"Descripción: {c['descripcion']}")
-        if c.get("notas_internas"):
-            notas_parts.append(f"Notas internas: {c['notas_internas']}")
-        notas_str = "\n\n".join(notas_parts) if notas_parts else None
-
-        # Insertar orden de producción
         cursor.execute("""
-            INSERT INTO ordenes_produccion
-                (codigo_orden, cliente, producto_id, cantidad, estado, cotizacion_id, notas)
-            VALUES (?, ?, ?, 1, 'En diseño', ?, ?)
-        """, (codigo_orden, cliente_str, c.get("producto_id"), cotizacion_id, notas_str))
-        orden_id = cursor.lastrowid
-
-        # Vincular la cotización a la nueva orden
-        cursor.execute("""
-            UPDATE cotizaciones
-            SET orden_produccion_id = ?, fecha_actualizado = datetime('now','localtime')
-            WHERE id = ?
-        """, (orden_id, cotizacion_id))
-
-        # Copiar respuestas de personalización a la orden de producción
-        cursor.execute("""
-            SELECT campo_id, etiqueta, tipo, valor, archivo_ruta
-            FROM cotizacion_personalizacion_respuestas
-            WHERE cotizacion_id = ?
+            UPDATE cotizaciones SET estado = 'convertida_produccion',
+            fecha_actualizado = datetime('now','localtime') WHERE id = ?
         """, (cotizacion_id,))
-        respuestas = cursor.fetchall()
-        for r in respuestas:
-            cursor.execute("""
-                INSERT INTO pedido_personalizacion_respuestas
-                    (orden_id, campo_id, etiqueta, tipo, valor, archivo_ruta)
-                VALUES (?, ?, ?, ?, ?, ?)
-            """, (orden_id, r["campo_id"], r["etiqueta"], r["tipo"], r["valor"], r["archivo_ruta"]))
 
         conn.commit()
         return {
             "status": "success",
-            "codigo_orden": codigo_orden,
-            "orden_id": orden_id,
-            "message": f"Cotización #{cotizacion_id} convertida a orden {codigo_orden}"
+            "codigo_orden": result["codigo_orden"],
+            "orden_id": result["orden_id"],
+            "message": f"Cotización #{cotizacion_id} convertida a orden {result['codigo_orden']}"
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
+
+
+@router.post("/cotizaciones/{cotizacion_id}/crear-factura")
+def crear_factura_desde_cotizacion(
+    cotizacion_id: int,
+    current_user: dict = Depends(get_current_admin),
+):
+    """Crea una factura directamente desde una cotización aprobada o convertida."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT * FROM cotizaciones WHERE id = ?", (cotizacion_id,))
+        row = cursor.fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="Cotización no encontrada")
+        c = dict(row)
+
+        if c["estado"] not in ("aprobada", "convertida_produccion"):
+            raise HTTPException(
+                status_code=400,
+                detail=f"Solo se puede facturar una cotización aprobada o ya convertida a producción. Estado: '{c['estado']}'"
+            )
+
+        # Comprobar si ya tiene factura vinculada
+        cursor.execute("SELECT id, numero_factura FROM facturas WHERE cotizacion_id = ?", (cotizacion_id,))
+        existing_fac = cursor.fetchone()
+        if existing_fac:
+            raise HTTPException(
+                status_code=409,
+                detail=f"Esta cotización ya tiene una factura: {existing_fac['numero_factura']}"
+            )
+
+        result = _crear_factura_desde_cotizacion(cursor, c, c.get("orden_produccion_id"))
+
+        cursor.execute("""
+            UPDATE cotizaciones SET estado = 'facturada',
+            fecha_actualizado = datetime('now','localtime') WHERE id = ?
+        """, (cotizacion_id,))
+
+        conn.commit()
+        return {
+            "status": "success",
+            "factura_id": result["factura_id"],
+            "numero_factura": result["numero_factura"],
+            "message": f"Factura {result['numero_factura']} creada desde Cotización #{cotizacion_id}"
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
+
+
+@router.post("/cotizaciones/{cotizacion_id}/crear-produccion-y-factura")
+def crear_produccion_y_factura(
+    cotizacion_id: int,
+    current_user: dict = Depends(get_current_admin),
+):
+    """Crea orden de producción y factura en una sola operación atómica."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT * FROM cotizaciones WHERE id = ?", (cotizacion_id,))
+        row = cursor.fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="Cotización no encontrada")
+        c = dict(row)
+
+        if c["estado"] not in ("aprobada",):
+            raise HTTPException(
+                status_code=400,
+                detail=f"Solo se pueden procesar cotizaciones aprobadas. Estado: '{c['estado']}'"
+            )
+        if c.get("orden_produccion_id"):
+            raise HTTPException(status_code=409, detail="Esta cotización ya tiene una orden de producción.")
+
+        cursor.execute("SELECT id FROM facturas WHERE cotizacion_id = ?", (cotizacion_id,))
+        if cursor.fetchone():
+            raise HTTPException(status_code=409, detail="Esta cotización ya tiene una factura.")
+
+        orden_result  = _crear_orden_desde_cotizacion(cursor, c)
+        factura_result = _crear_factura_desde_cotizacion(cursor, c, orden_result["orden_id"])
+
+        # Vincular factura con orden de producción
+        cursor.execute(
+            "UPDATE ordenes_produccion SET factura_id = ? WHERE id = ?",
+            (factura_result["factura_id"], orden_result["orden_id"])
+        )
+        cursor.execute(
+            "UPDATE facturas SET orden_produccion_id = ?, codigo_orden = ? WHERE id = ?",
+            (orden_result["orden_id"], orden_result["codigo_orden"], factura_result["factura_id"])
+        )
+
+        cursor.execute("""
+            UPDATE cotizaciones SET estado = 'facturada',
+            fecha_actualizado = datetime('now','localtime') WHERE id = ?
+        """, (cotizacion_id,))
+
+        conn.commit()
+        return {
+            "status": "success",
+            "orden_id": orden_result["orden_id"],
+            "codigo_orden": orden_result["codigo_orden"],
+            "factura_id": factura_result["factura_id"],
+            "numero_factura": factura_result["numero_factura"],
+            "message": f"Cotización #{cotizacion_id} → Orden {orden_result['codigo_orden']} + Factura {factura_result['numero_factura']}"
         }
     except HTTPException:
         raise

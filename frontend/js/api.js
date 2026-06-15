@@ -3645,6 +3645,43 @@ const EvergreenAPI = {
         return r.json();
     },
 
+    async aprobarCotizacion(id) {
+        const r = await fetch(`${API_BASE_URL}/cotizaciones/${id}/estado`, {
+            method: 'PUT',
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('ev_token')}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ estado: 'aprobada' })
+        });
+        if (!r.ok) { const e = await r.json(); throw new Error(e.detail || 'Error'); }
+        return r.json();
+    },
+
+    async crearProduccionDesdeCotizacion(id) {
+        const r = await fetch(`${API_BASE_URL}/cotizaciones/${id}/convertir`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('ev_token')}` }
+        });
+        if (!r.ok) { const e = await r.json(); throw new Error(e.detail || 'Error'); }
+        return r.json();
+    },
+
+    async crearFacturaDesdeCotizacion(id) {
+        const r = await fetch(`${API_BASE_URL}/cotizaciones/${id}/crear-factura`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('ev_token')}` }
+        });
+        if (!r.ok) { const e = await r.json(); throw new Error(e.detail || 'Error'); }
+        return r.json();
+    },
+
+    async crearProduccionYFactura(id) {
+        const r = await fetch(`${API_BASE_URL}/cotizaciones/${id}/crear-produccion-y-factura`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('ev_token')}` }
+        });
+        if (!r.ok) { const e = await r.json(); throw new Error(e.detail || 'Error'); }
+        return r.json();
+    },
+
     async guardarRespuestasCotizacion(cotizacionId, formData) {
         const r = await fetch(`${API_BASE_URL}/cotizaciones/${cotizacionId}/personalizacion/respuestas`, {
             method: 'POST',

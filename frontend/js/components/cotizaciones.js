@@ -33,11 +33,15 @@ const CotizacionesComponent = {
 
     _estadoBadge(estado) {
         const map = {
-            nueva:       { color: '#2196f3', bg: '#e3f2fd', label: 'Nueva' },
-            en_revision: { color: '#ff9800', bg: '#fff3e0', label: 'En revisión' },
-            cotizada:    { color: '#9c27b0', bg: '#f3e5f5', label: 'Cotizada' },
-            aprobada:    { color: '#4caf50', bg: '#e8f5e9', label: 'Aprobada' },
-            rechazada:   { color: '#f44336', bg: '#ffebee', label: 'Rechazada' },
+            nueva:                  { color: '#2196f3', bg: '#e3f2fd', label: 'Nueva' },
+            en_revision:            { color: '#ff9800', bg: '#fff3e0', label: 'En revisión' },
+            cotizada:               { color: '#9c27b0', bg: '#f3e5f5', label: 'Cotizada' },
+            aprobada:               { color: '#4caf50', bg: '#e8f5e9', label: 'Aprobada ✓' },
+            rechazada:              { color: '#f44336', bg: '#ffebee', label: 'Rechazada' },
+            borrador:               { color: '#78909c', bg: '#eceff1', label: 'Borrador' },
+            enviada:                { color: '#0288d1', bg: '#e1f5fe', label: 'Enviada' },
+            convertida_produccion:  { color: '#1565c0', bg: '#e8eaf6', label: '🔧 En Producción' },
+            facturada:              { color: '#2e7d32', bg: '#e8f5e9', label: '🧾 Facturada' },
         };
         const s = map[estado] || { color: '#888', bg: '#f5f5f5', label: estado };
         return `<span style="background:${s.bg};color:${s.color};padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;white-space:nowrap;">${s.label}</span>`;
@@ -172,8 +176,13 @@ const CotizacionesComponent = {
 
     _renderDetalle(container, c) {
         const imagenes = c.imagenes || [];
-        const estados = ['nueva','en_revision','cotizada','aprobada','rechazada'];
-        const etiquetas = { nueva:'Nueva', en_revision:'En revisión', cotizada:'Cotizada', aprobada:'Aprobada', rechazada:'Rechazada' };
+        const estados = ['nueva','en_revision','cotizada','aprobada','rechazada','borrador','enviada','convertida_produccion','facturada'];
+        const etiquetas = {
+            nueva:'Nueva', en_revision:'En revisión', cotizada:'Cotizada',
+            aprobada:'Aprobada', rechazada:'Rechazada',
+            borrador:'Borrador', enviada:'Enviada',
+            convertida_produccion:'En Producción', facturada:'Facturada',
+        };
 
         container.dataset.view = 'detalle';
         container.innerHTML = `
@@ -322,31 +331,58 @@ const CotizacionesComponent = {
                 ` : ''}
             </div>
 
-            <!-- Enviar a Producción (solo si estado = aprobada) -->
-            ${c.estado === 'aprobada' ? `
-            <div class="card" style="padding:20px;border-left:4px solid ${c.orden_produccion_id ? '#4caf50' : '#1976d2'};">
-                <h4 style="font-size:13px;font-weight:700;color:${c.orden_produccion_id ? '#4caf50' : '#1976d2'};margin:0 0 12px;display:flex;align-items:center;gap:6px;">
-                    <i data-lucide="${c.orden_produccion_id ? 'check-circle' : 'zap'}" style="width:14px;height:14px;"></i>
-                    ${c.orden_produccion_id ? 'Orden de Producción Creada' : 'Enviar a Producción'}
+            <!-- Panel de Acciones: Aprobar / Producción / Factura -->
+            <div class="card" id="cotiz-acciones-panel" style="padding:20px;border-left:4px solid #5f7830;">
+                <h4 style="font-size:13px;font-weight:700;color:#5f7830;margin:0 0 14px;display:flex;align-items:center;gap:6px;">
+                    <i data-lucide="zap" style="width:14px;height:14px;"></i> Acciones
                 </h4>
-                ${c.orden_produccion_id ? `
-                    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
-                        <span style="font-size:13px;color:#555;">Esta cotización ya fue convertida en una orden de producción.</span>
-                        <button onclick="window.location.hash='produccion'; CotizacionesComponent.render('cotizaciones-container');"
-                            class="btn btn-secondary" style="padding:7px 16px;font-size:12px;display:flex;align-items:center;gap:6px;">
-                            <i data-lucide="external-link" style="width:13px;height:13px;"></i> Ver en Producción
-                        </button>
-                    </div>
-                ` : `
-                    <p style="font-size:13px;color:#555;margin:0 0 12px;">
-                        Crea una orden en el Kanban de Producción Láser con estado <strong>En diseño</strong>. Las imágenes adjuntas estarán disponibles desde el modal de la orden.
-                    </p>
-                    <button id="btn-enviar-produccion" onclick="CotizacionesComponent._enviarAProduccion(${c.id}, this)"
-                        class="btn btn-primary" style="padding:9px 20px;font-size:13px;background:#1976d2;border-color:#1565c0;display:flex;align-items:center;gap:7px;">
-                        <i data-lucide="zap" style="width:14px;height:14px;"></i> Enviar a Producción
+
+                <!-- Links a recursos ya creados -->
+                <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:${['aprobada','convertida_produccion','facturada'].includes(c.estado) ? '14px' : '0'};" id="cotiz-recursos-creados">
+                    ${c.orden_produccion_id ? `
+                    <a href="#" onclick="event.preventDefault();AppRouter.navigate('produccion')" style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;background:#e8eaf6;color:#1565c0;border-radius:8px;font-size:12px;font-weight:700;text-decoration:none;">
+                        🔧 Ver Orden de Producción
+                    </a>` : ''}
+                    ${c.estado === 'facturada' ? `
+                    <a href="#" onclick="event.preventDefault();AppRouter.navigate('facturas')" style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;background:#e8f5e9;color:#2e7d32;border-radius:8px;font-size:12px;font-weight:700;text-decoration:none;">
+                        🧾 Ver Factura
+                    </a>` : ''}
+                </div>
+
+                <!-- Botones de acción según estado -->
+                <div style="display:flex;gap:10px;flex-wrap:wrap;" id="cotiz-btn-acciones">
+                    ${!['aprobada','convertida_produccion','facturada'].includes(c.estado) ? `
+                    <button id="btn-cotiz-aprobar" onclick="CotizacionesComponent._aprobar(${c.id})"
+                        style="padding:9px 20px;background:#4caf50;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:7px;">
+                        <i data-lucide="check-circle" style="width:15px;height:15px;"></i> Aprobar Cotización
+                    </button>` : ''}
+
+                    ${c.estado === 'aprobada' ? `
+                    <button id="btn-cotiz-prod" onclick="CotizacionesComponent._crearProduccion(${c.id})"
+                        style="padding:9px 20px;background:#1565c0;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:7px;">
+                        <i data-lucide="wrench" style="width:15px;height:15px;"></i> Crear Producción
                     </button>
-                `}
-            </div>` : ''}
+                    <button id="btn-cotiz-fac" onclick="CotizacionesComponent._crearFactura(${c.id})"
+                        style="padding:9px 20px;background:#2e7d32;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:7px;">
+                        <i data-lucide="file-text" style="width:15px;height:15px;"></i> Crear Factura
+                    </button>
+                    <button id="btn-cotiz-ambos" onclick="CotizacionesComponent._crearAmbos(${c.id})"
+                        style="padding:9px 20px;background:#5f7830;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:7px;">
+                        <i data-lucide="layers" style="width:15px;height:15px;"></i> Crear Producción + Factura
+                    </button>` : ''}
+
+                    ${c.estado === 'convertida_produccion' ? `
+                    <button id="btn-cotiz-fac" onclick="CotizacionesComponent._crearFactura(${c.id})"
+                        style="padding:9px 20px;background:#2e7d32;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:7px;">
+                        <i data-lucide="file-text" style="width:15px;height:15px;"></i> Crear Factura
+                    </button>` : ''}
+
+                    ${c.estado === 'facturada' ? `
+                    <span style="font-size:13px;color:#2e7d32;font-weight:600;">✓ Cotización completamente procesada</span>` : ''}
+                </div>
+
+                <div id="cotiz-accion-msg" style="margin-top:10px;font-size:12.5px;display:none;padding:8px 14px;border-radius:8px;"></div>
+            </div>
         </div>`;
 
         lucide.createIcons();
@@ -394,21 +430,66 @@ const CotizacionesComponent = {
         }
     },
 
-    async _enviarAProduccion(id, btn) {
-        if (!confirm('¿Convertir esta cotización en una orden de producción?\n\nSe creará la orden en estado "En diseño".')) return;
-        btn.disabled = true;
-        btn.innerHTML = '<i data-lucide="loader" style="width:14px;height:14px;"></i> Creando orden…';
-        lucide.createIcons();
+    _accionMsg(msg, isError = false) {
+        const el = document.getElementById('cotiz-accion-msg');
+        if (!el) return;
+        el.textContent = msg;
+        el.style.display = 'block';
+        el.style.background = isError ? '#fff5f5' : '#f1f8e9';
+        el.style.color = isError ? '#c0392b' : '#2e7d32';
+        el.style.border = `1px solid ${isError ? '#ffd0cc' : '#c8e6c9'}`;
+    },
+
+    _setBtnsLoading(label) {
+        ['btn-cotiz-aprobar','btn-cotiz-prod','btn-cotiz-fac','btn-cotiz-ambos'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) { el.disabled = true; el.style.opacity = '0.6'; }
+        });
+        this._accionMsg(`⏳ ${label}`);
+    },
+
+    async _aprobar(id) {
+        if (!confirm('¿Marcar esta cotización como Aprobada?')) return;
+        this._setBtnsLoading('Aprobando…');
         try {
-            const res = await EvergreenAPI.convertirCotizacion(id);
-            alert(`✓ Orden creada: ${res.codigo_orden}\n\nYa puedes verla en la pestaña Producción Láser.`);
+            await EvergreenAPI.aprobarCotizacion(id);
             await this.abrirDetalle(id);
-        } catch (e) {
-            alert('Error: ' + e.message);
-            btn.disabled = false;
-            btn.innerHTML = '<i data-lucide="zap" style="width:14px;height:14px;"></i> Enviar a Producción';
-            lucide.createIcons();
-        }
+        } catch (e) { this._accionMsg('Error: ' + e.message, true); }
+    },
+
+    async _crearProduccion(id) {
+        if (!confirm('¿Crear orden de producción desde esta cotización?\n\nSe creará en estado "En diseño".')) return;
+        this._setBtnsLoading('Creando orden de producción…');
+        try {
+            const res = await EvergreenAPI.crearProduccionDesdeCotizacion(id);
+            await this.abrirDetalle(id);
+            this._accionMsg(`✓ Orden ${res.codigo_orden} creada en Producción Láser.`);
+        } catch (e) { this._accionMsg('Error: ' + e.message, true); }
+    },
+
+    async _crearFactura(id) {
+        if (!confirm('¿Crear factura desde esta cotización?\n\nSe generará con el precio estimado. Puedes editarla luego en Facturación.')) return;
+        this._setBtnsLoading('Creando factura…');
+        try {
+            const res = await EvergreenAPI.crearFacturaDesdeCotizacion(id);
+            await this.abrirDetalle(id);
+            this._accionMsg(`✓ Factura ${res.numero_factura} creada en Facturación.`);
+        } catch (e) { this._accionMsg('Error: ' + e.message, true); }
+    },
+
+    async _crearAmbos(id) {
+        if (!confirm('¿Crear orden de producción Y factura desde esta cotización?\n\nAmbos documentos se vincularán entre sí.')) return;
+        this._setBtnsLoading('Creando producción y factura…');
+        try {
+            const res = await EvergreenAPI.crearProduccionYFactura(id);
+            await this.abrirDetalle(id);
+            this._accionMsg(`✓ Orden ${res.codigo_orden} + Factura ${res.numero_factura} creadas.`);
+        } catch (e) { this._accionMsg('Error: ' + e.message, true); }
+    },
+
+    async _enviarAProduccion(id, btn) {
+        // Compatibilidad con referencias antiguas
+        await this._crearProduccion(id);
     },
 
     async _abrirModalEdicionDesdeTabla(cotizacionId) {

@@ -1461,6 +1461,7 @@ const FacturasComponent = {
                 <td>
                     <strong>${f.numero_factura}</strong>
                     ${f.codigo_orden ? `<br><span style="font-size:10.5px;color:#6b7280;font-weight:500;">Orden: <code style="font-size:10px;">${f.codigo_orden}</code></span>` : ''}
+                    ${f.cotizacion_id ? `<br><span style="font-size:10.5px;background:#e8eaf6;color:#1565c0;padding:1px 7px;border-radius:10px;font-weight:700;">📋 Cotización #${f.cotizacion_id}</span>` : ''}
                 </td>
                 <td>${parsedCliente.name}</td>
                 <td>${f.fecha_emision}</td>

@@ -394,6 +394,7 @@ const ProduccionComponent = {
                 <div>
                     <code style="font-size:14px;font-weight:700;color:var(--color-moss-green);">${c.codigo_orden}</code>
                     <span style="font-size:11px;color:#aaa;margin-left:10px;">${fecha}</span>
+                    ${c.cotizacion_id ? `<span style="font-size:11px;background:#e8eaf6;color:#1565c0;padding:3px 10px;border-radius:20px;font-weight:700;margin-left:6px;">📋 Cotización #${c.cotizacion_id}</span>` : ''}
                 </div>
                 <button id="btn-close-detalle" style="background:none;border:none;font-size:20px;cursor:pointer;color:#888;line-height:1;">&times;</button>
             </div>

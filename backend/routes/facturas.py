@@ -47,6 +47,7 @@ class FacturaCreate(BaseModel):
     items: List[ItemFacturaCreate]
     orden_produccion_id: Optional[int] = None   # vínculo formal con ordenes_produccion
     codigo_orden: Optional[str] = None          # copia desnormalizada del código para mostrar rápido
+    cotizacion_id: Optional[int] = None         # cotización origen (si se creó desde cotización)
 
 class EstadoUpdate(BaseModel):
     estado: str
@@ -188,14 +189,14 @@ def crear_factura(factura: FacturaCreate, current_user: dict = Depends(get_curre
                     fecha_emision, fecha_vencimiento,
                     fecha_pago, metodo_pago, numero_cheque, subtotal,
                     ivu_estatal, ivu_municipal, total, monto_pagado, notas, estado,
-                    orden_produccion_id, codigo_orden
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    orden_produccion_id, codigo_orden, cotizacion_id
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 num_factura, factura.cliente_id, factura.cliente_nombre_manual,
                 factura.fecha_emision, factura.fecha_vencimiento,
                 factura.fecha_pago, factura.metodo_pago, factura.numero_cheque, factura.subtotal,
                 factura.ivu_estatal, factura.ivu_municipal, factura.total, factura.monto_pagado, factura.notas, factura.estado,
-                factura.orden_produccion_id, factura.codigo_orden
+                factura.orden_produccion_id, factura.codigo_orden, factura.cotizacion_id
             ))
             
             factura_id = cursor.lastrowid

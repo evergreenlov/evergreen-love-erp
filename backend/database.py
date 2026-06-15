@@ -414,10 +414,12 @@ def init_db(force_reset=False):
         nombre_cliente TEXT NOT NULL,
         email TEXT NOT NULL,
         telefono TEXT,
-        descripcion TEXT NOT NULL,
+        descripcion TEXT NOT NULL DEFAULT '',
         presupuesto_aprox REAL,
-        estado TEXT CHECK(estado IN ('nueva','en_revision','cotizada','aprobada','rechazada'))
-            NOT NULL DEFAULT 'nueva',
+        estado TEXT CHECK(estado IN (
+            'nueva','en_revision','cotizada','aprobada','rechazada',
+            'borrador','enviada','convertida_produccion','facturada'
+        )) NOT NULL DEFAULT 'nueva',
         fuente TEXT DEFAULT 'publico',
         cliente_b2b_id INTEGER,
         notas_internas TEXT,
@@ -455,6 +457,56 @@ def init_db(force_reset=False):
             print(f"Columna '{col}' añadida a cotizaciones.")
         except Exception:
             pass  # Ya existe
+
+    # Migración: cotizaciones.estado — ampliar CHECK para nuevos estados de flujo
+    try:
+        cursor.execute("SAVEPOINT _cot_check_test")
+        cursor.execute("""
+            INSERT INTO cotizaciones (id, nombre_cliente, email, descripcion, estado)
+            VALUES (-999, '_test_', '_test_@test.com', '', 'convertida_produccion')
+        """)
+        cursor.execute("DELETE FROM cotizaciones WHERE id = -999")
+        cursor.execute("RELEASE _cot_check_test")
+    except Exception:
+        cursor.execute("ROLLBACK TO _cot_check_test")
+        cursor.execute("RELEASE _cot_check_test")
+        print("Reconstruyendo tabla cotizaciones para ampliar CHECK de estados…")
+        cursor.execute("ALTER TABLE cotizaciones RENAME TO _cotizaciones_rebuild")
+        cursor.execute("""
+        CREATE TABLE cotizaciones (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            producto_id INTEGER REFERENCES productos(id) ON DELETE SET NULL,
+            nombre_cliente TEXT NOT NULL,
+            email TEXT NOT NULL,
+            telefono TEXT,
+            descripcion TEXT NOT NULL DEFAULT '',
+            presupuesto_aprox REAL,
+            estado TEXT CHECK(estado IN (
+                'nueva','en_revision','cotizada','aprobada','rechazada',
+                'borrador','enviada','convertida_produccion','facturada'
+            )) NOT NULL DEFAULT 'nueva',
+            fuente TEXT DEFAULT 'publico',
+            cliente_b2b_id INTEGER,
+            notas_internas TEXT,
+            fecha_creacion TEXT DEFAULT (datetime('now','localtime')),
+            fecha_actualizado TEXT DEFAULT (datetime('now','localtime')),
+            orden_produccion_id INTEGER,
+            costo_estimado REAL,
+            precio_estimado REAL,
+            margen_estimado REAL,
+            notas_estimacion TEXT
+        )
+        """)
+        cursor.execute("INSERT INTO cotizaciones SELECT * FROM _cotizaciones_rebuild")
+        cursor.execute("DROP TABLE _cotizaciones_rebuild")
+        print("Tabla cotizaciones reconstruida con CHECK ampliado.")
+
+    # Migración: facturas.cotizacion_id → origen de la factura
+    try:
+        cursor.execute("ALTER TABLE facturas ADD COLUMN cotizacion_id INTEGER REFERENCES cotizaciones(id)")
+        print("Columna 'cotizacion_id' añadida a facturas.")
+    except Exception:
+        pass  # Ya existe
 
     # Migración: ordenes_produccion.cotizacion_id → origen de la orden
     try:
