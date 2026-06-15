@@ -593,6 +593,23 @@ def init_db(force_reset=False):
     except Exception:
         pass
 
+    # Migraciones: Modo 3D / Multicapa
+    for col, defn in [
+        ("modo_producto",      "TEXT DEFAULT 'plano'"),
+        ("num_piezas",         "INTEGER DEFAULT 1"),
+        ("tiempo_pegado",      "REAL DEFAULT 0.0"),
+        ("tiempo_secado_ref",  "REAL DEFAULT 0.0"),
+        ("costo_pegamento",    "REAL DEFAULT 0.0"),
+        ("costo_herrajes_extras", "REAL DEFAULT 0.0"),
+        ("costo_empaque",      "REAL DEFAULT 0.0"),
+        ("porcentaje_merma",   "REAL DEFAULT 0.0"),
+    ]:
+        try:
+            cursor.execute(f"ALTER TABLE productos ADD COLUMN {col} {defn}")
+            print(f"Columna '{col}' añadida a productos.")
+        except Exception:
+            pass
+
     # Crear carpeta de recibos si no existe
     import os as _os
     _recibos_dir = _os.path.abspath(_os.path.join(_os.path.dirname(__file__), "..", "data", "recibos_gastos"))

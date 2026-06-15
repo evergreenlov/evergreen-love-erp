@@ -160,8 +160,17 @@ const CostosComponent = {
 
                             <form id="form-calculadora" style="display: flex; flex-direction: column; gap: 14px;">
 
-                                <!-- Tipo de producto y complejidad -->
-                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                                <!-- Modo de producto + Tipo + Complejidad -->
+                                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px;">
+                                    <div style="display: flex; flex-direction: column; gap: 4px;">
+                                        <label style="font-weight: 500; font-size: 13px;">Modo de Producto</label>
+                                        <select id="modo-producto" style="padding: 10px; border-radius: var(--radius-sm); border: 1px solid var(--color-gray-border); font-family: var(--font-primary);"
+                                            onchange="document.getElementById('seccion-3d').style.display=this.value!=='plano'?'block':'none'">
+                                            <option value="plano">Plano</option>
+                                            <option value="multicapa">Multicapa</option>
+                                            <option value="tridimensional">Tridimensional</option>
+                                        </select>
+                                    </div>
                                     <div style="display: flex; flex-direction: column; gap: 4px;">
                                         <label style="font-weight: 500; font-size: 13px;">Tipo de Producto</label>
                                         <select id="tipo-producto" style="padding: 10px; border-radius: var(--radius-sm); border: 1px solid var(--color-gray-border); font-family: var(--font-primary);">
@@ -170,6 +179,9 @@ const CostosComponent = {
                                             <option value="shadow_box">Shadow Box</option>
                                             <option value="ornamento">Ornamento</option>
                                             <option value="portada_libreta">Portada de Libreta</option>
+                                            <option value="lapicero">Lapicero</option>
+                                            <option value="barco">Barco / Miniatura</option>
+                                            <option value="base_soporte">Base / Soporte</option>
                                             <option value="personalizado">Personalizado</option>
                                             <option value="otro">Otro</option>
                                         </select>
@@ -181,6 +193,48 @@ const CostosComponent = {
                                             <option value="media">Media (×1.3)</option>
                                             <option value="compleja">Compleja (×1.6)</option>
                                         </select>
+                                    </div>
+                                </div>
+
+                                <!-- Sección 3D / Multicapa (oculta por defecto) -->
+                                <div id="seccion-3d" style="display:none; border:1px solid #b8d4a8; border-radius:10px; padding:14px; background:#f4faf0;">
+                                    <div style="font-weight:600; font-size:13px; color:#3d7a30; margin-bottom:12px; display:flex; align-items:center; gap:6px;">
+                                        <i data-lucide="layers" style="width:15px;height:15px;"></i> Configuración Multicapa / 3D
+                                    </div>
+                                    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-bottom:10px;">
+                                        <div style="display:flex;flex-direction:column;gap:4px;">
+                                            <label style="font-weight:500;font-size:12px;">Nº de Piezas / Capas</label>
+                                            <input type="number" id="num-piezas" value="1" step="1" min="1" style="padding:9px;border-radius:var(--radius-sm);border:1px solid #b8d4a8;font-family:var(--font-primary);">
+                                        </div>
+                                        <div style="display:flex;flex-direction:column;gap:4px;">
+                                            <label style="font-weight:500;font-size:12px;">Tiempo Pegado (min) <span style="color:#c0392b;font-size:10px;">cobra labor</span></label>
+                                            <input type="number" id="tiempo-pegado" value="0" step="0.5" min="0" style="padding:9px;border-radius:var(--radius-sm);border:1px solid #b8d4a8;font-family:var(--font-primary);">
+                                        </div>
+                                        <div style="display:flex;flex-direction:column;gap:4px;">
+                                            <label style="font-weight:500;font-size:12px;">Tiempo Secado (min) <span style="color:#aaa;font-size:10px;">referencia</span></label>
+                                            <input type="number" id="tiempo-secado-ref" value="0" step="5" min="0" style="padding:9px;border-radius:var(--radius-sm);border:1px solid #b8d4a8;font-family:var(--font-primary);">
+                                        </div>
+                                    </div>
+                                    <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:10px;">
+                                        <div style="display:flex;flex-direction:column;gap:4px;">
+                                            <label style="font-weight:500;font-size:12px;">Costo Pegamento ($)</label>
+                                            <input type="number" id="costo-pegamento" value="0" step="0.01" min="0" style="padding:9px;border-radius:var(--radius-sm);border:1px solid #b8d4a8;font-family:var(--font-primary);">
+                                        </div>
+                                        <div style="display:flex;flex-direction:column;gap:4px;">
+                                            <label style="font-weight:500;font-size:12px;">Herrajes Extras ($)</label>
+                                            <input type="number" id="costo-herrajes-extras" value="0" step="0.01" min="0" style="padding:9px;border-radius:var(--radius-sm);border:1px solid #b8d4a8;font-family:var(--font-primary);">
+                                        </div>
+                                        <div style="display:flex;flex-direction:column;gap:4px;">
+                                            <label style="font-weight:500;font-size:12px;">Costo Empaque ($)</label>
+                                            <input type="number" id="costo-empaque" value="0" step="0.01" min="0" style="padding:9px;border-radius:var(--radius-sm);border:1px solid #b8d4a8;font-family:var(--font-primary);">
+                                        </div>
+                                        <div style="display:flex;flex-direction:column;gap:4px;">
+                                            <label style="font-weight:500;font-size:12px;">% Merma adicional</label>
+                                            <input type="number" id="porcentaje-merma" value="0" step="1" min="0" max="50" style="padding:9px;border-radius:var(--radius-sm);border:1px solid #b8d4a8;font-family:var(--font-primary);">
+                                        </div>
+                                    </div>
+                                    <div style="margin-top:8px;font-size:11px;color:#7a9a70;">
+                                        ⏱ El tiempo de secado es solo referencial — no se cobra como labor. La merma adicional se aplica sobre el material base (ya incluye 15% base).
                                     </div>
                                 </div>
 
@@ -424,6 +478,21 @@ const CostosComponent = {
         if (p.capas          !== undefined && p.capas !== null) document.getElementById('capas-pintura').value   = p.capas;
         if (p.tiempo_pintura !== undefined && p.tiempo_pintura !== null) document.getElementById('tiempo-pintura').value  = p.tiempo_pintura;
         if (p.tiempo_ensamblaje !== undefined && p.tiempo_ensamblaje !== null) document.getElementById('tiempo-ensamblaje').value = p.tiempo_ensamblaje;
+        // Modo 3D / Multicapa
+        const modoEl = document.getElementById('modo-producto');
+        if (modoEl && p.modo_producto) {
+            modoEl.value = p.modo_producto;
+            const seccion3d = document.getElementById('seccion-3d');
+            if (seccion3d) seccion3d.style.display = p.modo_producto !== 'plano' ? 'block' : 'none';
+        }
+        const _set3d = (id, val) => { if (val !== undefined && val !== null) { const el = document.getElementById(id); if (el) el.value = val; } };
+        _set3d('num-piezas',          p.num_piezas);
+        _set3d('tiempo-pegado',        p.tiempo_pegado);
+        _set3d('tiempo-secado-ref',    p.tiempo_secado_ref);
+        _set3d('costo-pegamento',      p.costo_pegamento);
+        _set3d('costo-herrajes-extras', p.costo_herrajes_extras);
+        _set3d('costo-empaque',        p.costo_empaque);
+        _set3d('porcentaje-merma',     p.porcentaje_merma);
         // Resina
         const usaResinaEl = document.getElementById('usa-resina');
         if (usaResinaEl) {
@@ -679,6 +748,15 @@ const CostosComponent = {
                 const resinaActivo = parseFloat(document.getElementById('resina-tiempo-activo')?.value) || 0;
                 const resinaCurado = parseFloat(document.getElementById('resina-tiempo-curado')?.value) || 0;
                 const margenWholesale = parseFloat(document.getElementById('margen-wholesale')?.value) || 0;
+                // Modo 3D / Multicapa
+                const modoProducto = document.getElementById('modo-producto')?.value || 'plano';
+                const numPiezas = parseInt(document.getElementById('num-piezas')?.value) || 1;
+                const tiempoPegado = parseFloat(document.getElementById('tiempo-pegado')?.value) || 0;
+                const tiempoSecadoRef = parseFloat(document.getElementById('tiempo-secado-ref')?.value) || 0;
+                const costoPegamento = parseFloat(document.getElementById('costo-pegamento')?.value) || 0;
+                const costoHerrajesExtras = parseFloat(document.getElementById('costo-herrajes-extras')?.value) || 0;
+                const costoEmpaque = parseFloat(document.getElementById('costo-empaque')?.value) || 0;
+                const pctMerma = parseFloat(document.getElementById('porcentaje-merma')?.value) || 0;
 
                 // Tarifas desde estado del componente (ya cargadas desde API)
                 const tarifaLaser = CostosComponent.tarifas.tarifa_hora_laser;
@@ -687,7 +765,9 @@ const CostosComponent = {
 
                 const areaHoja = anchoHoja * altoHoja;
                 const areaProd = anchoProd * altoProd;
-                const areaConDesperdicio = areaProd * 1.15;
+                // Merma: 15% base + % adicional configurable
+                const factorMerma = 1.15 + (pctMerma / 100);
+                const areaConDesperdicio = areaProd * factorMerma;
                 const costoPlanchaProporcional = (areaConDesperdicio / areaHoja) * costoHoja;
 
                 this.componentesSeleccionados = [];
@@ -752,11 +832,15 @@ const CostosComponent = {
                 const tiempoPinturaTotal = tiempoPinturaCapa * capas;
                 const costoPintura = tiempoPinturaTotal / 60 * tarifaLabor * factorComplejidad;
                 const costoEnsamblaje = tiempoEnsamblaje / 60 * tarifaLabor;
+                // Pegado (se cobra como labor, secado NO)
+                const costoPegado = tiempoPegado / 60 * tarifaLabor;
                 // Resina
                 const costoResinaMaterial = usaResina ? resinaMl * resinaCostoPorMl : 0;
                 const costoResinaLabor = usaResina ? resinaActivo / 60 * tarifaLabor : 0;
                 const costoResinaTotal = costoResinaMaterial + costoResinaLabor;
-                const costoManoObra = costoPintura + costoEnsamblaje + ajusteManual;
+                // Extras 3D directos
+                const costoExtras3D = costoPegamento + costoHerrajesExtras + costoEmpaque;
+                const costoManoObra = costoPintura + costoEnsamblaje + costoPegado + ajusteManual;
 
                 // Desglose — Láser
                 desgloseHTML += `
@@ -790,6 +874,37 @@ const CostosComponent = {
                         <div style="display: flex; justify-content: space-between; font-size: 13px; margin-top: 4px;">
                             <span>${tiempoEnsamblaje} min</span>
                             <span>$${costoEnsamblaje.toFixed(2)}</span>
+                        </div>
+                    </div>
+                    `;
+                }
+
+                // Desglose — Pegado (solo en modo 3D/multicapa)
+                if (costoPegado > 0) {
+                    desgloseHTML += `
+                    <div style="background-color: var(--color-white); padding: 12px; border-radius: var(--radius-sm); border: 1px solid var(--color-gray-border); margin-bottom: 8px;">
+                        <strong style="color: var(--color-moss-green); font-size: 13.5px;">Pegado ($${tarifaLabor.toFixed(2)}/hr):</strong>
+                        <div style="display: flex; justify-content: space-between; font-size: 13px; margin-top: 4px;">
+                            <span>${tiempoPegado} min</span>
+                            <span>$${costoPegado.toFixed(2)}</span>
+                        </div>
+                        ${tiempoSecadoRef > 0 ? `<div style="display:flex;justify-content:space-between;font-size:12px;color:#aaa;margin-top:3px;"><span>⏱ Secado estimado: ${tiempoSecadoRef} min (sin costo)</span><span>—</span></div>` : ''}
+                    </div>
+                    `;
+                }
+
+                // Desglose — Extras 3D directos
+                if (costoExtras3D > 0) {
+                    const itemsExtras = [];
+                    if (costoPegamento > 0)     itemsExtras.push(`Pegamento: $${costoPegamento.toFixed(2)}`);
+                    if (costoHerrajesExtras > 0) itemsExtras.push(`Herrajes/imanes extras: $${costoHerrajesExtras.toFixed(2)}`);
+                    if (costoEmpaque > 0)        itemsExtras.push(`Empaque: $${costoEmpaque.toFixed(2)}`);
+                    desgloseHTML += `
+                    <div style="background-color: var(--color-white); padding: 12px; border-radius: var(--radius-sm); border: 1px solid var(--color-gray-border); margin-bottom: 8px;">
+                        <strong style="color: var(--color-moss-green); font-size: 13.5px;">Extras 3D:</strong>
+                        <div style="font-size: 13px; margin-top: 4px; display:flex; flex-direction:column; gap:3px;">
+                            ${itemsExtras.map(i => `<div style="display:flex;justify-content:space-between;"><span>${i.split(': ')[0]}</span><span>${i.split(': ')[1]}</span></div>`).join('')}
+                            <div style="display:flex;justify-content:space-between;font-weight:600;border-top:1px solid #eee;padding-top:3px;margin-top:3px;"><span>Subtotal extras</span><span>$${costoExtras3D.toFixed(2)}</span></div>
                         </div>
                     </div>
                     `;
@@ -833,7 +948,7 @@ const CostosComponent = {
                     `;
                 }
 
-                const costoTotal = costoPlanchaProporcional + costoAccesoriosTotal + costoLaser + costoManoObra + costoResinaTotal;
+                const costoTotal = costoPlanchaProporcional + costoAccesoriosTotal + costoLaser + costoManoObra + costoResinaTotal + costoExtras3D;
                 const factorRetail = 1 - (margen / 100);
                 const precioSugerido = factorRetail > 0 ? (costoTotal / factorRetail) : costoTotal;
                 const gananciaRetail = precioSugerido - costoTotal;
@@ -886,6 +1001,15 @@ const CostosComponent = {
                     tiempo_resina_curado_min: resinaCurado,
                     margen_wholesale: margenWholesale,
                     precio_wholesale: margenWholesale > 0 ? precioWholesale : null,
+                    // Modo 3D / Multicapa
+                    modo_producto: modoProducto,
+                    num_piezas: numPiezas,
+                    tiempo_pegado: tiempoPegado,
+                    tiempo_secado_ref: tiempoSecadoRef,
+                    costo_pegamento: costoPegamento,
+                    costo_herrajes_extras: costoHerrajesExtras,
+                    costo_empaque: costoEmpaque,
+                    porcentaje_merma: pctMerma,
                 };
 
                 document.getElementById('costo-desglose-lista').innerHTML = desgloseHTML;
@@ -1263,6 +1387,14 @@ const CostosComponent = {
                         precio_wholesale_12: wholesale12Val,
                         precio_wholesale_24: wholesale24Val,
                         precio_wholesale_50: wholesale50Val,
+                        modo_producto: this.ultimoCalculo.modo_producto,
+                        num_piezas: this.ultimoCalculo.num_piezas,
+                        tiempo_pegado: this.ultimoCalculo.tiempo_pegado,
+                        tiempo_secado_ref: this.ultimoCalculo.tiempo_secado_ref,
+                        costo_pegamento: this.ultimoCalculo.costo_pegamento,
+                        costo_herrajes_extras: this.ultimoCalculo.costo_herrajes_extras,
+                        costo_empaque: this.ultimoCalculo.costo_empaque,
+                        porcentaje_merma: this.ultimoCalculo.porcentaje_merma,
                     });
 
                     // Reemplazar foto si se seleccionó una nueva
@@ -1311,6 +1443,14 @@ const CostosComponent = {
                     precio_wholesale_12: wholesale12Val,
                     precio_wholesale_24: wholesale24Val,
                     precio_wholesale_50: wholesale50Val,
+                    modo_producto: this.ultimoCalculo.modo_producto,
+                    num_piezas: this.ultimoCalculo.num_piezas,
+                    tiempo_pegado: this.ultimoCalculo.tiempo_pegado,
+                    tiempo_secado_ref: this.ultimoCalculo.tiempo_secado_ref,
+                    costo_pegamento: this.ultimoCalculo.costo_pegamento,
+                    costo_herrajes_extras: this.ultimoCalculo.costo_herrajes_extras,
+                    costo_empaque: this.ultimoCalculo.costo_empaque,
+                    porcentaje_merma: this.ultimoCalculo.porcentaje_merma,
                 };
 
                 try {

@@ -58,6 +58,15 @@ class ProductoSchema(BaseModel):
     costo_resina_por_ml: Optional[float] = 0.0
     tiempo_resina_activo_min: Optional[float] = 0.0
     tiempo_resina_curado_min: Optional[float] = 0.0
+    # Modo 3D / Multicapa
+    modo_producto: Optional[str] = "plano"
+    num_piezas: Optional[int] = 1
+    tiempo_pegado: Optional[float] = 0.0
+    tiempo_secado_ref: Optional[float] = 0.0
+    costo_pegamento: Optional[float] = 0.0
+    costo_herrajes_extras: Optional[float] = 0.0
+    costo_empaque: Optional[float] = 0.0
+    porcentaje_merma: Optional[float] = 0.0
 
 class ProductoUpdateSchema(BaseModel):
     nombre: str
@@ -97,6 +106,15 @@ class ProductoUpdateSchema(BaseModel):
     costo_resina_por_ml: Optional[float] = None
     tiempo_resina_activo_min: Optional[float] = None
     tiempo_resina_curado_min: Optional[float] = None
+    # Modo 3D / Multicapa
+    modo_producto: Optional[str] = None
+    num_piezas: Optional[int] = None
+    tiempo_pegado: Optional[float] = None
+    tiempo_secado_ref: Optional[float] = None
+    costo_pegamento: Optional[float] = None
+    costo_herrajes_extras: Optional[float] = None
+    costo_empaque: Optional[float] = None
+    porcentaje_merma: Optional[float] = None
 
 # --- ENDPOINTS CONFIGURACIÓN GLOBAL ---
 
@@ -253,8 +271,10 @@ def create_producto(producto: ProductoSchema, current_user: dict = Depends(get_c
                 precio_wholesale_12, precio_wholesale_24, precio_wholesale_50,
                 tipo_producto, capas, complejidad, tiempo_pintura, tiempo_ensamblaje,
                 usa_resina, cantidad_resina_ml, costo_resina_por_ml,
-                tiempo_resina_activo_min, tiempo_resina_curado_min
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                tiempo_resina_activo_min, tiempo_resina_curado_min,
+                modo_producto, num_piezas, tiempo_pegado, tiempo_secado_ref,
+                costo_pegamento, costo_herrajes_extras, costo_empaque, porcentaje_merma
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             producto.sku, producto.nombre, producto.diseno_id,
             producto.ancho, producto.alto,
@@ -267,7 +287,11 @@ def create_producto(producto: ProductoSchema, current_user: dict = Depends(get_c
             producto.tiempo_pintura or 0.0, producto.tiempo_ensamblaje or 0.0,
             producto.usa_resina or 0, producto.cantidad_resina_ml or 0.0,
             producto.costo_resina_por_ml or 0.0,
-            producto.tiempo_resina_activo_min or 0.0, producto.tiempo_resina_curado_min or 0.0
+            producto.tiempo_resina_activo_min or 0.0, producto.tiempo_resina_curado_min or 0.0,
+            producto.modo_producto or 'plano', producto.num_piezas or 1,
+            producto.tiempo_pegado or 0.0, producto.tiempo_secado_ref or 0.0,
+            producto.costo_pegamento or 0.0, producto.costo_herrajes_extras or 0.0,
+            producto.costo_empaque or 0.0, producto.porcentaje_merma or 0.0
         ))
         
         producto_id = cursor.lastrowid
@@ -385,6 +409,14 @@ def update_producto(producto_id: int, item: ProductoUpdateSchema, current_user: 
         precio_wholesale_12 = item.precio_wholesale_12 if item.precio_wholesale_12 is not None else existing.get('precio_wholesale_12')
         precio_wholesale_24 = item.precio_wholesale_24 if item.precio_wholesale_24 is not None else existing.get('precio_wholesale_24')
         precio_wholesale_50 = item.precio_wholesale_50 if item.precio_wholesale_50 is not None else existing.get('precio_wholesale_50')
+        modo_producto = item.modo_producto if item.modo_producto is not None else (existing.get('modo_producto') or 'plano')
+        num_piezas = item.num_piezas if item.num_piezas is not None else (existing.get('num_piezas') or 1)
+        tiempo_pegado = item.tiempo_pegado if item.tiempo_pegado is not None else (existing.get('tiempo_pegado') or 0.0)
+        tiempo_secado_ref = item.tiempo_secado_ref if item.tiempo_secado_ref is not None else (existing.get('tiempo_secado_ref') or 0.0)
+        costo_pegamento = item.costo_pegamento if item.costo_pegamento is not None else (existing.get('costo_pegamento') or 0.0)
+        costo_herrajes_extras = item.costo_herrajes_extras if item.costo_herrajes_extras is not None else (existing.get('costo_herrajes_extras') or 0.0)
+        costo_empaque = item.costo_empaque if item.costo_empaque is not None else (existing.get('costo_empaque') or 0.0)
+        porcentaje_merma = item.porcentaje_merma if item.porcentaje_merma is not None else (existing.get('porcentaje_merma') or 0.0)
 
         cursor.execute(
             """
@@ -398,7 +430,9 @@ def update_producto(producto_id: int, item: ProductoUpdateSchema, current_user: 
                 tipo_producto = ?, capas = ?, complejidad = ?,
                 tiempo_pintura = ?, tiempo_ensamblaje = ?,
                 usa_resina = ?, cantidad_resina_ml = ?, costo_resina_por_ml = ?,
-                tiempo_resina_activo_min = ?, tiempo_resina_curado_min = ?
+                tiempo_resina_activo_min = ?, tiempo_resina_curado_min = ?,
+                modo_producto = ?, num_piezas = ?, tiempo_pegado = ?, tiempo_secado_ref = ?,
+                costo_pegamento = ?, costo_herrajes_extras = ?, costo_empaque = ?, porcentaje_merma = ?
             WHERE id = ?
             """,
             (item.nombre, item.sku, item.precio_final, shopify_descripcion,
@@ -410,6 +444,8 @@ def update_producto(producto_id: int, item: ProductoUpdateSchema, current_user: 
              tipo_producto, capas, complejidad, tiempo_pintura, tiempo_ensamblaje,
              usa_resina, cantidad_resina_ml, costo_resina_por_ml,
              tiempo_resina_activo_min, tiempo_resina_curado_min,
+             modo_producto, num_piezas, tiempo_pegado, tiempo_secado_ref,
+             costo_pegamento, costo_herrajes_extras, costo_empaque, porcentaje_merma,
              producto_id)
         )
         
