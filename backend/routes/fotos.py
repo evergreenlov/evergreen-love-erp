@@ -360,7 +360,9 @@ async def test_gemini(
     gemini_key: Optional[str] = Header(None, alias="X-Gemini-Key"),
     current_user: dict = Depends(get_current_admin)
 ):
-    """Diagnóstico de conectividad Gemini: verifica la clave y envía 'Hola'."""
+    """IA temporalmente desactivada."""
+    raise HTTPException(status_code=503, detail="IA temporalmente desactivada.")
+
     modelo = "gemini-2.0-flash"
     api_version = "v1beta"
 
@@ -434,10 +436,9 @@ async def estimar_costos_por_ia(
     gemini_key: Optional[str] = Header(None, alias="X-Gemini-Key"),
     current_user: dict = Depends(get_current_admin)
 ):
-    """
-    Recibe la foto de un producto terminado, la envía a la API de Gemini 1.5 Flash,
-    y detecta materiales, herrajes y tiempos estimados para costeo automático.
-    """
+    """IA temporalmente desactivada."""
+    raise HTTPException(status_code=503, detail="IA temporalmente desactivada.")
+
     if not gemini_key:
         raise HTTPException(
             status_code=400,

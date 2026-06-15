@@ -121,36 +121,15 @@ const CostosComponent = {
                     <!-- Formulario de Entrada y panel de IA -->
                     <div style="display: flex; flex-direction: column; gap: 20px;">
                         
-                        <!-- Panel de Estimación por IA (Nuevo) -->
-                        <div class="card" style="background: linear-gradient(135deg, var(--color-moss-green-light), transparent); border: 1px solid var(--color-moss-green-light); padding: 18px;">
-                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
-                                <strong style="font-size: 15px; color: var(--color-moss-green); display: flex; align-items: center; gap: 6px;">
-                                    <i data-lucide="sparkles" style="width: 16px; height: 16px;"></i> Cotizador Automático por Foto (IA)
-                                </strong>
-                                <span style="font-size: 12px; color: var(--color-olive-brown); cursor: pointer; text-decoration: underline; font-weight: 500;" id="btn-config-gemini-key">
-                                    Configurar Clave Gemini
-                                </span>
+                        <!-- Panel de Estimación por IA (DESACTIVADO TEMPORALMENTE) -->
+                        <div class="card" style="background: #f5f5f5; border: 1px solid #ddd; padding: 18px; opacity: 0.7;">
+                            <div style="display: flex; align-items: center; gap: 8px; color: #8c8270;">
+                                <i data-lucide="sparkles" style="width: 16px; height: 16px;"></i>
+                                <strong style="font-size: 14px;">Cotizador Automático por Foto (IA)</strong>
                             </div>
-                            <p style="font-size: 13px; color: var(--color-soft-black); opacity: 0.9; margin-bottom: 12px; line-height: 1.4;">
-                                Sube la foto de tu llavero o producto terminado. La Inteligencia Artificial analizará el tipo de madera, herrajes adicionales y el tiempo estimado de láser para configurar la calculadora al instante.
+                            <p style="font-size: 13px; color: #8c8270; margin-top: 8px; margin-bottom: 0;">
+                                Estimación con IA temporalmente desactivada. Use la calculadora manual.
                             </p>
-                            
-                            <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-                                <input type="file" id="ia-costo-file" accept="image/*" style="font-family: var(--font-primary); font-size: 13px; max-width: 250px;">
-                                <button type="button" class="btn btn-primary" id="btn-analizar-foto-ia" style="padding: 8px 16px; font-size: 13px;">
-                                    <i data-lucide="wand-2"></i> Estimar con IA
-                                </button>
-                            </div>
-                            
-                            <!-- Indicador de Carga IA -->
-                            <div id="ia-analizando-loader" style="display: none; align-items: center; gap: 10px; font-size: 13px; color: var(--color-moss-green); margin-top: 12px; font-weight: 500;">
-                                <div class="spinner" style="width: 16px; height: 16px; border-width: 2.5px; margin: 0;"></div>
-                                <span>Gemini está analizando la imagen y consultando precios de Evergreen Love...</span>
-                            </div>
-                            
-                            <!-- Caja de Resultados y Explicación de IA -->
-                            <div id="ia-explicacion-box" style="display: none; background: var(--color-white); border-radius: var(--radius-sm); border: 1px solid var(--color-gray-border); padding: 12px; font-size: 13px; color: var(--color-soft-black); line-height: 1.4; margin-top: 12px; box-shadow: var(--shadow-sm);">
-                            </div>
                         </div>
 
                         <!-- Bloque 1: Producto e Inventario Base -->
@@ -441,96 +420,6 @@ const CostosComponent = {
         }
     },
 
-    // Rellena la calculadora con los datos del producto a editar
-    _resizeImage(file, maxPx) {
-        const resizePromise = new Promise((resolve, reject) => {
-            const img = new Image();
-            const url = URL.createObjectURL(file);
-            img.onload = () => {
-                URL.revokeObjectURL(url);
-                const { width, height } = img;
-                if (width <= maxPx && height <= maxPx) { resolve(file); return; }
-                const scale = Math.min(maxPx / width, maxPx / height);
-                const canvas = document.createElement('canvas');
-                canvas.width = Math.round(width * scale);
-                canvas.height = Math.round(height * scale);
-                canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-                canvas.toBlob(blob => {
-                    if (!blob) { reject(new Error('resize: toBlob falló')); return; }
-                    resolve(new File([blob], file.name, { type: blob.type || file.type }));
-                }, file.type || 'image/jpeg', 0.88);
-            };
-            img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('resize: imagen no se pudo cargar')); };
-            img.src = url;
-        });
-        // Timeout de 8 segundos para que resize nunca bloquee el flujo principal
-        const timeoutPromise = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('resize: timeout')), 8000)
-        );
-        return Promise.race([resizePromise, timeoutPromise]);
-    }
-
-    _aplicarResultadoIA(res, checkboxes, btnCalcular, explBox) {
-        if (!(res.status === 'success' && res.data)) {
-            explBox.innerHTML = `<div style="color:#c0392b;font-size:13px;">No se pudo estructurar el análisis de la IA.</div>`;
-            explBox.style.display = 'block';
-            return;
-        }
-        const iaData = res.data;
-
-        explBox.innerHTML = `
-            <strong style="color: var(--color-moss-green); display: flex; align-items: center; gap: 4px;">
-                <i data-lucide="check-circle-2" style="width: 14px; height: 14px;"></i> Análisis de IA Completado
-            </strong>
-            <p style="margin-top: 6px; font-style: italic;">"${iaData.explicacion}"</p>
-            <div style="margin-top: 8px; font-size: 12px; color: #8c8270;">
-                • Material: <strong>${iaData.material_base}</strong><br>
-                • Herrajes: <strong>${iaData.herrajes_detectados.join(", ") || 'Ninguno'}</strong><br>
-                • Grabado: <strong>${iaData.densidad_grabado}</strong> (Corte: ${iaData.tiempo_corte_sugerido_minutos}m, Grabado: ${iaData.tiempo_grabado_sugerido_minutos}m)
-            </div>
-        `;
-        explBox.style.display = 'block';
-        lucide.createIcons();
-
-        const selectMat = document.getElementById('costo-material-select');
-        let materialEncontrado = false;
-        for (let i = 0; i < selectMat.options.length; i++) {
-            const optionText = selectMat.options[i].text.toLowerCase();
-            const matchText = iaData.material_base.toLowerCase();
-            if (optionText.includes(matchText) || matchText.includes(optionText.split(" (")[0].toLowerCase())) {
-                selectMat.selectedIndex = i;
-                materialEncontrado = true;
-                break;
-            }
-        }
-        if (!materialEncontrado && selectMat.options.length > 0) selectMat.selectedIndex = 0;
-
-        document.getElementById('laser-corte').value = iaData.tiempo_corte_sugerido_minutos || 1.5;
-        document.getElementById('laser-grabado').value = iaData.tiempo_grabado_sugerido_minutos || 1.0;
-
-        checkboxes.forEach(cb => {
-            cb.checked = false;
-            const qtyInput = cb.closest('div').parentElement.querySelector('.extra-qty-input');
-            qtyInput.setAttribute('disabled', 'true');
-            qtyInput.value = 1;
-        });
-
-        iaData.herrajes_detectados.forEach(iaHerr => {
-            checkboxes.forEach(cb => {
-                const hName = cb.getAttribute('data-nombre').toLowerCase();
-                const iaHName = iaHerr.toLowerCase();
-                if (hName.includes(iaHName) || iaHName.includes(hName.split(" de ")[0])) {
-                    cb.checked = true;
-                    const qtyInput = cb.closest('div').parentElement.querySelector('.extra-qty-input');
-                    qtyInput.removeAttribute('disabled');
-                    qtyInput.value = 1;
-                }
-            });
-        });
-
-        btnCalcular.click();
-    }
-
     _aplicarModoEdicion(p) {
         // Cancelar edición
         const btnCancelar = document.getElementById('btn-cancelar-edicion');
@@ -636,9 +525,7 @@ const CostosComponent = {
         const checkboxes = document.querySelectorAll('.extra-checkbox');
         const btnCalcular = document.getElementById('btn-calcular-costo');
         const btnSaveProduct = document.getElementById('btn-save-as-product');
-        const btnConfigKey = document.getElementById('btn-config-gemini-key');
-        const btnAnalizarIa = document.getElementById('btn-analizar-foto-ia');
-        const iaFileInput = document.getElementById('ia-costo-file');
+        // IA desactivada temporalmente — los elementos ya no se renderizan en el HTML
 
         if (btnSaveProduct) {
             btnSaveProduct.addEventListener('click', () => this.openSaveProductModal());
@@ -686,128 +573,6 @@ const CostosComponent = {
                 }
             });
         });
-
-        // Configuración de Gemini Key (Modal)
-        if (btnConfigKey) {
-            btnConfigKey.addEventListener('click', () => this.openGeminiConfigModal());
-        }
-
-        // Estimar costos con IA (Llamada al backend)
-        if (btnAnalizarIa && iaFileInput) {
-            console.log('[IA] Listener registrado en btn-analizar-foto-ia');
-            btnAnalizarIa.addEventListener('click', async () => {
-                console.log('[IA] click recibido');
-
-                const loader = document.getElementById('ia-analizando-loader');
-                const explBox = document.getElementById('ia-explicacion-box');
-
-                // Función de limpieza garantizada para todos los caminos
-                const resetUI = () => {
-                    console.log('[IA] finally ejecutado — restaurando UI');
-                    if (loader) loader.style.display = 'none';
-                    btnAnalizarIa.disabled = false;
-                };
-
-                const showError = (html) => {
-                    if (!explBox) return;
-                    explBox.innerHTML = html;
-                    explBox.style.display = 'block';
-                    explBox.querySelector('.btn-ia-manual-fallback')?.addEventListener('click', () => {
-                        explBox.innerHTML = `<p style="font-size:13px;color:#5d4037;">Complete los campos (material, tiempos, herrajes) y presione <strong>Calcular</strong>.</p>`;
-                        document.getElementById('costo-material-select')?.focus();
-                    });
-                };
-
-                const file = iaFileInput.files[0];
-                if (!file) {
-                    console.log('[IA] sin archivo seleccionado');
-                    alert("Por favor, selecciona una foto primero.");
-                    return;
-                }
-                console.log('[IA] archivo seleccionado:', file.name, file.size, 'bytes', file.type);
-
-                const geminiKey = localStorage.getItem('evergreen_gemini_key');
-                if (!geminiKey) {
-                    console.log('[IA] sin API key configurada');
-                    alert("Por favor, configura tu API Key de Gemini antes de realizar el análisis. Haz clic en 'Configurar Clave Gemini'.");
-                    this.openGeminiConfigModal();
-                    return;
-                }
-
-                if (loader) { loader.style.display = 'flex'; }
-                if (explBox) { explBox.style.display = 'none'; }
-                btnAnalizarIa.disabled = true;
-
-                console.log('[IA] Inicio análisis. Archivo:', file.name, file.size, 'bytes');
-
-                // Verificar caché de sesión (evita llamadas repetidas con la misma imagen)
-                const cacheKey = `ia_cache_${file.name}_${file.size}_${file.lastModified}`;
-                const cached = sessionStorage.getItem(cacheKey);
-                if (cached) {
-                    try {
-                        const res = JSON.parse(cached);
-                        console.log('[IA] Resultado desde caché de sesión.');
-                        resetUI();
-                        this._aplicarResultadoIA(res, checkboxes, btnCalcular, explBox);
-                        return;
-                    } catch (_) {
-                        console.warn('[IA] Caché corrupta, ignorando.');
-                    }
-                }
-
-                // Redimensionar imagen a máximo 1024px antes de enviar
-                let fileToSend = file;
-                try {
-                    console.log('[IA] resize start');
-                    fileToSend = await this._resizeImage(file, 1024);
-                    console.log('[IA] resize end:', fileToSend.name, fileToSend.size, 'bytes');
-                } catch (resizeErr) {
-                    console.warn('[IA] resize error — usando original:', resizeErr.message);
-                    fileToSend = file;
-                }
-
-                // AbortController: timeout de 45 segundos para el fetch
-                const abortCtrl = new AbortController();
-                const abortTimer = setTimeout(() => {
-                    console.warn('[IA] Timeout 45s — abortando fetch');
-                    abortCtrl.abort();
-                }, 45000);
-
-                try {
-                    console.log('[IA] fetch start → /api/ia/estimar');
-                    const res = await EvergreenAPI.estimarCostoPorIA(fileToSend, geminiKey, abortCtrl.signal);
-                    clearTimeout(abortTimer);
-                    console.log('[IA] fetch response OK:', res.status, res.modelo || '');
-                    sessionStorage.setItem(cacheKey, JSON.stringify(res));
-                    this._aplicarResultadoIA(res, checkboxes, btnCalcular, explBox);
-                } catch (err) {
-                    clearTimeout(abortTimer);
-                    console.error('[IA] fetch error:', err.name, err.message);
-                    const msg = err.message || '';
-                    if (err.name === 'AbortError' || msg.toLowerCase().includes('abort') || msg.toLowerCase().includes('timeout')) {
-                        showError(`<div style="background:#fff3e0;border:1px solid #fb8c00;border-radius:6px;padding:10px 14px;">
-                            <strong style="color:#e65100;">⏱ La IA tardó demasiado</strong>
-                            <p style="margin:6px 0 8px;font-size:13px;color:#5d4037;">El análisis no respondió a tiempo. Completa los campos manualmente.</p>
-                            <button class="btn-ia-manual-fallback" style="background:#795548;color:#fff;border:none;border-radius:4px;padding:6px 12px;cursor:pointer;font-size:12px;">Completar manualmente</button>
-                        </div>`);
-                    } else if (msg.includes('429') || msg.includes('QUOTA_EXHAUSTED')) {
-                        showError(`<div style="background:#fff8e1;border:1px solid #f9a825;border-radius:6px;padding:10px 14px;">
-                            <strong style="color:#e65100;">⚠️ Cuota de IA agotada temporalmente</strong>
-                            <p style="margin:6px 0 8px;font-size:13px;color:#5d4037;">La cuota gratuita de Gemini se encuentra agotada. Intente más tarde o complete manualmente.</p>
-                            <button class="btn-ia-manual-fallback" style="background:#795548;color:#fff;border:none;border-radius:4px;padding:6px 12px;cursor:pointer;font-size:12px;">Completar manualmente</button>
-                        </div>`);
-                    } else {
-                        showError(`<div style="background:#fce4ec;border:1px solid #e57373;border-radius:6px;padding:10px 14px;">
-                            <strong style="color:#c0392b;">Error en análisis de IA</strong>
-                            <p style="margin:6px 0;font-size:13px;color:#5d4037;">${msg || 'Error desconocido — revisa la consola.'}</p>
-                            <button class="btn-ia-manual-fallback" style="background:#795548;color:#fff;border:none;border-radius:4px;padding:6px 12px;cursor:pointer;font-size:12px;">Completar manualmente</button>
-                        </div>`);
-                    }
-                } finally {
-                    resetUI();
-                }
-            });
-        }
 
         // Ejecutar cálculo normal
         if (btnCalcular) {
