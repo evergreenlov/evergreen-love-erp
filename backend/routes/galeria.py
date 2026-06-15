@@ -5,7 +5,7 @@ Endpoint público: GET /api/productos/{id}/galeria/publico
 """
 import os
 import time
-import shutil
+from datetime import datetime
 from typing import Optional
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Form
 from database import get_db_connection
@@ -116,10 +116,11 @@ async def upload_galeria(
     )
     next_orden = cursor.fetchone()["next_orden"]
 
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     cursor.execute("""
-        INSERT INTO producto_imagenes (producto_id, ruta_imagen, es_principal, orden, alt_text, tipo)
-        VALUES (?, ?, ?, ?, ?, ?)
-    """, (producto_id, ruta, int(bool(es_principal)), next_orden, alt_text, tipo))
+        INSERT INTO producto_imagenes (producto_id, ruta_imagen, es_principal, orden, alt_text, tipo, fecha_creacion)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    """, (producto_id, ruta, int(bool(es_principal)), next_orden, alt_text, tipo, now))
     conn.commit()
     imagen_id = cursor.lastrowid
     conn.close()

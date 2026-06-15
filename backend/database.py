@@ -733,7 +733,7 @@ def init_db(force_reset=False):
         orden          INTEGER NOT NULL DEFAULT 0,
         alt_text       TEXT,
         tipo           TEXT NOT NULL DEFAULT 'producto',
-        fecha_creacion TEXT DEFAULT (datetime('now','localtime'))
+        fecha_creacion TEXT
     );
     """)
 
