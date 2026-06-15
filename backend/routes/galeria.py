@@ -29,7 +29,9 @@ def _galeria_path(filename: str) -> str:
 @router.get("/productos/{producto_id}/galeria/publico")
 def get_galeria_publico(producto_id: int):
     """Devuelve las imágenes activas de la galería ordenadas para el catálogo público."""
+    conn = None
     try:
+        print(f"[GALERIA] abrir conexión — get_galeria_publico producto_id={producto_id}")
         conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute("""
@@ -39,17 +41,22 @@ def get_galeria_publico(producto_id: int):
             ORDER BY es_principal DESC, orden ASC, id ASC
         """, (producto_id,))
         rows = [dict(r) for r in cursor.fetchall()]
-        conn.close()
         return {"status": "success", "data": rows}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if conn:
+            print(f"[GALERIA] cerrar conexión — get_galeria_publico producto_id={producto_id}")
+            conn.close()
 
 
 # ── Admin: listar ─────────────────────────────────────────────────────────────
 
 @router.get("/productos/{producto_id}/galeria")
 def get_galeria(producto_id: int, current_user: dict = Depends(get_current_admin)):
+    conn = None
     try:
+        print(f"[GALERIA] abrir conexión — get_galeria producto_id={producto_id}")
         conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute("""
@@ -59,10 +66,13 @@ def get_galeria(producto_id: int, current_user: dict = Depends(get_current_admin
             ORDER BY es_principal DESC, orden ASC, id ASC
         """, (producto_id,))
         rows = [dict(r) for r in cursor.fetchall()]
-        conn.close()
         return {"status": "success", "data": rows}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if conn:
+            print(f"[GALERIA] cerrar conexión — get_galeria producto_id={producto_id}")
+            conn.close()
 
 
 # ── Admin: subir imagen ───────────────────────────────────────────────────────
@@ -82,48 +92,81 @@ async def upload_galeria(
 
     os.makedirs(GALERIA_DIR, exist_ok=True)
 
-    conn = get_db_connection()
-    cursor = conn.cursor()
+    # ── Paso 1: leer el archivo en memoria ANTES de abrir la conexión SQLite.
+    #    Esto evita mantener un write-lock abierto durante el await de I/O.
+    content = await file.read()
 
-    # Verificar límite de imágenes
-    cursor.execute("SELECT COUNT(*) as n FROM producto_imagenes WHERE producto_id = ?", (producto_id,))
-    if cursor.fetchone()["n"] >= MAX_IMAGENES:
-        conn.close()
-        raise HTTPException(status_code=400, detail=f"Máximo {MAX_IMAGENES} imágenes por producto.")
-
-    # Si se marca como principal, quitar principal a las demás
-    if es_principal:
-        cursor.execute(
-            "UPDATE producto_imagenes SET es_principal = 0 WHERE producto_id = ?",
-            (producto_id,)
-        )
-
-    # Nombre único de archivo
+    # ── Paso 2: guardar archivo físico ANTES de abrir la BD.
     timestamp = int(time.time() * 1000)
     filename = f"prod{producto_id}_{timestamp}{ext}"
     filepath = _galeria_path(filename)
-
-    content = await file.read()
-    with open(filepath, "wb") as f:
-        f.write(content)
-
     ruta = f"/producto_galeria/{filename}"
 
-    # Orden = max actual + 1
-    cursor.execute(
-        "SELECT COALESCE(MAX(orden), -1) + 1 as next_orden FROM producto_imagenes WHERE producto_id = ?",
-        (producto_id,)
-    )
-    next_orden = cursor.fetchone()["next_orden"]
+    try:
+        with open(filepath, "wb") as f:
+            f.write(content)
+    except OSError as e:
+        raise HTTPException(status_code=500, detail=f"Error al guardar archivo: {e}")
 
-    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    cursor.execute("""
-        INSERT INTO producto_imagenes (producto_id, ruta_imagen, es_principal, orden, alt_text, tipo, fecha_creacion)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-    """, (producto_id, ruta, int(bool(es_principal)), next_orden, alt_text, tipo, now))
-    conn.commit()
-    imagen_id = cursor.lastrowid
-    conn.close()
+    # ── Paso 3: abrir conexión SQLite solo para las queries, con try/finally garantizado.
+    conn = None
+    try:
+        print(f"[GALERIA] abrir conexión — upload_galeria producto_id={producto_id} archivo={filename}")
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Verificar límite de imágenes
+        cursor.execute(
+            "SELECT COUNT(*) as n FROM producto_imagenes WHERE producto_id = ?",
+            (producto_id,)
+        )
+        if cursor.fetchone()["n"] >= MAX_IMAGENES:
+            raise HTTPException(status_code=400, detail=f"Máximo {MAX_IMAGENES} imágenes por producto.")
+
+        # Si se marca como principal, quitar principal a las demás
+        if es_principal:
+            cursor.execute(
+                "UPDATE producto_imagenes SET es_principal = 0 WHERE producto_id = ?",
+                (producto_id,)
+            )
+
+        # Orden = max actual + 1
+        cursor.execute(
+            "SELECT COALESCE(MAX(orden), -1) + 1 as next_orden FROM producto_imagenes WHERE producto_id = ?",
+            (producto_id,)
+        )
+        next_orden = cursor.fetchone()["next_orden"]
+
+        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        cursor.execute("""
+            INSERT INTO producto_imagenes (producto_id, ruta_imagen, es_principal, orden, alt_text, tipo, fecha_creacion)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (producto_id, ruta, int(bool(es_principal)), next_orden, alt_text, tipo, now))
+
+        print(f"[GALERIA] commit — upload_galeria imagen_id pendiente producto_id={producto_id}")
+        conn.commit()
+        imagen_id = cursor.lastrowid
+
+    except HTTPException:
+        # Si la BD rechaza (límite, etc.), borrar el archivo físico para no dejar basura
+        if os.path.exists(filepath):
+            try:
+                os.remove(filepath)
+            except OSError:
+                pass
+        raise
+    except Exception as e:
+        # Error inesperado de BD — borrar el archivo físico
+        if os.path.exists(filepath):
+            try:
+                os.remove(filepath)
+            except OSError:
+                pass
+        raise HTTPException(status_code=500, detail=f"Error al insertar en BD: {e}")
+    finally:
+        if conn:
+            print(f"[GALERIA] cerrar conexión — upload_galeria producto_id={producto_id}")
+            conn.close()
 
     return {
         "status": "success",
@@ -147,38 +190,49 @@ def update_galeria(
     payload: dict,
     current_user: dict = Depends(get_current_admin),
 ):
-    conn = get_db_connection()
-    cursor = conn.cursor()
+    conn = None
+    try:
+        print(f"[GALERIA] abrir conexión — update_galeria imagen_id={imagen_id}")
+        conn = get_db_connection()
+        cursor = conn.cursor()
 
-    cursor.execute(
-        "SELECT id FROM producto_imagenes WHERE id = ? AND producto_id = ?",
-        (imagen_id, producto_id)
-    )
-    if not cursor.fetchone():
-        conn.close()
-        raise HTTPException(status_code=404, detail="Imagen no encontrada.")
-
-    # Si se marca como principal, quitar a las demás primero
-    if payload.get("es_principal"):
         cursor.execute(
-            "UPDATE producto_imagenes SET es_principal = 0 WHERE producto_id = ?",
-            (producto_id,)
+            "SELECT id FROM producto_imagenes WHERE id = ? AND producto_id = ?",
+            (imagen_id, producto_id)
         )
+        if not cursor.fetchone():
+            raise HTTPException(status_code=404, detail="Imagen no encontrada.")
 
-    fields = []
-    values = []
-    for key in ("es_principal", "orden", "alt_text", "tipo"):
-        if key in payload:
-            fields.append(f"{key} = ?")
-            values.append(payload[key])
+        if payload.get("es_principal"):
+            cursor.execute(
+                "UPDATE producto_imagenes SET es_principal = 0 WHERE producto_id = ?",
+                (producto_id,)
+            )
 
-    if fields:
-        values.append(imagen_id)
-        cursor.execute(f"UPDATE producto_imagenes SET {', '.join(fields)} WHERE id = ?", values)
-        conn.commit()
+        fields = []
+        values = []
+        for key in ("es_principal", "orden", "alt_text", "tipo"):
+            if key in payload:
+                fields.append(f"{key} = ?")
+                values.append(payload[key])
 
-    conn.close()
-    return {"status": "success"}
+        if fields:
+            values.append(imagen_id)
+            cursor.execute(
+                f"UPDATE producto_imagenes SET {', '.join(fields)} WHERE id = ?", values
+            )
+            print(f"[GALERIA] commit — update_galeria imagen_id={imagen_id}")
+            conn.commit()
+
+        return {"status": "success"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if conn:
+            print(f"[GALERIA] cerrar conexión — update_galeria imagen_id={imagen_id}")
+            conn.close()
 
 
 # ── Admin: eliminar imagen ────────────────────────────────────────────────────
@@ -189,25 +243,37 @@ def delete_galeria(
     imagen_id: int,
     current_user: dict = Depends(get_current_admin),
 ):
-    conn = get_db_connection()
-    cursor = conn.cursor()
+    conn = None
+    ruta = None
+    try:
+        print(f"[GALERIA] abrir conexión — delete_galeria imagen_id={imagen_id}")
+        conn = get_db_connection()
+        cursor = conn.cursor()
 
-    cursor.execute(
-        "SELECT ruta_imagen FROM producto_imagenes WHERE id = ? AND producto_id = ?",
-        (imagen_id, producto_id)
-    )
-    row = cursor.fetchone()
-    if not row:
-        conn.close()
-        raise HTTPException(status_code=404, detail="Imagen no encontrada.")
+        cursor.execute(
+            "SELECT ruta_imagen FROM producto_imagenes WHERE id = ? AND producto_id = ?",
+            (imagen_id, producto_id)
+        )
+        row = cursor.fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="Imagen no encontrada.")
 
-    ruta = row["ruta_imagen"]
-    cursor.execute("DELETE FROM producto_imagenes WHERE id = ?", (imagen_id,))
-    conn.commit()
-    conn.close()
+        ruta = row["ruta_imagen"]
+        cursor.execute("DELETE FROM producto_imagenes WHERE id = ?", (imagen_id,))
+        print(f"[GALERIA] commit — delete_galeria imagen_id={imagen_id}")
+        conn.commit()
 
-    # Borrar archivo físico si existe
-    if ruta.startswith("/producto_galeria/"):
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if conn:
+            print(f"[GALERIA] cerrar conexión — delete_galeria imagen_id={imagen_id}")
+            conn.close()
+
+    # Borrar archivo físico DESPUÉS de cerrar la conexión
+    if ruta and ruta.startswith("/producto_galeria/"):
         filename = ruta.split("/producto_galeria/")[-1]
         filepath = _galeria_path(filename)
         if os.path.exists(filepath):
