@@ -3748,5 +3748,22 @@ const EvergreenAPI = {
         if (!r.ok) throw new Error('Error al obtener personalización de cotización');
         return r.json();
     },
+
+    async descargarPdfCotizacion(cotizacionId) {
+        const r = await fetch(`${API_BASE_URL}/cotizaciones/${cotizacionId}/pdf`, {
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('ev_token')}` }
+        });
+        if (!r.ok) { const e = await r.json(); throw new Error(e.detail || 'Error al generar PDF'); }
+        return r.blob();
+    },
+
+    async enviarEmailCotizacion(cotizacionId) {
+        const r = await fetch(`${API_BASE_URL}/cotizaciones/${cotizacionId}/enviar-email`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('ev_token')}` }
+        });
+        if (!r.ok) { const e = await r.json(); throw new Error(e.detail || 'Error al enviar email'); }
+        return r.json();
+    },
 };
 

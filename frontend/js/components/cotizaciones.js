@@ -350,6 +350,22 @@ const CotizacionesComponent = {
                     </a>` : ''}
                 </div>
 
+                <!-- Botones PDF / Email / Copiar — siempre visibles -->
+                <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
+                    <button onclick="CotizacionesComponent._descargarPdf(${c.id})"
+                        style="padding:7px 14px;background:#fff;color:#5f7830;border:1.5px solid #5f7830;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;transition:all 0.15s;" id="btn-pdf-${c.id}">
+                        📄 Descargar PDF
+                    </button>
+                    <button onclick="CotizacionesComponent._enviarEmail(${c.id},'${(c.email||'').replace(/'/g,"&#39;")}')"
+                        style="padding:7px 14px;background:#fff;color:#1565c0;border:1.5px solid #1565c0;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;transition:all 0.15s;" id="btn-email-${c.id}">
+                        ✉️ Enviar por Email
+                    </button>
+                    <button onclick="CotizacionesComponent._copiarMensaje(${c.id},${c.precio_estimado||0},'${(c.nombre_cliente||'').replace(/'/g,"&#39;")}')"
+                        style="padding:7px 14px;background:#fff;color:#7a6840;border:1.5px solid #c5b89a;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;transition:all 0.15s;">
+                        📋 Copiar Mensaje
+                    </button>
+                </div>
+
                 <!-- Botones de acción según estado -->
                 <div style="display:flex;gap:10px;flex-wrap:wrap;" id="cotiz-btn-acciones">
                     ${!['aprobada','convertida_produccion','facturada'].includes(c.estado) ? `
@@ -486,6 +502,67 @@ const CotizacionesComponent = {
             await this.abrirDetalle(id);
             this._accionMsg(`✓ Orden ${res.codigo_orden} + Factura ${res.numero_factura} creadas.`);
         } catch (e) { this._accionMsg('Error: ' + e.message, true); }
+    },
+
+    async _descargarPdf(id) {
+        const btn = document.getElementById(`btn-pdf-${id}`);
+        const orig = btn ? btn.innerHTML : '';
+        try {
+            if (btn) { btn.disabled = true; btn.innerHTML = '⏳ Generando…'; }
+            const blob = await EvergreenAPI.descargarPdfCotizacion(id);
+            const url  = URL.createObjectURL(blob);
+            const a    = document.createElement('a');
+            a.href     = url;
+            a.download = `cotizacion-${id}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 1000);
+        } catch (e) {
+            this._accionMsg('Error al generar PDF: ' + e.message, true);
+        } finally {
+            if (btn) { btn.disabled = false; btn.innerHTML = orig; }
+        }
+    },
+
+    async _enviarEmail(id, email) {
+        const destino = email || '(sin email)';
+        if (!email || !email.includes('@')) {
+            this._accionMsg('Esta cotización no tiene un email de cliente válido. Edítala para agregar el email.', true);
+            return;
+        }
+        if (!confirm(`¿Enviar la cotización #${id} al correo:\n${destino}?\n\nSe adjuntará el PDF automáticamente.`)) return;
+        const btn = document.getElementById(`btn-email-${id}`);
+        const orig = btn ? btn.innerHTML : '';
+        try {
+            if (btn) { btn.disabled = true; btn.innerHTML = '⏳ Enviando…'; }
+            const res = await EvergreenAPI.enviarEmailCotizacion(id);
+            this._accionMsg(`✓ Email enviado a ${res.email}`);
+        } catch (e) {
+            this._accionMsg('Error al enviar email: ' + e.message, true);
+        } finally {
+            if (btn) { btn.disabled = false; btn.innerHTML = orig; }
+        }
+    },
+
+    _copiarMensaje(id, precioEst, nombreCliente) {
+        const total = precioEst > 0
+            ? `$${(parseFloat(precioEst) * 1.115).toFixed(2)}`
+            : 'por confirmar';
+        const texto = `Hola ${nombreCliente || 'estimado cliente'},\n\nAdjuntamos la cotización #${id} para su producto personalizado.\n\nTotal estimado: ${total}\n\nQuedamos atentos para su aprobación.\n\n— Evergreen Love`;
+        if (navigator.clipboard) {
+            navigator.clipboard.writeText(texto)
+                .then(() => this._accionMsg('✓ Mensaje copiado al portapapeles'))
+                .catch(() => this._accionMsg('No se pudo copiar. Usa Ctrl+C manualmente.', true));
+        } else {
+            const ta = document.createElement('textarea');
+            ta.value = texto;
+            ta.style.position = 'fixed'; ta.style.opacity = '0';
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            ta.remove();
+            this._accionMsg('✓ Mensaje copiado al portapapeles');
+        }
     },
 
     async _enviarAProduccion(id, btn) {

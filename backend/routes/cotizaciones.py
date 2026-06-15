@@ -1,4 +1,5 @@
 from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Depends, Query
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from typing import Optional, List
 import sqlite3
@@ -6,6 +7,12 @@ import os
 import json
 import re
 import time
+import smtplib
+import datetime as _dt_mod
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email.mime.base import MIMEBase
+from email import encoders
 
 from database import get_db_connection
 from auth import get_current_admin
@@ -791,3 +798,164 @@ def actualizar_notas(
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         conn.close()
+
+
+# ── Helpers compartidos para PDF / email ──────────────────────────────────────
+
+def _fetch_cotizacion_y_respuestas(cotizacion_id: int):
+    """Devuelve (cotizacion_dict, respuestas_list) o lanza HTTPException."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+            SELECT c.*, p.nombre as producto_nombre
+            FROM cotizaciones c
+            LEFT JOIN productos p ON p.id = c.producto_id
+            WHERE c.id = ?
+        """, (cotizacion_id,))
+        row = cursor.fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="Cotización no encontrada")
+        cotizacion = dict(row)
+
+        cursor.execute("""
+            SELECT etiqueta, tipo, valor, archivo_ruta
+            FROM cotizacion_personalizacion_respuestas
+            WHERE cotizacion_id = ?
+            ORDER BY id
+        """, (cotizacion_id,))
+        respuestas = [dict(r) for r in cursor.fetchall()]
+
+        return cotizacion, respuestas
+    finally:
+        conn.close()
+
+
+# ── GET /cotizaciones/{id}/pdf ────────────────────────────────────────────────
+
+@router.get("/cotizaciones/{cotizacion_id}/pdf")
+def descargar_pdf_cotizacion(
+    cotizacion_id: int,
+    current_user: dict = Depends(get_current_admin),
+):
+    """Genera y descarga el PDF de cotización."""
+    from routes.pdf_cotizacion import generar_pdf_cotizacion
+
+    cotizacion, respuestas = _fetch_cotizacion_y_respuestas(cotizacion_id)
+    pdf_buf = generar_pdf_cotizacion(cotizacion, respuestas)
+
+    filename = f"cotizacion-{cotizacion_id}.pdf"
+    return StreamingResponse(
+        pdf_buf,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+# ── POST /cotizaciones/{id}/enviar-email ──────────────────────────────────────
+
+@router.post("/cotizaciones/{cotizacion_id}/enviar-email")
+def enviar_email_cotizacion(
+    cotizacion_id: int,
+    current_user: dict = Depends(get_current_admin),
+):
+    """Envía la cotización en PDF al email del cliente."""
+    from routes.pdf_cotizacion import generar_pdf_cotizacion
+
+    cotizacion, respuestas = _fetch_cotizacion_y_respuestas(cotizacion_id)
+
+    email_destino = (cotizacion.get("email") or "").strip()
+    if not email_destino or "@" not in email_destino:
+        raise HTTPException(
+            status_code=400,
+            detail="Esta cotización no tiene un email de cliente válido. "
+                   "Edita la cotización y agrega el email antes de enviar."
+        )
+
+    smtp_host = os.environ.get("SMTP_HOST", "").strip()
+    smtp_port = int(os.environ.get("SMTP_PORT", "587"))
+    smtp_user = os.environ.get("SMTP_USER", "").strip()
+    smtp_pass = os.environ.get("SMTP_PASSWORD", "").strip()
+    smtp_from = os.environ.get("SMTP_FROM", smtp_user).strip()
+
+    if not smtp_host or not smtp_user or not smtp_pass:
+        raise HTTPException(
+            status_code=503,
+            detail="El servidor de email no está configurado. "
+                   "Define SMTP_HOST, SMTP_USER y SMTP_PASSWORD en las variables de entorno."
+        )
+
+    pdf_buf   = generar_pdf_cotizacion(cotizacion, respuestas)
+    pdf_bytes = pdf_buf.read()
+
+    nombre_cliente = cotizacion.get("nombre_cliente") or "Cliente"
+    cotiz_id       = cotizacion.get("id")
+    precio_est     = cotizacion.get("precio_estimado")
+    producto_n     = cotizacion.get("producto_nombre") or "producto personalizado"
+
+    total_str = ""
+    if precio_est:
+        total = round(float(precio_est) * 1.115, 2)
+        total_str = f"${total:.2f}"
+
+    body_html = f"""
+    <html><body style="font-family:Arial,sans-serif;color:#333;max-width:600px;margin:0 auto;">
+        <div style="background:#5f7830;padding:20px 28px;border-radius:8px 8px 0 0;">
+            <h1 style="color:white;margin:0;font-size:20px;">🌿 Evergreen Love</h1>
+            <p style="color:#d4e6b5;margin:4px 0 0;font-size:13px;">Artesanías láser personalizadas</p>
+        </div>
+        <div style="background:#faf8f5;padding:28px;border:1px solid #e8e0d5;border-top:none;">
+            <p style="font-size:15px;">Hola <strong>{nombre_cliente}</strong>,</p>
+            <p>Adjuntamos la cotización <strong>#{cotiz_id}</strong> para tu <strong>{producto_n}</strong>.</p>
+            {"<p style='font-size:18px;color:#5f7830;font-weight:bold;'>Total estimado: " + total_str + "</p>" if total_str else ""}
+            <p>Una vez apruebes la cotización, comenzamos con tu proyecto.</p>
+            <hr style="border:none;border-top:1px solid #e8e0d5;margin:20px 0;">
+            <p style="font-size:12px;color:#888;">
+                Esta cotización es válida por <strong>15 días</strong>.<br>
+                La producción comienza luego de aprobación y pago según acuerdo.
+            </p>
+        </div>
+        <div style="background:#f0f7e6;padding:14px 28px;text-align:center;border-radius:0 0 8px 8px;border:1px solid #e8e0d5;border-top:none;">
+            <p style="margin:0;font-size:12px;color:#5f7830;">Evergreen Love · Puerto Rico · Con amor y precisión láser 🌿</p>
+        </div>
+    </body></html>
+    """
+
+    msg = MIMEMultipart("mixed")
+    msg["Subject"] = f"Cotización #{cotiz_id} — Evergreen Love"
+    msg["From"]    = smtp_from
+    msg["To"]      = email_destino
+    msg.attach(MIMEText(body_html, "html", "utf-8"))
+
+    att = MIMEBase("application", "pdf")
+    att.set_payload(pdf_bytes)
+    encoders.encode_base64(att)
+    att.add_header("Content-Disposition", f'attachment; filename="cotizacion-{cotiz_id}.pdf"')
+    msg.attach(att)
+
+    try:
+        if smtp_port == 465:
+            import ssl
+            ctx = ssl.create_default_context()
+            with smtplib.SMTP_SSL(smtp_host, smtp_port, context=ctx) as srv:
+                srv.login(smtp_user, smtp_pass)
+                srv.sendmail(smtp_from, [email_destino], msg.as_bytes())
+        else:
+            with smtplib.SMTP(smtp_host, smtp_port, timeout=15) as srv:
+                srv.ehlo()
+                srv.starttls()
+                srv.login(smtp_user, smtp_pass)
+                srv.sendmail(smtp_from, [email_destino], msg.as_bytes())
+    except smtplib.SMTPAuthenticationError:
+        raise HTTPException(
+            status_code=502,
+            detail="Error de autenticación SMTP. Verifica SMTP_USER y SMTP_PASSWORD."
+        )
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Error al enviar email: {str(e)}")
+
+    return {
+        "status": "success",
+        "message": f"Cotización #{cotiz_id} enviada a {email_destino}",
+        "email": email_destino,
+    }
