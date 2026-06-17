@@ -164,9 +164,16 @@ def get_catalogo_cliente(cliente_id: int, current_user: dict = Depends(get_curre
                    p.nombre as producto_nombre, p.sku as producto_sku,
                    p.costo_total, p.precio_final as precio_retail, p.personalizado,
                    p.precio_wholesale_12, p.precio_wholesale_24, p.precio_wholesale_50,
+                   p.shopify_descripcion, p.ancho, p.alto, p.tipo_producto,
                    (SELECT f.nombre_archivo FROM fotos_asociadas f
                     WHERE f.producto_id = p.id AND f.tipo_foto = 'referencia'
-                    ORDER BY f.id DESC LIMIT 1) as foto_nombre
+                    ORDER BY f.id DESC LIMIT 1) as foto_nombre,
+                   (SELECT m.nombre FROM componentes_producto cp
+                    JOIN materiales m ON cp.material_id = m.id
+                    WHERE cp.producto_id = p.id LIMIT 1) as material_nombre,
+                   (SELECT pi.ruta_imagen FROM producto_imagenes pi
+                    WHERE pi.producto_id = p.id
+                    ORDER BY pi.es_principal DESC, pi.orden ASC, pi.id ASC LIMIT 1) as galeria_primera
             FROM catalogo_cliente cc
             JOIN productos p ON cc.producto_id = p.id
             WHERE cc.cliente_id = ?
@@ -201,6 +208,11 @@ def get_catalogo_cliente(cliente_id: int, current_user: dict = Depends(get_curre
                 ruta = f"/catalogo_transparente/{nombre}" if tipo == 'transparente' else f"/fotos_import/{nombre}"
                 if ruta not in fotos:
                     fotos.append(ruta)
+
+            # Galería nueva (producto_imagenes) tiene prioridad sobre fotos_asociadas
+            galeria_primera = d.pop('galeria_primera', None)
+            if galeria_primera and galeria_primera not in fotos:
+                fotos.insert(0, galeria_primera)
 
             d['fotos'] = fotos
             d['foto_ruta'] = fotos[0] if fotos else (
@@ -317,9 +329,16 @@ def catalogo_publico_por_codigo(codigo_b2b: str):
                    p.nombre as producto_nombre, p.sku as producto_sku,
                    p.precio_final as precio_retail, p.personalizado,
                    p.precio_wholesale_12, p.precio_wholesale_24, p.precio_wholesale_50,
+                   p.shopify_descripcion, p.ancho, p.alto, p.tipo_producto,
                    (SELECT f.nombre_archivo FROM fotos_asociadas f
                     WHERE f.producto_id = p.id AND f.tipo_foto = 'referencia'
-                    ORDER BY f.id DESC LIMIT 1) as foto_nombre
+                    ORDER BY f.id DESC LIMIT 1) as foto_nombre,
+                   (SELECT m.nombre FROM componentes_producto cp
+                    JOIN materiales m ON cp.material_id = m.id
+                    WHERE cp.producto_id = p.id LIMIT 1) as material_nombre,
+                   (SELECT pi.ruta_imagen FROM producto_imagenes pi
+                    WHERE pi.producto_id = p.id
+                    ORDER BY pi.es_principal DESC, pi.orden ASC, pi.id ASC LIMIT 1) as galeria_primera
             FROM catalogo_cliente cc
             JOIN productos p ON cc.producto_id = p.id
             WHERE cc.cliente_id = ?
@@ -347,6 +366,12 @@ def catalogo_publico_por_codigo(codigo_b2b: str):
                 ruta = f"/catalogo_transparente/{nombre}" if fr["tipo_foto"] == "transparente" else f"/fotos_import/{nombre}"
                 if ruta not in fotos:
                     fotos.append(ruta)
+
+            # Galería nueva (producto_imagenes) tiene prioridad sobre fotos_asociadas
+            galeria_primera = d.pop("galeria_primera", None)
+            if galeria_primera and galeria_primera not in fotos:
+                fotos.insert(0, galeria_primera)
+
             d["fotos"] = fotos
             d["foto_ruta"] = fotos[0] if fotos else (
                 f"/fotos_import/{d['foto_nombre']}" if d.get("foto_nombre") else None
@@ -355,7 +380,7 @@ def catalogo_publico_por_codigo(codigo_b2b: str):
             d["precio_b2b"] = precio_b2b
             d["etiqueta_precio"] = etiqueta
             d["nivel_precio_b2b"] = nivel
-            # No exponer datos sensibles
+            # No exponer datos sensibles de precio
             for campo in ("precio_especial", "foto_nombre", "precio_wholesale_12",
                           "precio_wholesale_24", "precio_wholesale_50"):
                 d.pop(campo, None)
