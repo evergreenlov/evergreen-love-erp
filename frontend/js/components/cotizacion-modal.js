@@ -3,7 +3,7 @@
  * Uso: CotizacionModal.open({ productoId, productoNombre, precioFinal, preciosVolumen,
  *                             imagenUrl, galeria, fuente, clienteB2bId })
  *
- * v6: + tabla de precios por volumen, + tipo de evento, + botones WhatsApp / Cotización.
+ * v8: + multiselect live cost sum, + extended material campo detection.
  * El flujo de submit, los endpoints y el guardado de respuestas NO cambian.
  */
 const CotizacionModal = {
@@ -17,6 +17,7 @@ const CotizacionModal = {
     _showTamano: false,
     _galeria: [],
     _preciosVolumen: null,
+    _extraCost: 0,
 
     _MATERIALES: [
         { id: 'basswood',              nombre: 'Basswood',              bg: '#D4B48C', desc: 'Madera de tilo' },
@@ -394,6 +395,7 @@ const CotizacionModal = {
                         <div id="cotiz-preview-info">
                             <div id="cotiz-preview-nombre"></div>
                             <div id="cotiz-preview-precio"></div>
+                            <div id="cotiz-extras-line" style="font-size:11px;color:#c0634c;display:none;"></div>
                             <div id="cotiz-preview-mat-badge"></div>
                             <div id="cotiz-preview-tam-badge"></div>
                         </div>
@@ -645,6 +647,34 @@ const CotizacionModal = {
         wrap.style.display = 'block';
     },
 
+    // ── Recalculate extras from multiselect checkboxes ──
+    _updateExtraCost() {
+        let extra = 0;
+        for (const c of (this._campos || [])) {
+            if (c.tipo !== 'multiselect') continue;
+            const container = document.getElementById(`cotiz-campo-${c.id}`);
+            if (!container) continue;
+            container.querySelectorAll('input[type=checkbox]:checked').forEach(cb => {
+                extra += parseFloat(cb.dataset.costo) || 0;
+            });
+        }
+        this._extraCost = extra;
+        const base = parseFloat(this._context.precioFinal) || 0;
+        const precioEl  = document.getElementById('cotiz-preview-precio');
+        const extrasEl  = document.getElementById('cotiz-extras-line');
+        if (precioEl && base > 0) {
+            precioEl.textContent = `$${(base + extra).toFixed(2)}`;
+        }
+        if (extrasEl) {
+            if (extra > 0 && base > 0) {
+                extrasEl.textContent = `Base $${base.toFixed(2)} + materiales $${extra.toFixed(2)}`;
+                extrasEl.style.display = 'block';
+            } else {
+                extrasEl.style.display = 'none';
+            }
+        }
+    },
+
     // ── Select material ──
     _selectMaterial(id) {
         this._materialSel = id;
@@ -856,6 +886,7 @@ const CotizacionModal = {
         this._showTamano = false;
         this._galeria = Array.isArray(galeria) ? galeria : [];
         this._preciosVolumen = preciosVolumen || null;
+        this._extraCost = 0;
 
         // Reset form fields
         ['cotiz-nombre','cotiz-email','cotiz-telefono','cotiz-desc','cotiz-presupuesto'].forEach(id => {
@@ -931,9 +962,17 @@ const CotizacionModal = {
                         }
                         document.getElementById('cotiz-desc').placeholder = 'Alguna indicación extra para el equipo…';
 
-                        // Show material cards unless a "Material" campo already exists
-                        const hasMaterialCampo = campos.some(c =>
-                            c.etiqueta.toLowerCase().includes('material'));
+                        // Live price update when multiselect checkboxes change
+                        document.getElementById('cotiz-campos-inner').addEventListener('change', e => {
+                            if (e.target.type === 'checkbox') this._updateExtraCost();
+                        });
+                        this._updateExtraCost();
+
+                        // Show material cards unless a campo for material/madera/acrílico exists
+                        const hasMaterialCampo = campos.some(c => {
+                            const e = c.etiqueta.toLowerCase();
+                            return e.includes('material') || e.includes('madera') || e.includes('acril');
+                        });
                         this._showMaterial = !hasMaterialCampo;
                         if (this._showMaterial) {
                             this._renderMaterialGrid();
