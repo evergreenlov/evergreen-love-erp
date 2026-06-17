@@ -3,7 +3,7 @@
  * Uso: CotizacionModal.open({ productoId, productoNombre, precioFinal, preciosVolumen,
  *                             imagenUrl, galeria, fuente, clienteB2bId })
  *
- * v8: + multiselect live cost sum, + extended material campo detection.
+ * v9: + multiselect card UI with material swatches, debug logs [MULTISELECT].
  * El flujo de submit, los endpoints y el guardado de respuestas NO cambian.
  */
 const CotizacionModal = {
@@ -189,6 +189,13 @@ const CotizacionModal = {
                 text-transform: uppercase; letter-spacing: 0.7px;
                 margin: 0 0 10px; display: flex; align-items: center; gap: 5px;
             }
+
+            /* ── Multiselect material cards ── */
+            .cotiz-ms-card:hover { border-color: #c5d9a8; transform: translateY(-1px); }
+            .cotiz-ms-card.ms-selected {
+                border-color: #5f7830; box-shadow: 0 0 0 3px rgba(95,120,48,0.14);
+            }
+            .cotiz-ms-card.ms-selected .ms-check { display: flex !important; }
 
             /* ── Material cards ── */
             #cotiz-material-grid {
@@ -647,17 +654,35 @@ const CotizacionModal = {
         wrap.style.display = 'block';
     },
 
+    // ── Swatch color by material name ──
+    _getSwatchColor(nombre) {
+        const n = nombre.toLowerCase();
+        if (n.includes('baltic'))       return { bg: '#e8d5b0', text: '#5a3e1b', checker: false };
+        if (n.includes('basswood'))     return { bg: '#D4B48C', text: '#4a2e10', checker: false };
+        if (n.includes('walnut'))       return { bg: '#4A2417', text: '#f5e6d0', checker: false };
+        if (n.includes('mahogany'))     return { bg: '#7D2C1C', text: '#fde8d8', checker: false };
+        if (n.includes('mdf'))          return { bg: '#c4a882', text: '#3a2a14', checker: false };
+        if (n.includes('negro'))        return { bg: '#141414', text: '#e8e8e8', checker: false };
+        if (n.includes('blanco'))       return { bg: '#F2F2F2', text: '#333',    checker: false };
+        if (n.includes('transparente')) return { bg: 'rgba(210,235,252,0.4)', text: '#2a5070', checker: true };
+        return { bg: '#e8ded0', text: '#4a3928', checker: false };
+    },
+
     // ── Recalculate extras from multiselect checkboxes ──
     _updateExtraCost() {
         let extra = 0;
+        const seleccionados = [];
         for (const c of (this._campos || [])) {
             if (c.tipo !== 'multiselect') continue;
             const container = document.getElementById(`cotiz-campo-${c.id}`);
             if (!container) continue;
             container.querySelectorAll('input[type=checkbox]:checked').forEach(cb => {
                 extra += parseFloat(cb.dataset.costo) || 0;
+                seleccionados.push(cb.value);
             });
         }
+        console.log('[MULTISELECT] seleccionados:', seleccionados);
+        console.log('[MULTISELECT] extras total:', extra);
         this._extraCost = extra;
         const base = parseFloat(this._context.precioFinal) || 0;
         const precioEl  = document.getElementById('cotiz-preview-precio');
@@ -788,15 +813,26 @@ const CotizacionModal = {
             const opts = (c.opciones || '').split(',').map(o => o.trim()).filter(Boolean);
             input = `<select id="cotiz-campo-${c.id}" ${base}><option value="">-- Selecciona --</option>${opts.map(o => `<option value="${o}">${o}</option>`).join('')}</select>`;
         } else if (c.tipo === 'multiselect') {
+            console.log('[MULTISELECT] campo recibido:', c.etiqueta, c.opciones);
             const opts = (c.opciones || '').split(',').map(o => {
-                const [nombre, costo] = o.trim().split('|');
-                return { nombre: (nombre||'').trim(), costo: parseFloat(costo) || 0 };
+                const parts = o.trim().split('|');
+                return { nombre: (parts[0]||'').trim(), costo: parseFloat((parts[1]||'').trim()) || 0 };
             }).filter(o => o.nombre);
-            input = `<div id="cotiz-campo-${c.id}" style="display:flex;flex-direction:column;gap:6px;padding:4px 0;">${opts.map(o =>
-                `<label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;font-weight:normal;">
-                    <input type="checkbox" value="${o.nombre}" data-costo="${o.costo}" style="width:14px;height:14px;accent-color:#5f7830;">
-                    ${o.nombre}${o.costo > 0 ? ` <span style="color:#c0634c;font-size:11px;">(+$${o.costo.toFixed(2)})</span>` : ''}
-                </label>`).join('')}</div>`;
+            console.log('[MULTISELECT] opciones parseadas:', opts);
+            input = `<div id="cotiz-campo-${c.id}" style="display:grid;grid-template-columns:repeat(3,1fr);gap:7px;padding:4px 0;">${opts.map(o => {
+                const sw = this._getSwatchColor(o.nombre);
+                const swStyle = sw.checker
+                    ? `background-image:linear-gradient(45deg,#a8c4d8 25%,transparent 25%),linear-gradient(-45deg,#a8c4d8 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#a8c4d8 75%),linear-gradient(-45deg,transparent 75%,#a8c4d8 75%);background-size:8px 8px;background-position:0 0,0 4px,4px -4px,-4px 0;background-color:rgba(210,235,252,0.4);`
+                    : `background:${sw.bg};`;
+                return `<label style="display:flex;flex-direction:column;align-items:center;gap:5px;padding:9px 5px;border-radius:10px;cursor:pointer;border:2px solid transparent;background:#fff;text-align:center;transition:border-color 0.15s,transform 0.1s,box-shadow 0.15s;" class="cotiz-ms-card" onclick="this.classList.toggle('ms-selected');var cb=this.querySelector('input');cb.checked=!cb.checked;CotizacionModal._updateExtraCost();">
+                    <div style="width:38px;height:38px;border-radius:8px;border:1px solid rgba(0,0,0,0.1);flex-shrink:0;${swStyle}position:relative;">
+                        <div class="ms-check" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;background:rgba(0,0,0,0.35);border-radius:7px;font-size:18px;line-height:1;color:#fff;">✓</div>
+                    </div>
+                    <span style="font-size:11px;font-weight:600;color:#3a3228;line-height:1.2;">${o.nombre}</span>
+                    ${o.costo > 0 ? `<span style="font-size:10px;color:#c0634c;font-weight:700;">+$${o.costo.toFixed(2)}</span>` : ''}
+                    <input type="checkbox" value="${o.nombre}" data-costo="${o.costo}" style="display:none;">
+                </label>`;
+            }).join('')}</div>`;
         } else if (c.tipo === 'archivo') {
             input = `<input type="file" id="cotiz-campo-${c.id}" accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.svg" style="font-size:12px;">`;
         }
