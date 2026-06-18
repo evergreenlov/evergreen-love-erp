@@ -5,9 +5,41 @@ import sqlite3
 import csv
 import io
 import os
+import urllib.request
 
 from database import get_db_connection
 from auth import get_current_admin
+
+# Cloudflare R2 config — mismas variables de entorno que usa el catálogo
+_R2_ACCOUNT_ID   = os.environ.get("CLOUDFLARE_ACCOUNT_ID", "")
+_R2_API_TOKEN    = os.environ.get("CLOUDFLARE_API_TOKEN", "")
+_R2_BUCKET       = os.environ.get("CLOUDFLARE_BUCKET", "")
+_R2_DELIVERY_URL = os.environ.get("CLOUDFLARE_DELIVERY_URL", "").rstrip("/")
+
+def _upload_to_r2(filename: str, content: bytes, ext: str) -> Optional[str]:
+    """Sube un archivo a Cloudflare R2 y devuelve la URL pública, o None si falla."""
+    if not (_R2_ACCOUNT_ID and _R2_API_TOKEN and _R2_BUCKET):
+        return None
+    content_type = "image/png" if ext == ".png" else "image/jpeg"
+    cf_url = (
+        f"https://api.cloudflare.com/client/v4/accounts/{_R2_ACCOUNT_ID}"
+        f"/r2/buckets/{_R2_BUCKET}/objects/{filename}"
+    )
+    req = urllib.request.Request(
+        cf_url,
+        data=content,
+        headers={"Authorization": f"Bearer {_R2_API_TOKEN}", "Content-Type": content_type},
+        method="PUT",
+    )
+    try:
+        with urllib.request.urlopen(req) as resp:
+            if resp.status in (200, 201):
+                if _R2_DELIVERY_URL:
+                    return f"{_R2_DELIVERY_URL}/{filename}"
+                return f"https://{_R2_BUCKET}.r2.cloudflarestorage.com/{filename}"
+    except Exception as e:
+        print(f"[MATERIALES] Error subiendo a R2: {e}")
+    return None
 
 router = APIRouter(
     prefix="/api",
@@ -134,36 +166,42 @@ def delete_material(material_id: int, current_user: dict = Depends(get_current_a
 
 @router.post("/materiales/{material_id}/foto")
 async def upload_material_photo(material_id: int, file: UploadFile = File(...), current_user: dict = Depends(get_current_admin)):
+    ext = os.path.splitext(file.filename)[1].lower()
+    if ext not in ('.jpg', '.jpeg', '.png'):
+        raise HTTPException(status_code=400, detail="Formato no soportado. Usa JPG o PNG.")
+
+    content = await file.read()
+
+    # Guardar copia local en el mismo DATA_DIR que usa database.py
+    from database import DB_DIR
+    fotos_dir = os.path.join(DB_DIR, "fotos_import")
+    os.makedirs(fotos_dir, exist_ok=True)
+    filename = f"material_{material_id}{ext}"
+    filepath = os.path.join(fotos_dir, filename)
+    with open(filepath, "wb") as f:
+        f.write(content)
+
+    # Intentar subir a Cloudflare R2 para almacenamiento persistente
+    foto_url = _upload_to_r2(filename, content, ext)
+    if foto_url:
+        print(f"[MATERIALES] Foto subida a R2: {foto_url}")
+    else:
+        # Sin R2 configurado: usar ruta local (solo funciona en desarrollo)
+        foto_url = f"/fotos_import/{filename}"
+        print(f"[MATERIALES] R2 no configurado, foto guardada localmente: {foto_url}")
+
+    conn = get_db_connection()
     try:
-        conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute("SELECT id FROM materiales WHERE id = ?", (material_id,))
         if not cursor.fetchone():
-            conn.close()
             raise HTTPException(status_code=404, detail="Material no encontrado")
-            
-        ext = os.path.splitext(file.filename)[1].lower()
-        if ext not in ['.jpg', '.jpeg', '.png']:
-            conn.close()
-            raise HTTPException(status_code=400, detail="Formato no soportado")
-            
-        filename = f"material_{material_id}{ext}"
-        fotos_dir = os.path.join("data", "fotos_import")
-        os.makedirs(fotos_dir, exist_ok=True)
-        filepath = os.path.join(fotos_dir, filename)
-        
-        content = await file.read()
-        with open(filepath, "wb") as f:
-            f.write(content)
-            
-        foto_url = f"/fotos_import/{filename}"
         cursor.execute("UPDATE materiales SET foto_url = ? WHERE id = ?", (foto_url, material_id))
         conn.commit()
+    finally:
         conn.close()
-        
-        return {"status": "success", "foto_url": foto_url}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+
+    return {"status": "success", "foto_url": foto_url}
 
 # --- ENDPOINTS IMPORTACIÓN MASIVA ---
 

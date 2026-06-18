@@ -150,7 +150,8 @@ def db_status(current_user: dict = Depends(get_current_admin)):
 # Servir archivos estáticos del frontend y adjuntos
 FRONTEND_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "frontend"))
 ADJUNTOS_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "adjuntos"))
-FOTOS_IMPORT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "fotos_import"))
+_data_dir = os.environ.get("DATA_DIR") or os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data"))
+FOTOS_IMPORT_DIR = os.path.join(_data_dir, "fotos_import")
 
 # Montar los subdirectorios del frontend
 if os.path.exists(os.path.join(FRONTEND_DIR, "css")):

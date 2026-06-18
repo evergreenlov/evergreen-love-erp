@@ -4,7 +4,8 @@ import sqlite3
 from database import get_db_connection
 
 # Carpetas del proyecto
-FOTOS_IMPORT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "data", "fotos_import"))
+_data_dir = os.environ.get("DATA_DIR") or os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "data"))
+FOTOS_IMPORT_DIR = os.path.join(_data_dir, "fotos_import")
 
 def scan_and_index_photos():
     """

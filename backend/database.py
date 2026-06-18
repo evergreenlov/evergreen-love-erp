@@ -1,9 +1,13 @@
 import sqlite3
 import os
 
-# Ruta de la base de datos
-DB_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data"))
-DB_PATH = os.path.join(DB_DIR, "evergreen.db")
+# Ruta de la base de datos.
+# En producción (Render): establecer DATABASE_URL=/data/evergreen.db (ruta del disco persistente).
+# En desarrollo local: se usa <repo>/data/evergreen.db automáticamente.
+_default_db_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data"))
+DB_PATH = os.environ.get("DATABASE_URL") or os.path.join(_default_db_dir, "evergreen.db")
+DB_DIR  = os.path.dirname(DB_PATH)
+os.makedirs(DB_DIR, exist_ok=True)
 
 def get_db_connection():
     conn = sqlite3.connect(DB_PATH, timeout=15)
