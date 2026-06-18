@@ -824,7 +824,7 @@ const CotizacionModal = {
                 const swStyle = sw.checker
                     ? `background-image:linear-gradient(45deg,#a8c4d8 25%,transparent 25%),linear-gradient(-45deg,#a8c4d8 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#a8c4d8 75%),linear-gradient(-45deg,transparent 75%,#a8c4d8 75%);background-size:8px 8px;background-position:0 0,0 4px,4px -4px,-4px 0;background-color:rgba(210,235,252,0.4);`
                     : `background:${sw.bg};`;
-                return `<label style="display:flex;flex-direction:column;align-items:center;gap:5px;padding:9px 5px;border-radius:10px;cursor:pointer;border:2px solid transparent;background:#fff;text-align:center;transition:border-color 0.15s,transform 0.1s,box-shadow 0.15s;" class="cotiz-ms-card" onclick="this.classList.toggle('ms-selected');var cb=this.querySelector('input');cb.checked=!cb.checked;CotizacionModal._updateExtraCost();">
+                return `<label style="display:flex;flex-direction:column;align-items:center;gap:5px;padding:9px 5px;border-radius:10px;cursor:pointer;border:2px solid transparent;background:#fff;text-align:center;transition:border-color 0.15s,transform 0.1s,box-shadow 0.15s;" class="cotiz-ms-card">
                     <div style="width:38px;height:38px;border-radius:8px;border:1px solid rgba(0,0,0,0.1);flex-shrink:0;${swStyle}position:relative;">
                         <div class="ms-check" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;background:rgba(0,0,0,0.35);border-radius:7px;font-size:18px;line-height:1;color:#fff;">✓</div>
                     </div>
@@ -1000,7 +1000,11 @@ const CotizacionModal = {
 
                         // Live price update when multiselect checkboxes change
                         document.getElementById('cotiz-campos-inner').addEventListener('change', e => {
-                            if (e.target.type === 'checkbox') this._updateExtraCost();
+                            if (e.target.type !== 'checkbox') return;
+                            // Sync visual selected state on the parent card
+                            const card = e.target.closest('.cotiz-ms-card');
+                            if (card) card.classList.toggle('ms-selected', e.target.checked);
+                            this._updateExtraCost();
                         });
                         this._updateExtraCost();
 
@@ -1189,3 +1193,6 @@ const CotizacionModal = {
         }
     }
 };
+
+// Expose globally so inline onclick strings and ES-module contexts can reach it
+window.CotizacionModal = CotizacionModal;
