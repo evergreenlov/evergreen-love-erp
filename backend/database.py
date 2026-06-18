@@ -2,11 +2,31 @@ import sqlite3
 import os
 
 # Ruta de la base de datos.
-# En producción (Render): establecer DATABASE_URL=/data/evergreen.db (ruta del disco persistente).
+# En producción (Render): establecer SQLITE_PATH=/tu-mount-path/evergreen.db
+# donde /tu-mount-path es el Mount Path exacto del disco persistente configurado en Render.
+# NOTA: no usar DATABASE_URL — Render la reserva para conexiones PostgreSQL.
 # En desarrollo local: se usa <repo>/data/evergreen.db automáticamente.
 _default_db_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data"))
-DB_PATH = os.environ.get("DATABASE_URL") or os.path.join(_default_db_dir, "evergreen.db")
-DB_DIR  = os.path.dirname(DB_PATH)
+_sqlite_path_env = os.environ.get("SQLITE_PATH", "").strip()
+
+if _sqlite_path_env:
+    _db_dir_candidate = os.path.dirname(os.path.abspath(_sqlite_path_env))
+    try:
+        os.makedirs(_db_dir_candidate, exist_ok=True)
+        # Verificar que el directorio es escribible
+        _probe = os.path.join(_db_dir_candidate, ".write_test")
+        with open(_probe, "w") as _f:
+            _f.write("ok")
+        os.remove(_probe)
+        DB_PATH = _sqlite_path_env
+        print(f"[database] Usando base de datos persistente: {DB_PATH}")
+    except Exception as _e:
+        print(f"[database] SQLITE_PATH '{_sqlite_path_env}' no accesible ({_e}). Usando ruta local.")
+        DB_PATH = os.path.join(_default_db_dir, "evergreen.db")
+else:
+    DB_PATH = os.path.join(_default_db_dir, "evergreen.db")
+
+DB_DIR = os.path.dirname(os.path.abspath(DB_PATH))
 os.makedirs(DB_DIR, exist_ok=True)
 
 def get_db_connection():

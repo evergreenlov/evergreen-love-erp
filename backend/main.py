@@ -147,13 +147,47 @@ def db_status(current_user: dict = Depends(get_current_admin)):
             "message": str(e)
         }
 
-# Servir archivos estáticos del frontend y adjuntos
+# ── Resolución de DATA_DIR con fallback automático ──────────────────────────
+# En producción (Render): establecer DATA_DIR al Mount Path exacto del disco persistente.
+# Si la ruta no existe o no tiene permisos de escritura, cae al directorio local del proyecto.
 FRONTEND_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "frontend"))
-ADJUNTOS_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "adjuntos"))
-_data_dir = os.environ.get("DATA_DIR") or os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data"))
-FOTOS_IMPORT_DIR = os.path.join(_data_dir, "fotos_import")
+_LOCAL_DATA_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data"))
 
-# Montar los subdirectorios del frontend
+def _resolve_data_dir() -> str:
+    candidate = os.environ.get("DATA_DIR", "").strip()
+    if candidate:
+        try:
+            os.makedirs(candidate, exist_ok=True)
+            # Verificar escritura real
+            _probe = os.path.join(candidate, ".write_test")
+            with open(_probe, "w") as _f:
+                _f.write("ok")
+            os.remove(_probe)
+            print(f"[main] Usando DATA_DIR persistente: {candidate}")
+            return candidate
+        except Exception as _e:
+            print(f"[main] DATA_DIR '{candidate}' no accesible ({_e}). Usando directorio local.")
+    os.makedirs(_LOCAL_DATA_DIR, exist_ok=True)
+    print(f"[main] Usando DATA_DIR local: {_LOCAL_DATA_DIR}")
+    return _LOCAL_DATA_DIR
+
+DATA_DIR = _resolve_data_dir()
+
+def _ensure_dir(subdir: str) -> str:
+    """Crea DATA_DIR/subdir y lo devuelve. Nunca crashea."""
+    path = os.path.join(DATA_DIR, subdir)
+    try:
+        os.makedirs(path, exist_ok=True)
+    except Exception as _e:
+        print(f"[main] Advertencia: no se pudo crear {path}: {_e}")
+    return path
+
+FOTOS_IMPORT_DIR          = _ensure_dir("fotos_import")
+ADJUNTOS_DIR              = _ensure_dir("adjuntos")
+COTIZACIONES_IMGS_DIR     = _ensure_dir("cotizaciones")
+PERSONALIZACION_ARCHIVOS_DIR = _ensure_dir("personalizacion_archivos")
+
+# ── Montar subdirectorios del frontend ───────────────────────────────────────
 if os.path.exists(os.path.join(FRONTEND_DIR, "css")):
     app.mount("/css", StaticFiles(directory=os.path.join(FRONTEND_DIR, "css")), name="css")
 if os.path.exists(os.path.join(FRONTEND_DIR, "js")):
@@ -161,21 +195,11 @@ if os.path.exists(os.path.join(FRONTEND_DIR, "js")):
 if os.path.exists(os.path.join(FRONTEND_DIR, "img")):
     app.mount("/img", StaticFiles(directory=os.path.join(FRONTEND_DIR, "img")), name="img")
 
-# Montar carpeta de adjuntos láser y fotos locales
-os.makedirs(ADJUNTOS_DIR, exist_ok=True)
-os.makedirs(FOTOS_IMPORT_DIR, exist_ok=True)
-app.mount("/adjuntos", StaticFiles(directory=ADJUNTOS_DIR), name="adjuntos")
-app.mount("/fotos_import", StaticFiles(directory=FOTOS_IMPORT_DIR), name="fotos_import")
-
-# Imágenes de cotizaciones
-COTIZACIONES_IMGS_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "cotizaciones"))
-os.makedirs(COTIZACIONES_IMGS_DIR, exist_ok=True)
-app.mount("/cotizaciones_imgs", StaticFiles(directory=COTIZACIONES_IMGS_DIR), name="cotizaciones_imgs")
-
-# Archivos adjuntos de personalización de pedidos
-PERSONALIZACION_ARCHIVOS_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "personalizacion_archivos"))
-os.makedirs(PERSONALIZACION_ARCHIVOS_DIR, exist_ok=True)
-app.mount("/personalizacion_archivos", StaticFiles(directory=PERSONALIZACION_ARCHIVOS_DIR), name="personalizacion_archivos")
+# ── Montar carpetas de datos ──────────────────────────────────────────────────
+app.mount("/adjuntos",                StaticFiles(directory=ADJUNTOS_DIR),               name="adjuntos")
+app.mount("/fotos_import",            StaticFiles(directory=FOTOS_IMPORT_DIR),           name="fotos_import")
+app.mount("/cotizaciones_imgs",       StaticFiles(directory=COTIZACIONES_IMGS_DIR),      name="cotizaciones_imgs")
+app.mount("/personalizacion_archivos",StaticFiles(directory=PERSONALIZACION_ARCHIVOS_DIR),name="personalizacion_archivos")
 
 # Fotos con fondo removido (rembg)
 if os.path.exists("/Volumes/MYRIAM SEAG/evergreen-love"):
