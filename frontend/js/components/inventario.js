@@ -79,21 +79,27 @@ const InventarioComponent = {
                     : `<span class="badge badge-success" style="background-color: rgba(77, 124, 15, 0.1); color: var(--color-success);">Suficiente (${mat.cantidad})</span>`;
 
                 const isBaseMaterial = ['madera', 'acrilico', 'corcho', 'resina'].includes(mat.tipo);
+                const ivu = mat.ivu ?? 11.5;
+                const costoConIvu     = mat.costo_hoja_unidad_con_ivu ?? (mat.costo_hoja_unidad * (1 + ivu / 100));
+                const totalConIvu     = mat.costo_total_lote_con_ivu  ?? (mat.cantidad * mat.costo_hoja_unidad * (1 + ivu / 100));
+                const costoIn2ConIvu  = mat.costo_in2_con_ivu ?? 0;
+                const ivuBadge = ivu > 0
+                    ? `<span style="font-size:10px;background:#fef9ec;color:#92620a;border:1px solid #f3d98a;border-radius:4px;padding:1px 5px;">IVU ${ivu}%</span>`
+                    : `<span style="font-size:10px;background:#f0f7ec;color:#5f7830;border:1px solid #c5d9a8;border-radius:4px;padding:1px 5px;">exento</span>`;
+
                 let costoDetalle = '';
                 if (isBaseMaterial) {
-                    const area = mat.tamano_ancho * mat.tamano_alto;
-                    const costoIn = area > 0 ? (mat.costo_hoja_unidad / area) : 0;
                     costoDetalle = `
-                        <div style="font-weight: 600; font-size: 13.5px;">$${mat.costo_hoja_unidad.toFixed(2)} <span style="font-size: 11px; font-weight: normal; color: #8c8270;">/plancha</span></div>
-                        <div style="font-size: 11.5px; color: var(--color-olive-brown); margin-top: 2.5px; font-weight: 500;">$${costoIn.toFixed(4)} / in²</div>
+                        <div style="font-weight:600;font-size:13px;">$${costoConIvu.toFixed(2)} <span style="font-size:10.5px;font-weight:normal;color:#8c8270;">/plancha c/IVU</span></div>
+                        <div style="font-size:11px;color:#8c8270;text-decoration:line-through;">$${mat.costo_hoja_unidad.toFixed(2)} sin IVU</div>
+                        ${costoIn2ConIvu > 0 ? `<div style="font-size:11px;color:var(--color-olive-brown);margin-top:2px;">$${costoIn2ConIvu.toFixed(4)} / in²</div>` : ''}
                     `;
                 } else {
                     costoDetalle = `
-                        <div style="font-weight: 600; font-size: 13.5px;">$${mat.costo_hoja_unidad.toFixed(4)} <span style="font-size: 11px; font-weight: normal; color: #8c8270;">/unidad</span></div>
+                        <div style="font-weight:600;font-size:13px;">$${costoConIvu.toFixed(4)} <span style="font-size:10.5px;font-weight:normal;color:#8c8270;">/ud c/IVU</span></div>
+                        <div style="font-size:11px;color:#8c8270;text-decoration:line-through;">$${mat.costo_hoja_unidad.toFixed(4)} sin IVU</div>
                     `;
                 }
-
-                const totalCostoLote = mat.cantidad * mat.costo_hoja_unidad;
 
                 rows += `
                     <tr data-id="${mat.id}">
@@ -106,7 +112,11 @@ const InventarioComponent = {
                         <td>${mat.tamano_ancho} x ${mat.tamano_alto} in</td>
                         <td>${costoDetalle}</td>
                         <td>${stockBadge}</td>
-                        <td><strong>$${totalCostoLote.toFixed(2)}</strong></td>
+                        <td>
+                            <div style="font-weight:700;font-size:13px;">$${totalConIvu.toFixed(2)}</div>
+                            <div style="font-size:11px;color:#8c8270;text-decoration:line-through;">$${(mat.costo_total_lote ?? mat.cantidad * mat.costo_hoja_unidad).toFixed(2)}</div>
+                            ${ivuBadge}
+                        </td>
                         <td>${mat.proveedor || 'N/A'}</td>
                         <td>${mat.enlace_compra ? `<a href="${mat.enlace_compra}" target="_blank" class="btn-link">Ver enlace</a>` : 'N/A'}</td>
                         <td style="display: flex; gap: 8px; justify-content: flex-end; align-items: center;">
@@ -160,9 +170,9 @@ const InventarioComponent = {
                                 <th>Tipo</th>
                                 <th>Espesor</th>
                                 <th>Formato / Dimensiones</th>
-                                <th>Costo (Plancha/Ud)</th>
+                                <th>Costo c/IVU (Plancha/Ud)</th>
                                 <th>Stock Disponible</th>
-                                <th>Costo Total Lote</th>
+                                <th>Costo Total Lote c/IVU</th>
                                 <th>Proveedor</th>
                                 <th>Compra</th>
                                 <th style="text-align: right;">Acciones</th>
@@ -410,6 +420,20 @@ const InventarioComponent = {
                             <label id="label-mat-costo" style="font-weight: 600; font-size: 12.5px; color: var(--color-moss-green);">Costo Unitario ($)</label>
                             <input type="number" id="mat-costo" step="any" required value="${isEdit ? material.costo_hoja_unidad : 8.50}" style="padding: 10px; border-radius: var(--radius-sm); border: 1px solid var(--color-gray-border); font-family: var(--font-primary); font-size: 13px;">
                         </div>
+                        <div style="display: flex; flex-direction: column; gap: 4px;">
+                            <label style="font-weight: 600; font-size: 12.5px; color: var(--color-moss-green);">IVU Pagado (%)</label>
+                            <select id="mat-ivu" style="padding: 10px; border-radius: var(--radius-sm); border: 1px solid var(--color-gray-border); font-family: var(--font-primary); font-size: 13px; background:#fff;">
+                                <option value="11.5" ${(!isEdit || material.ivu == 11.5) ? 'selected' : ''}>11.5% (PR estatal)</option>
+                                <option value="10.5" ${isEdit && material.ivu == 10.5 ? 'selected' : ''}>10.5%</option>
+                                <option value="7"    ${isEdit && material.ivu == 7    ? 'selected' : ''}>7%</option>
+                                <option value="4"    ${isEdit && material.ivu == 4    ? 'selected' : ''}>4%</option>
+                                <option value="0"    ${isEdit && material.ivu == 0    ? 'selected' : ''}>0% (exento)</option>
+                            </select>
+                        </div>
+                        <div style="display: flex; flex-direction: column; gap: 4px; justify-content: flex-end;">
+                            <label style="font-weight: 600; font-size: 12.5px; color: var(--color-moss-green);">Costo c/IVU (referencia)</label>
+                            <div id="mat-costo-ivu-preview" style="padding: 10px; border-radius: var(--radius-sm); border: 1px solid var(--color-gray-border); background: #f3f9ec; font-size: 13px; color: #3a6b1a; font-weight: 600;">—</div>
+                        </div>
                     </div>
 
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
@@ -495,6 +519,23 @@ const InventarioComponent = {
         const costoTotalInput = document.getElementById('mat-costo-total');
         const costoUnitInput = document.getElementById('mat-costo');
 
+        const ivuSelect   = document.getElementById('mat-ivu');
+        const ivuPreview  = document.getElementById('mat-costo-ivu-preview');
+
+        const updateIvuPreview = () => {
+            const unit  = parseFloat(costoUnitInput.value) || 0;
+            const ivu   = parseFloat(ivuSelect.value) || 0;
+            const cant  = parseFloat(cantInput.value) || 0;
+            const factor = 1 + ivu / 100;
+            const unitConIvu  = unit * factor;
+            const totalConIvu = unit * cant * factor;
+            if (ivuPreview) {
+                ivuPreview.textContent = ivu > 0
+                    ? `$${unitConIvu.toFixed(4)} /ud · Lote: $${totalConIvu.toFixed(2)}`
+                    : 'Sin IVU';
+            }
+        };
+
         if (cantInput && costoTotalInput && costoUnitInput) {
             const calculateFromTotal = () => {
                 const cant = parseFloat(cantInput.value) || 0;
@@ -502,6 +543,7 @@ const InventarioComponent = {
                 if (cant > 0 && total >= 0) {
                     costoUnitInput.value = (total / cant).toFixed(4);
                 }
+                updateIvuPreview();
             };
 
             const calculateFromUnit = () => {
@@ -510,11 +552,14 @@ const InventarioComponent = {
                 if (cant > 0 && unit >= 0) {
                     costoTotalInput.value = (unit * cant).toFixed(2);
                 }
+                updateIvuPreview();
             };
 
             costoTotalInput.addEventListener('input', calculateFromTotal);
-            cantInput.addEventListener('input', calculateFromUnit); // Al cambiar la cantidad, recalculamos el total de compra usando el precio unitario
+            cantInput.addEventListener('input', calculateFromUnit);
             costoUnitInput.addEventListener('input', calculateFromUnit);
+            if (ivuSelect) ivuSelect.addEventListener('change', updateIvuPreview);
+            updateIvuPreview(); // render inicial
         }
 
         document.getElementById('material-form').addEventListener('submit', async (e) => {
@@ -529,6 +574,7 @@ const InventarioComponent = {
                 cantidad: parseInt(document.getElementById('mat-cantidad').value, 10),
                 cantidad_minima_alerta: parseInt(document.getElementById('mat-alerta').value, 10),
                 costo_hoja_unidad: parseFloat(document.getElementById('mat-costo').value),
+                ivu: parseFloat(document.getElementById('mat-ivu').value) || 0,
                 proveedor: document.getElementById('mat-proveedor').value || null,
                 fecha_compra: isEdit ? material.fecha_compra : new Date().toISOString().split('T')[0],
                 lote: document.getElementById('mat-lote').value || null,

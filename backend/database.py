@@ -823,6 +823,13 @@ def init_db(force_reset=False):
     except Exception:
         pass  # Ya existe
 
+    # Migración: IVU pagado por material (Puerto Rico 11.5% por defecto)
+    try:
+        cursor.execute("ALTER TABLE materiales ADD COLUMN ivu REAL NOT NULL DEFAULT 11.5")
+        print("Columna 'ivu' añadida a materiales (default 11.5%).")
+    except Exception:
+        pass  # Ya existe
+
     # Crear carpeta de recibos si no existe
     import os as _os
     _recibos_dir = _os.path.abspath(_os.path.join(_os.path.dirname(__file__), "..", "data", "recibos_gastos"))

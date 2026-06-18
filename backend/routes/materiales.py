@@ -57,11 +57,26 @@ class MaterialSchema(BaseModel):
     cantidad: int
     cantidad_minima_alerta: int = 2
     costo_hoja_unidad: float
+    ivu: float = 11.5          # porcentaje IVU pagado (Puerto Rico: 11.5% estatal, 10.5%, 7%, 0%...)
     proveedor: Optional[str] = None
     fecha_compra: Optional[str] = None
     lote: Optional[str] = None
     enlace_compra: Optional[str] = None
     foto_url: Optional[str] = None
+
+
+def _add_ivu_computed(mat: dict) -> dict:
+    """Añade campos calculados con IVU al diccionario de un material."""
+    ivu_pct = mat.get("ivu", 11.5) or 11.5
+    factor = 1 + ivu_pct / 100
+    costo = mat.get("costo_hoja_unidad", 0) or 0
+    cantidad = mat.get("cantidad", 0) or 0
+    area = (mat.get("tamano_ancho", 0) or 0) * (mat.get("tamano_alto", 0) or 0)
+    mat["costo_hoja_unidad_con_ivu"] = round(costo * factor, 4)
+    mat["costo_total_lote"]          = round(costo * cantidad, 2)
+    mat["costo_total_lote_con_ivu"]  = round(costo * cantidad * factor, 2)
+    mat["costo_in2_con_ivu"]         = round((costo / area) * factor, 6) if area > 0 else 0
+    return mat
 
 class RetazoSchema(BaseModel):
     material_id: int
@@ -79,7 +94,7 @@ def list_materiales(current_user: dict = Depends(get_current_admin)):
         cursor = conn.cursor()
         cursor.execute("SELECT * FROM materiales ORDER BY id DESC")
         rows = cursor.fetchall()
-        materiales = [dict(row) for row in rows]
+        materiales = [_add_ivu_computed(dict(row)) for row in rows]
         conn.close()
         return {"status": "success", "data": materiales}
     except Exception as e:
@@ -99,11 +114,11 @@ def create_material(material: MaterialSchema, current_user: dict = Depends(get_c
         conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute("""
-            INSERT INTO materiales (nombre, tipo, espesor, tamano_ancho, tamano_alto, cantidad, cantidad_minima_alerta, costo_hoja_unidad, proveedor, fecha_compra, lote, enlace_compra, foto_url)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO materiales (nombre, tipo, espesor, tamano_ancho, tamano_alto, cantidad, cantidad_minima_alerta, costo_hoja_unidad, ivu, proveedor, fecha_compra, lote, enlace_compra, foto_url)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
-            material.nombre, material.tipo, material.espesor, material.tamano_ancho, material.tamano_alto, 
-            material.cantidad, material.cantidad_minima_alerta, material.costo_hoja_unidad, 
+            material.nombre, material.tipo, material.espesor, material.tamano_ancho, material.tamano_alto,
+            material.cantidad, material.cantidad_minima_alerta, material.costo_hoja_unidad, material.ivu,
             material.proveedor, material.fecha_compra, material.lote, material.enlace_compra, material.foto_url
         ))
         conn.commit()
@@ -127,12 +142,13 @@ def update_material(material_id: int, material: MaterialSchema, current_user: di
             
         cursor.execute("""
             UPDATE materiales
-            SET nombre = ?, tipo = ?, espesor = ?, tamano_ancho = ?, tamano_alto = ?, cantidad = ?, 
-                cantidad_minima_alerta = ?, costo_hoja_unidad = ?, proveedor = ?, fecha_compra = ?, lote = ?, enlace_compra = ?, foto_url = COALESCE(?, foto_url)
+            SET nombre = ?, tipo = ?, espesor = ?, tamano_ancho = ?, tamano_alto = ?, cantidad = ?,
+                cantidad_minima_alerta = ?, costo_hoja_unidad = ?, ivu = ?,
+                proveedor = ?, fecha_compra = ?, lote = ?, enlace_compra = ?, foto_url = COALESCE(?, foto_url)
             WHERE id = ?
         """, (
             material.nombre, material.tipo, material.espesor, material.tamano_ancho, material.tamano_alto,
-            material.cantidad, material.cantidad_minima_alerta, material.costo_hoja_unidad,
+            material.cantidad, material.cantidad_minima_alerta, material.costo_hoja_unidad, material.ivu,
             material.proveedor, material.fecha_compra, material.lote, material.enlace_compra, material.foto_url, material_id
         ))
         conn.commit()
