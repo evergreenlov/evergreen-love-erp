@@ -502,7 +502,7 @@ def update_producto(producto_id: int, item: ProductoUpdateSchema, current_user: 
 
 class CampoPersonalizacionSchema(BaseModel):
     etiqueta: str
-    tipo: str                          # texto|textarea|fecha|select|checkbox|archivo
+    tipo: str                          # texto|textarea|fecha|select|multiselect|checkbox|archivo
     requerido: int = 0
     opciones: Optional[str] = None     # JSON string para tipo=select
     costo_adicional: float = 0.0
@@ -539,7 +539,7 @@ def get_campos_publico(producto_id: int):
 
 @router.post("/productos/{producto_id}/campos-personalizacion", status_code=201)
 def create_campo(producto_id: int, campo: CampoPersonalizacionSchema, current_user: dict = Depends(get_current_admin)):
-    TIPOS_VALIDOS = {"texto", "textarea", "fecha", "select", "checkbox", "archivo"}
+    TIPOS_VALIDOS = {"texto", "textarea", "fecha", "select", "multiselect", "checkbox", "archivo"}
     if campo.tipo not in TIPOS_VALIDOS:
         raise HTTPException(status_code=400, detail=f"Tipo inválido. Usa: {', '.join(TIPOS_VALIDOS)}")
     conn = get_db_connection()

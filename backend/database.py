@@ -760,6 +760,38 @@ def init_db(force_reset=False):
     );
     """)
 
+    # Migración: ampliar CHECK constraint de producto_personalizacion_campos para incluir 'multiselect'
+    # SQLite no permite ALTER CONSTRAINT, así que usamos el patrón rename→recreate→copy→drop.
+    try:
+        row = cursor.execute(
+            "SELECT sql FROM sqlite_master WHERE type='table' AND name='producto_personalizacion_campos'"
+        ).fetchone()
+        if row and 'multiselect' not in row[0]:
+            cursor.execute("ALTER TABLE producto_personalizacion_campos RENAME TO _ppc_rebuild")
+            cursor.execute("""
+            CREATE TABLE producto_personalizacion_campos (
+                id              INTEGER PRIMARY KEY AUTOINCREMENT,
+                producto_id     INTEGER NOT NULL REFERENCES productos(id) ON DELETE CASCADE,
+                etiqueta        TEXT NOT NULL,
+                tipo            TEXT NOT NULL CHECK(tipo IN ('texto','textarea','fecha','select','multiselect','checkbox','archivo')),
+                requerido       INTEGER NOT NULL DEFAULT 0,
+                opciones        TEXT,
+                costo_adicional REAL NOT NULL DEFAULT 0.0,
+                orden           INTEGER NOT NULL DEFAULT 0,
+                activo          INTEGER NOT NULL DEFAULT 1
+            )
+            """)
+            cursor.execute("""
+                INSERT INTO producto_personalizacion_campos
+                    (id, producto_id, etiqueta, tipo, requerido, opciones, costo_adicional, orden, activo)
+                SELECT id, producto_id, etiqueta, tipo, requerido, opciones, costo_adicional, orden, activo
+                FROM _ppc_rebuild
+            """)
+            cursor.execute("DROP TABLE _ppc_rebuild")
+            print("Migración: CHECK constraint de producto_personalizacion_campos actualizado para incluir 'multiselect'.")
+    except Exception as e:
+        print(f"Advertencia migración producto_personalizacion_campos: {e}")
+
     # Migración: campo personalizacion_json en carrito
     try:
         cursor.execute("ALTER TABLE carrito ADD COLUMN personalizacion_json TEXT")
