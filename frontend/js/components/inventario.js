@@ -403,7 +403,7 @@ const InventarioComponent = {
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
                         <div style="display: flex; flex-direction: column; gap: 4px;">
                             <label id="label-mat-cantidad" style="font-weight: 500; font-size: 13px;">Cantidad</label>
-                            <input type="number" id="mat-cantidad" step="1" required value="${isEdit ? material.cantidad : 5}" style="padding: 10px; border-radius: var(--radius-sm); border: 1px solid var(--color-gray-border);">
+                            <input type="number" id="mat-cantidad" step="any" required value="${isEdit ? material.cantidad : 5}" style="padding: 10px; border-radius: var(--radius-sm); border: 1px solid var(--color-gray-border);">
                         </div>
                         <div style="display: flex; flex-direction: column; gap: 4px;">
                             <label style="font-weight: 500; font-size: 13px;">Alerta Mínima</label>
@@ -571,7 +571,7 @@ const InventarioComponent = {
                 espesor: parseFloat(document.getElementById('mat-espesor').value),
                 tamano_ancho: parseFloat(document.getElementById('mat-ancho').value),
                 tamano_alto: parseFloat(document.getElementById('mat-alto').value),
-                cantidad: parseInt(document.getElementById('mat-cantidad').value, 10),
+                cantidad: parseFloat(document.getElementById('mat-cantidad').value),
                 cantidad_minima_alerta: parseInt(document.getElementById('mat-alerta').value, 10),
                 costo_hoja_unidad: parseFloat(document.getElementById('mat-costo').value),
                 ivu: parseFloat(document.getElementById('mat-ivu').value) || 0,
