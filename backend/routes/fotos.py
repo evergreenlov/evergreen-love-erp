@@ -71,8 +71,10 @@ async def subir_foto(
             prefix = row['sku']
             
         filename = f"{prefix}_{tipo_foto}{ext}"
+        # Garantizar que el directorio de destino exista antes de escribir
+        os.makedirs(FOTOS_IMPORT_DIR, exist_ok=True)
         filepath = os.path.join(FOTOS_IMPORT_DIR, filename)
-        
+
         # Guardar archivo localmente
         contents = await file.read()
         with open(filepath, "wb") as f:
@@ -80,9 +82,15 @@ async def subir_foto(
             
         # Inicializar ruta a guardar en la BD (por defecto la local)
         db_path = filepath
-        
+
+        # Credenciales R2: header tiene prioridad, variables de entorno como fallback
+        cf_account_id   = x_cloudflare_account_id   or os.environ.get("CLOUDFLARE_ACCOUNT_ID")   or os.environ.get("CF_ACCOUNT_ID")
+        cf_api_token    = x_cloudflare_api_token     or os.environ.get("CLOUDFLARE_API_TOKEN")    or os.environ.get("CF_API_TOKEN")
+        cf_bucket       = x_cloudflare_bucket        or os.environ.get("CLOUDFLARE_BUCKET")       or os.environ.get("CF_BUCKET")
+        cf_delivery_url = x_cloudflare_delivery_url  or os.environ.get("CLOUDFLARE_DELIVERY_URL") or os.environ.get("CF_DELIVERY_URL")
+
         # Subida a Cloudflare R2 si están presentes las credenciales
-        if x_cloudflare_account_id and x_cloudflare_api_token and x_cloudflare_bucket:
+        if cf_account_id and cf_api_token and cf_bucket:
             try:
                 content_type = "application/octet-stream"
                 if ext == ".png":
@@ -90,25 +98,25 @@ async def subir_foto(
                 elif ext in [".jpg", ".jpeg"]:
                     content_type = "image/jpeg"
                 
-                cf_url = f"https://api.cloudflare.com/client/v4/accounts/{x_cloudflare_account_id}/r2/buckets/{x_cloudflare_bucket}/objects/{filename}"
-                
+                cf_url = f"https://api.cloudflare.com/client/v4/accounts/{cf_account_id}/r2/buckets/{cf_bucket}/objects/{filename}"
+
                 cf_req = urllib.request.Request(
                     cf_url,
                     data=contents,
                     headers={
-                        "Authorization": f"Bearer {x_cloudflare_api_token}",
+                        "Authorization": f"Bearer {cf_api_token}",
                         "Content-Type": content_type
                     },
                     method="PUT"
                 )
-                
+
                 with urllib.request.urlopen(cf_req) as response:
                     if response.status in [200, 201]:
-                        if x_cloudflare_delivery_url:
-                            base_url = x_cloudflare_delivery_url.strip().rstrip('/')
+                        if cf_delivery_url:
+                            base_url = cf_delivery_url.strip().rstrip('/')
                             db_path = f"{base_url}/{filename}"
                         else:
-                            db_path = f"https://{x_cloudflare_bucket}.r2.cloudflarestorage.com/{filename}"
+                            db_path = f"https://{cf_bucket}.r2.cloudflarestorage.com/{filename}"
             except Exception as cf_err:
                 print(f"Error al subir a Cloudflare R2: {str(cf_err)}")
                 
@@ -170,12 +178,9 @@ def trigger_escanear_fotos(current_user: dict = Depends(get_current_admin)):
         raise HTTPException(status_code=500, detail=str(e))
 
 # Fotos con fondo removido (rembg)
-if os.path.exists("/Volumes/MYRIAM SEAG/evergreen-love"):
-    CATALOGO_TRANSPARENTE_DIR = "/Volumes/MYRIAM SEAG/evergreen-love/data/catalogo_transparente"
-    REMBG_MODELS_DIR = "/Volumes/MYRIAM SEAG/rembg_models"
-else:
-    CATALOGO_TRANSPARENTE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "catalogo_transparente"))
-    REMBG_MODELS_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "rembg_models"))
+_data_dir = os.environ.get("DATA_DIR") or os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "data"))
+CATALOGO_TRANSPARENTE_DIR = os.path.join(_data_dir, "catalogo_transparente")
+REMBG_MODELS_DIR          = os.path.join(_data_dir, "rembg_models")
 
 @router.post("/fotos/productos/{producto_id}/remover-fondo")
 def remover_fondo_producto(
