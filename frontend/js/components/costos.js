@@ -1078,14 +1078,18 @@ const CostosComponent = {
     },
 
     _calcularSublimacion(btnSaveProduct) {
-        const costBlank   = parseFloat(document.getElementById('subli-costo-blank')?.value) || 0;
-        const hojas       = parseFloat(document.getElementById('subli-hojas')?.value) || 1;
-        const minPlancha  = parseFloat(document.getElementById('subli-tiempo-plancha')?.value) || 0;
-        const margen      = parseFloat(document.getElementById('margen-ganancia').value) || 0;
-        const margenWhole = parseFloat(document.getElementById('margen-wholesale')?.value) || 0;
+        const costBlank    = parseFloat(document.getElementById('subli-costo-blank')?.value) || 0;
+        const hojas        = parseFloat(document.getElementById('subli-hojas')?.value) || 1;
+        const minPlancha   = parseFloat(document.getElementById('subli-tiempo-plancha')?.value) || 0;
+        const margen       = parseFloat(document.getElementById('margen-ganancia').value) || 0;
+        const margenWhole  = parseFloat(document.getElementById('margen-wholesale')?.value) || 0;
         const tipoProducto = document.getElementById('tipo-producto').value || 'otro';
         const complejidad  = document.getElementById('complejidad-producto').value || 'simple';
         const modoProducto = document.getElementById('modo-producto')?.value || 'plano';
+
+        // Extras manuales (campos compartidos con el modo láser)
+        const costoHerrajesExtras = parseFloat(document.getElementById('costo-herrajes-extras')?.value) || 0;
+        const costoEmpaque        = parseFloat(document.getElementById('costo-empaque')?.value) || 0;
 
         const tarifaImpresion = CostosComponent.tarifas.sublimacion_costo_impresion_a4  || 0.75;
         const tarifaPlancha   = CostosComponent.tarifas.sublimacion_costo_minuto_plancha || 0.10;
@@ -1094,13 +1098,56 @@ const CostosComponent = {
         const costoImpresion = hojas * tarifaImpresion;
         const costoPlancha   = minPlancha * tarifaPlancha;
         const costoManoObra  = minPlancha * tarifaManoObra;
-        const costoTotal     = costBlank + costoImpresion + costoPlancha + costoManoObra;
 
-        const factorRetail = 1 - (margen / 100);
+        // Leer checkboxes de componentes extras (igual que el modo láser)
+        this.componentesSeleccionados = [];
+        const checkboxes = document.querySelectorAll('.extra-checkbox');
+        let costoAccesoriosTotal = 0;
+        let accesoriosHTML = '';
+
+        checkboxes.forEach(cb => {
+            if (cb.checked) {
+                const extId           = parseInt(cb.getAttribute('data-id'));
+                const extNombre       = cb.getAttribute('data-nombre');
+                const extCostoUnit    = parseFloat(cb.getAttribute('data-costo'));
+                const parentDiv       = cb.closest('div').parentElement;
+                const qty             = parseInt(parentDiv.querySelector('.extra-qty-input').value) || 1;
+                const costoCalculado  = extCostoUnit * qty;
+
+                costoAccesoriosTotal += costoCalculado;
+                this.componentesSeleccionados.push({
+                    materialId: extId,
+                    cantidad: qty,
+                    nombre: extNombre,
+                    costoCalculado
+                });
+                accesoriosHTML += `
+                    <div style="display:flex;justify-content:space-between;font-size:13px;margin-top:4px;">
+                        <span>${extNombre} (x${qty})</span><span>$${costoCalculado.toFixed(2)}</span>
+                    </div>`;
+            }
+        });
+
+        const costoExtrasTotal = costoAccesoriosTotal + costoHerrajesExtras + costoEmpaque;
+        const costoTotal = costBlank + costoImpresion + costoPlancha + costoManoObra + costoExtrasTotal;
+
+        const factorRetail   = 1 - (margen / 100);
         const precioSugerido = factorRetail > 0 ? costoTotal / factorRetail : costoTotal;
         const gananciaRetail = precioSugerido - costoTotal;
         const factorWhole    = 1 - (margenWhole / 100);
         const precioWhole    = factorWhole > 0 ? costoTotal / factorWhole : costoTotal;
+
+        // Sección de accesorios en el desglose (solo si hay algo)
+        const extrasSection = (costoExtrasTotal > 0) ? `
+            <div style="background:var(--color-white);padding:12px;border-radius:var(--radius-sm);border:1px solid var(--color-gray-border);margin-top:8px;margin-bottom:8px;">
+                <strong style="color:var(--color-olive-brown);font-size:13.5px;">Componentes / Extras</strong>
+                ${accesoriosHTML}
+                ${costoHerrajesExtras > 0 ? `<div style="display:flex;justify-content:space-between;font-size:13px;margin-top:4px;"><span>Herrajes / imanes extras</span><span>$${costoHerrajesExtras.toFixed(2)}</span></div>` : ''}
+                ${costoEmpaque > 0        ? `<div style="display:flex;justify-content:space-between;font-size:13px;margin-top:4px;"><span>Empaque</span><span>$${costoEmpaque.toFixed(2)}</span></div>` : ''}
+                <div style="display:flex;justify-content:space-between;font-size:13px;margin-top:6px;font-weight:600;border-top:1px dashed #ddd;padding-top:6px;">
+                    <span>Subtotal extras</span><span>$${costoExtrasTotal.toFixed(2)}</span>
+                </div>
+            </div>` : '';
 
         const desgloseHTML = `
             <div style="background:var(--color-white);padding:12px;border-radius:var(--radius-sm);border:1px solid var(--color-gray-border);margin-bottom:8px;">
@@ -1118,6 +1165,7 @@ const CostosComponent = {
                     <span>Mano de obra: ${minPlancha} min × $${tarifaManoObra.toFixed(2)}/min</span><span>$${costoManoObra.toFixed(2)}</span>
                 </div>
             </div>
+            ${extrasSection}
             <div style="display:flex;justify-content:space-between;border-top:2px solid #c0392b;padding-top:12px;margin-top:14px;font-weight:700;color:#c0392b;font-size:15px;">
                 <span>COSTO TOTAL SUBLIMACIÓN:</span><span>$${costoTotal.toFixed(2)}</span>
             </div>
@@ -1133,11 +1181,10 @@ const CostosComponent = {
             </div>` : ''}
         `;
 
-        this.componentesSeleccionados = [];
         this.ultimoCalculo = {
             tipo_produccion: 'sublimacion',
             tipo_producto: tipoProducto,
-            complejidad: complejidad,
+            complejidad,
             modo_producto: modoProducto,
             // Campos de sublimación
             sublimacion_costo_blank: costBlank,
@@ -1146,6 +1193,8 @@ const CostosComponent = {
             // Costos calculados
             costo_maquina: costoPlancha,
             costo_mano_obra: costoManoObra,
+            costo_herrajes_extras: costoHerrajesExtras,
+            costo_empaque: costoEmpaque,
             costo_total: costoTotal,
             margen_ganancia: margen / 100,
             precio_sugerido: precioSugerido,
@@ -1156,7 +1205,7 @@ const CostosComponent = {
             tiempo_ensamblaje: 0, usa_resina: 0, cantidad_resina_ml: 0,
             costo_resina_por_ml: 0, tiempo_resina_activo_min: 0, tiempo_resina_curado_min: 0,
             num_piezas: 1, tiempo_pegado: 0, tiempo_secado_ref: 0, costo_pegamento: 0,
-            costo_herrajes_extras: 0, costo_empaque: 0, porcentaje_merma: 0,
+            porcentaje_merma: 0,
         };
 
         document.getElementById('costo-desglose-lista').innerHTML = desgloseHTML;
