@@ -254,11 +254,11 @@ def list_productos(current_user: dict = Depends(get_current_admin)):
         conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute("""
-            SELECT p.*, 
+            SELECT p.*,
                    (SELECT f.nombre_archivo FROM fotos_asociadas f WHERE f.producto_id = p.id AND f.tipo_foto = 'referencia' ORDER BY f.id DESC LIMIT 1) as foto_nombre,
-                   cc.cliente_id, cc.precio_especial as b2b_precio
-            FROM productos p 
-            LEFT JOIN catalogo_cliente cc ON p.id = cc.producto_id
+                   (SELECT cc.cliente_id    FROM catalogo_cliente cc WHERE cc.producto_id = p.id LIMIT 1) as cliente_id,
+                   (SELECT cc.precio_especial FROM catalogo_cliente cc WHERE cc.producto_id = p.id LIMIT 1) as b2b_precio
+            FROM productos p
             ORDER BY p.id DESC
         """)
         rows = cursor.fetchall()
@@ -510,13 +510,16 @@ def update_producto(producto_id: int, item: ProductoUpdateSchema, current_user: 
                     VALUES (?, ?, ?, ?)
                 """, (producto_id, comp.material_id, comp.cantidad_usada, comp.costo_calculado))
 
-        # Actualizar asociación B2B en catalogo_cliente
-        cursor.execute("DELETE FROM catalogo_cliente WHERE producto_id = ?", (producto_id,))
+        # Actualizar asociación B2B — solo upsert cuando se envían datos B2B explícitos.
+        # Nunca borrar asociaciones existentes de otros clientes.
         if item.cliente_id is not None and item.b2b_precio is not None:
             cursor.execute(
                 """
                 INSERT INTO catalogo_cliente (cliente_id, producto_id, precio_especial, notas)
                 VALUES (?, ?, ?, 'Asociado durante edición.')
+                ON CONFLICT(cliente_id, producto_id) DO UPDATE SET
+                    precio_especial = excluded.precio_especial,
+                    notas = excluded.notas
                 """,
                 (item.cliente_id, producto_id, item.b2b_precio)
             )
