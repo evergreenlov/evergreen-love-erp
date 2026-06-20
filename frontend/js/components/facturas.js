@@ -1287,6 +1287,7 @@ const FacturasComponent = {
             return;
         }
 
+        tbody.innerHTML = '';
         sortedGastos.forEach(g => {
             totalSum += g.monto;
             const tr = document.createElement('tr');
