@@ -1083,17 +1083,17 @@ const CostosComponent = {
         const minPlancha   = parseFloat(document.getElementById('subli-tiempo-plancha')?.value) || 0;
         const margen       = parseFloat(document.getElementById('margen-ganancia').value) || 0;
         const margenWhole  = parseFloat(document.getElementById('margen-wholesale')?.value) || 0;
-        const tipoProducto = document.getElementById('tipo-producto').value || 'otro';
-        const complejidad  = document.getElementById('complejidad-producto').value || 'simple';
+        const tipoProducto = document.getElementById('tipo-producto')?.value || 'otro';
+        const complejidad  = document.getElementById('complejidad-producto')?.value || 'simple';
         const modoProducto = document.getElementById('modo-producto')?.value || 'plano';
 
         // Extras manuales (campos compartidos con el modo láser)
         const costoHerrajesExtras = parseFloat(document.getElementById('costo-herrajes-extras')?.value) || 0;
         const costoEmpaque        = parseFloat(document.getElementById('costo-empaque')?.value) || 0;
 
-        const tarifaImpresion = CostosComponent.tarifas.sublimacion_costo_impresion_a4  || 0.75;
-        const tarifaPlancha   = CostosComponent.tarifas.sublimacion_costo_minuto_plancha || 0.10;
-        const tarifaManoObra  = CostosComponent.tarifas.sublimacion_mano_obra_minuto     || 0.25;
+        const tarifaImpresion = parseFloat(CostosComponent.tarifas.sublimacion_costo_impresion_a4)  || 0.75;
+        const tarifaPlancha   = parseFloat(CostosComponent.tarifas.sublimacion_costo_minuto_plancha) || 0.10;
+        const tarifaManoObra  = parseFloat(CostosComponent.tarifas.sublimacion_mano_obra_minuto)     || 0.25;
 
         const costoImpresion = hojas * tarifaImpresion;
         const costoPlancha   = minPlancha * tarifaPlancha;
@@ -1106,13 +1106,14 @@ const CostosComponent = {
         let accesoriosHTML = '';
 
         checkboxes.forEach(cb => {
-            if (cb.checked) {
-                const extId           = parseInt(cb.getAttribute('data-id'));
-                const extNombre       = cb.getAttribute('data-nombre');
-                const extCostoUnit    = parseFloat(cb.getAttribute('data-costo'));
-                const parentDiv       = cb.closest('div').parentElement;
-                const qty             = parseInt(parentDiv.querySelector('.extra-qty-input').value) || 1;
-                const costoCalculado  = extCostoUnit * qty;
+            if (!cb.checked) return;
+            try {
+                const extId        = parseInt(cb.getAttribute('data-id'))    || 0;
+                const extNombre    = cb.getAttribute('data-nombre')          || 'Extra';
+                const extCostoUnit = parseFloat(cb.getAttribute('data-costo') || '0') || 0;
+                const qtyInput     = cb.closest('div')?.parentElement?.querySelector('.extra-qty-input');
+                const qty          = parseInt(qtyInput?.value) || 1;
+                const costoCalculado = extCostoUnit * qty;
 
                 costoAccesoriosTotal += costoCalculado;
                 this.componentesSeleccionados.push({
@@ -1125,7 +1126,7 @@ const CostosComponent = {
                     <div style="display:flex;justify-content:space-between;font-size:13px;margin-top:4px;">
                         <span>${extNombre} (x${qty})</span><span>$${costoCalculado.toFixed(2)}</span>
                     </div>`;
-            }
+            } catch (_) { /* ignorar extras con DOM inesperado */ }
         });
 
         const costoExtrasTotal = costoAccesoriosTotal + costoHerrajesExtras + costoEmpaque;
