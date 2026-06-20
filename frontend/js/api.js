@@ -3471,11 +3471,16 @@ const EvergreenAPI = {
         }
     },
     async deleteGasto(id) {
+        const token = localStorage.getItem('ev_token') || '';
         try {
             const response = await fetch(`${API_BASE_URL}/gastos/${id}`, {
-                method: 'DELETE'
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
             });
-            if (!response.ok) throw new Error("Error al eliminar gasto");
+            if (!response.ok) {
+                const err = await response.json().catch(() => ({}));
+                throw new Error(err.detail || 'Error al eliminar gasto');
+            }
             return await response.json();
         } catch (error) {
             console.error("deleteGasto error:", error);
