@@ -201,21 +201,13 @@ app.mount("/fotos_import",            StaticFiles(directory=FOTOS_IMPORT_DIR),  
 app.mount("/cotizaciones_imgs",       StaticFiles(directory=COTIZACIONES_IMGS_DIR),      name="cotizaciones_imgs")
 app.mount("/personalizacion_archivos",StaticFiles(directory=PERSONALIZACION_ARCHIVOS_DIR),name="personalizacion_archivos")
 
-# Fotos con fondo removido (rembg)
-if os.path.exists("/Volumes/MYRIAM SEAG/evergreen-love"):
-    CATALOGO_TRANSPARENTE_DIR = "/Volumes/MYRIAM SEAG/evergreen-love/data/catalogo_transparente"
-    REMBG_MODELS_DIR = "/Volumes/MYRIAM SEAG/rembg_models"
-else:
-    CATALOGO_TRANSPARENTE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "catalogo_transparente"))
-    REMBG_MODELS_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "rembg_models"))
-
-os.makedirs(CATALOGO_TRANSPARENTE_DIR, exist_ok=True)
-os.makedirs(REMBG_MODELS_DIR, exist_ok=True)
+# Fotos con fondo removido (rembg) — usa el mismo DATA_DIR ya resuelto
+CATALOGO_TRANSPARENTE_DIR = _ensure_dir("catalogo_transparente")
+REMBG_MODELS_DIR          = _ensure_dir("rembg_models")
 app.mount("/catalogo_transparente", StaticFiles(directory=CATALOGO_TRANSPARENTE_DIR), name="catalogo_transparente")
 
 # Galería de imágenes de productos
-PRODUCTO_GALERIA_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "producto_galeria"))
-os.makedirs(PRODUCTO_GALERIA_DIR, exist_ok=True)
+PRODUCTO_GALERIA_DIR = _ensure_dir("producto_galeria")
 app.mount("/producto_galeria", StaticFiles(directory=PRODUCTO_GALERIA_DIR), name="producto_galeria")
 
 # Servir el index.html principal en la ruta raíz y también como /index.html
