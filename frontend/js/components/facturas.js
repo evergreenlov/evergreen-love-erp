@@ -1203,6 +1203,8 @@ const FacturasComponent = {
     },
 
     async loadData() {
+        if (this._loadingData) return;
+        this._loadingData = true;
         try {
             // Load clients, products and expenses
             const [resFacturas, resClientes, resProductos, resReporte, resGastos] = await Promise.all([
@@ -1217,7 +1219,14 @@ const FacturasComponent = {
             this.clientes = resClientes.data || [];
             this.productos = resProductos.data || [];
             this.reporte = resReporte;
-            this.gastos = resGastos.data || [];
+            // Deduplicate by id to guard against any duplicate rows from the server
+            const rawGastos = resGastos.data || [];
+            const seenIds = new Set();
+            this.gastos = rawGastos.filter(g => {
+                if (seenIds.has(g.id)) return false;
+                seenIds.add(g.id);
+                return true;
+            });
 
             this.renderFacturasList();
             this.populateClientesSelect();
@@ -1227,6 +1236,8 @@ const FacturasComponent = {
             this.updateAutoInvoiceNumber();
         } catch (error) {
             console.error("Error al cargar datos en FacturasComponent:", error);
+        } finally {
+            this._loadingData = false;
         }
     },
 
