@@ -139,6 +139,18 @@ const CostosComponent = {
 
                             <form id="form-calculadora" style="display: flex; flex-direction: column; gap: 14px;">
 
+                                <!-- Tipo de Producción (Láser / Sublimación) -->
+                                <div style="display: flex; gap: 0; border: 2px solid var(--color-moss-green); border-radius: var(--radius-sm); overflow: hidden; font-size: 13px; font-weight: 600;">
+                                    <label id="lbl-laser" style="flex:1; text-align:center; padding:10px; cursor:pointer; background:var(--color-moss-green); color:#fff; display:flex; align-items:center; justify-content:center; gap:6px;">
+                                        <input type="radio" name="tipo-produccion" id="tipo-produccion-laser" value="laser" checked style="display:none;">
+                                        🔵 Láser
+                                    </label>
+                                    <label id="lbl-sublimacion" style="flex:1; text-align:center; padding:10px; cursor:pointer; background:#fff; color:#666; display:flex; align-items:center; justify-content:center; gap:6px; border-left:2px solid var(--color-moss-green);">
+                                        <input type="radio" name="tipo-produccion" id="tipo-produccion-sublimacion" value="sublimacion" style="display:none;">
+                                        🔴 Sublimación
+                                    </label>
+                                </div>
+
                                 <!-- Modo de producto + Tipo + Complejidad -->
                                 <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px;">
                                     <div style="display: flex; flex-direction: column; gap: 4px;">
@@ -217,6 +229,9 @@ const CostosComponent = {
                                     </div>
                                 </div>
 
+                                <!-- SECCIÓN LÁSER (oculta cuando tipo-produccion=sublimacion) -->
+                                <div id="seccion-laser-campos">
+
                                 <!-- Material base -->
                                 <div style="display: flex; flex-direction: column; gap: 4px;">
                                     <label style="font-weight: 500; font-size: 13px;">Madera o Acrílico Base (Plancha)</label>
@@ -226,7 +241,7 @@ const CostosComponent = {
                                 </div>
 
                                 <!-- Dimensiones -->
-                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top:14px;">
                                     <div style="display: flex; flex-direction: column; gap: 4px;">
                                         <label style="font-weight: 500; font-size: 13px;">Ancho de la Pieza (in)</label>
                                         <input type="number" id="prod-ancho" value="2.0" step="0.1" min="0.1" style="padding: 10px; border-radius: var(--radius-sm); border: 1px solid var(--color-gray-border); font-family: var(--font-primary);">
@@ -238,7 +253,7 @@ const CostosComponent = {
                                 </div>
 
                                 <!-- Tiempos láser -->
-                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top:14px;">
                                     <div style="display: flex; flex-direction: column; gap: 4px;">
                                         <label style="font-weight: 500; font-size: 13px;">Tiempo Corte Láser (min)</label>
                                         <input type="number" id="laser-corte" value="1.5" step="0.1" min="0" style="padding: 10px; border-radius: var(--radius-sm); border: 1px solid var(--color-gray-border); font-family: var(--font-primary);">
@@ -246,6 +261,32 @@ const CostosComponent = {
                                     <div style="display: flex; flex-direction: column; gap: 4px;">
                                         <label style="font-weight: 500; font-size: 13px;">Tiempo Grabado Láser (min)</label>
                                         <input type="number" id="laser-grabado" value="1.0" step="0.1" min="0" style="padding: 10px; border-radius: var(--radius-sm); border: 1px solid var(--color-gray-border); font-family: var(--font-primary);">
+                                    </div>
+                                </div>
+
+                                </div><!-- fin seccion-laser-campos -->
+
+                                <!-- SECCIÓN SUBLIMACIÓN (visible cuando tipo-produccion=sublimacion) -->
+                                <div id="seccion-sublimacion-campos" style="display:none; border:1px solid #f4a0a0; border-radius:10px; padding:14px; background:#fff5f5;">
+                                    <div style="font-weight:600; font-size:13px; color:#c0392b; margin-bottom:12px; display:flex; align-items:center; gap:6px;">
+                                        🔴 Campos de Sublimación
+                                    </div>
+                                    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px;">
+                                        <div style="display:flex;flex-direction:column;gap:4px;">
+                                            <label style="font-weight:500;font-size:12px;">Costo del Blank ($)</label>
+                                            <input type="number" id="subli-costo-blank" value="0" step="0.01" min="0" style="padding:9px;border-radius:var(--radius-sm);border:1px solid #f4a0a0;font-family:var(--font-primary);">
+                                        </div>
+                                        <div style="display:flex;flex-direction:column;gap:4px;">
+                                            <label style="font-weight:500;font-size:12px;">Hojas A4 de Impresión</label>
+                                            <input type="number" id="subli-hojas" value="1" step="0.5" min="0" style="padding:9px;border-radius:var(--radius-sm);border:1px solid #f4a0a0;font-family:var(--font-primary);">
+                                        </div>
+                                        <div style="display:flex;flex-direction:column;gap:4px;">
+                                            <label style="font-weight:500;font-size:12px;">Tiempo Plancha (min)</label>
+                                            <input type="number" id="subli-tiempo-plancha" value="5" step="0.5" min="0" style="padding:9px;border-radius:var(--radius-sm);border:1px solid #f4a0a0;font-family:var(--font-primary);">
+                                        </div>
+                                    </div>
+                                    <div style="margin-top:8px;font-size:11px;color:#c0392b;">
+                                        Tarifas de impresión y plancha se configuran en el panel de Tarifas →
                                     </div>
                                 </div>
 
@@ -340,6 +381,23 @@ const CostosComponent = {
                             <div style="display: flex; flex-direction: column; gap: 4px;">
                                 <label style="font-weight: 500; font-size: 12px; color: #555;">Labor / Mano de Obra ($/hora)</label>
                                 <input type="number" id="tarifa-labor" value="${this.tarifas.tarifa_hora_labor.toFixed(2)}" step="0.50" min="0.01" style="padding: 8px; border-radius: var(--radius-sm); border: 1px solid #c8d9a0; font-family: var(--font-primary); font-size: 13px;">
+                            </div>
+                        </div>
+                        <div style="border-top:1px dashed #c8d9a0; padding-top:8px; margin-bottom:10px;">
+                            <div style="font-size:11px;font-weight:600;color:#c0392b;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.4px;">🔴 Tarifas Sublimación</div>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;">
+                                <div style="display: flex; flex-direction: column; gap: 3px;">
+                                    <label style="font-weight: 500; font-size: 11px; color: #555;">Impresión A4 ($)</label>
+                                    <input type="number" id="tarifa-subli-impresion" value="${(this.tarifas.sublimacion_costo_impresion_a4 || 0.75).toFixed(2)}" step="0.05" min="0" style="padding: 7px; border-radius: var(--radius-sm); border: 1px solid #f4a0a0; font-family: var(--font-primary); font-size: 12px;">
+                                </div>
+                                <div style="display: flex; flex-direction: column; gap: 3px;">
+                                    <label style="font-weight: 500; font-size: 11px; color: #555;">Plancha ($/min)</label>
+                                    <input type="number" id="tarifa-subli-plancha" value="${(this.tarifas.sublimacion_costo_minuto_plancha || 0.10).toFixed(2)}" step="0.01" min="0" style="padding: 7px; border-radius: var(--radius-sm); border: 1px solid #f4a0a0; font-family: var(--font-primary); font-size: 12px;">
+                                </div>
+                                <div style="display: flex; flex-direction: column; gap: 3px;">
+                                    <label style="font-weight: 500; font-size: 11px; color: #555;">Mano Obra ($/min)</label>
+                                    <input type="number" id="tarifa-subli-mano-obra" value="${(this.tarifas.sublimacion_mano_obra_minuto || 0.25).toFixed(2)}" step="0.01" min="0" style="padding: 7px; border-radius: var(--radius-sm); border: 1px solid #f4a0a0; font-family: var(--font-primary); font-size: 12px;">
+                                </div>
                             </div>
                         </div>
                         <button id="btn-guardar-tarifas" class="btn btn-secondary" style="width:100%; font-size: 12px; padding: 6px; color: var(--color-moss-green); border-color: var(--color-moss-green);">
@@ -551,6 +609,26 @@ const CostosComponent = {
             });
         }
 
+        // Restaurar tipo de producción y campos de sublimación
+        const tipoProd = p.tipo_produccion || 'laser';
+        const radioLaser = document.getElementById('tipo-produccion-laser');
+        const radioSubli  = document.getElementById('tipo-produccion-sublimacion');
+        if (tipoProd === 'sublimacion' && radioSubli) {
+            radioSubli.checked = true;
+            document.getElementById('seccion-laser-campos').style.display = 'none';
+            document.getElementById('seccion-sublimacion-campos').style.display = 'block';
+            const lblLaser = document.getElementById('lbl-laser');
+            const lblSub   = document.getElementById('lbl-sublimacion');
+            if (lblLaser) { lblLaser.style.background = '#fff'; lblLaser.style.color = '#666'; }
+            if (lblSub)   { lblSub.style.background = '#c0392b'; lblSub.style.color = '#fff'; }
+            const _setSubli = (id, val) => { if (val !== undefined && val !== null) { const el = document.getElementById(id); if (el) el.value = val; } };
+            _setSubli('subli-costo-blank',    p.sublimacion_costo_blank);
+            _setSubli('subli-hojas',          p.sublimacion_hojas_impresion);
+            _setSubli('subli-tiempo-plancha', p.sublimacion_tiempo_plancha);
+        } else if (radioLaser) {
+            radioLaser.checked = true;
+        }
+
         // Activar botón y lanzar cálculo automáticamente
         const btnCalcular = document.getElementById('btn-calcular-costo');
         const btnSave = document.getElementById('btn-save-as-product');
@@ -578,11 +656,26 @@ const CostosComponent = {
                     alert('Las tarifas deben ser mayores a $0');
                     return;
                 }
+                const subliImpresion = parseFloat(document.getElementById('tarifa-subli-impresion').value) || 0.75;
+                const subliPlancha   = parseFloat(document.getElementById('tarifa-subli-plancha').value)   || 0.10;
+                const subliManoObra  = parseFloat(document.getElementById('tarifa-subli-mano-obra').value) || 0.25;
                 btnGuardarTarifas.disabled = true;
                 btnGuardarTarifas.textContent = 'Guardando...';
                 try {
-                    await EvergreenAPI.updateConfiguracion({ tarifa_hora_laser: laser, tarifa_hora_labor: labor });
-                    CostosComponent.tarifas = { tarifa_hora_laser: laser, tarifa_hora_labor: labor };
+                    await EvergreenAPI.updateConfiguracion({
+                        tarifa_hora_laser: laser,
+                        tarifa_hora_labor: labor,
+                        sublimacion_costo_impresion_a4: subliImpresion,
+                        sublimacion_costo_minuto_plancha: subliPlancha,
+                        sublimacion_mano_obra_minuto: subliManoObra,
+                    });
+                    CostosComponent.tarifas = {
+                        tarifa_hora_laser: laser,
+                        tarifa_hora_labor: labor,
+                        sublimacion_costo_impresion_a4: subliImpresion,
+                        sublimacion_costo_minuto_plancha: subliPlancha,
+                        sublimacion_mano_obra_minuto: subliManoObra,
+                    };
                     btnGuardarTarifas.textContent = '✓ Tarifas guardadas';
                     setTimeout(() => {
                         btnGuardarTarifas.disabled = false;
@@ -596,6 +689,19 @@ const CostosComponent = {
                 }
             });
         }
+
+        // Toggle Láser / Sublimación
+        document.querySelectorAll('input[name="tipo-produccion"]').forEach(radio => {
+            radio.addEventListener('change', () => {
+                const esSub = radio.value === 'sublimacion';
+                document.getElementById('seccion-laser-campos').style.display   = esSub ? 'none'  : 'block';
+                document.getElementById('seccion-sublimacion-campos').style.display = esSub ? 'block' : 'none';
+                const lblLaser = document.getElementById('lbl-laser');
+                const lblSub   = document.getElementById('lbl-sublimacion');
+                if (lblLaser) { lblLaser.style.background = esSub ? '#fff' : 'var(--color-moss-green)'; lblLaser.style.color = esSub ? '#666' : '#fff'; }
+                if (lblSub)   { lblSub.style.background   = esSub ? '#c0392b' : '#fff'; lblSub.style.color = esSub ? '#fff' : '#666'; }
+            });
+        });
 
         // Habilitar inputs de cantidad
         checkboxes.forEach(cb => {
@@ -614,6 +720,13 @@ const CostosComponent = {
         // Ejecutar cálculo normal
         if (btnCalcular) {
             btnCalcular.addEventListener('click', () => {
+                // Branch: sublimación vs láser
+                const radioSubli = document.getElementById('tipo-produccion-sublimacion');
+                if (radioSubli && radioSubli.checked) {
+                    this._calcularSublimacion(btnSaveProduct);
+                    return;
+                }
+
                 const selectMat = document.getElementById('costo-material-select');
                 if (!selectMat || selectMat.value === "0" || selectMat.selectedIndex < 0) {
                     alert("Por favor, selecciona una plancha de madera o acrílico base.");
@@ -962,6 +1075,92 @@ const CostosComponent = {
                 }
             });
         });
+    },
+
+    _calcularSublimacion(btnSaveProduct) {
+        const costBlank   = parseFloat(document.getElementById('subli-costo-blank')?.value) || 0;
+        const hojas       = parseFloat(document.getElementById('subli-hojas')?.value) || 1;
+        const minPlancha  = parseFloat(document.getElementById('subli-tiempo-plancha')?.value) || 0;
+        const margen      = parseFloat(document.getElementById('margen-ganancia').value) || 0;
+        const margenWhole = parseFloat(document.getElementById('margen-wholesale')?.value) || 0;
+        const tipoProducto = document.getElementById('tipo-producto').value || 'otro';
+        const complejidad  = document.getElementById('complejidad-producto').value || 'simple';
+        const modoProducto = document.getElementById('modo-producto')?.value || 'plano';
+
+        const tarifaImpresion = CostosComponent.tarifas.sublimacion_costo_impresion_a4  || 0.75;
+        const tarifaPlancha   = CostosComponent.tarifas.sublimacion_costo_minuto_plancha || 0.10;
+        const tarifaManoObra  = CostosComponent.tarifas.sublimacion_mano_obra_minuto     || 0.25;
+
+        const costoImpresion = hojas * tarifaImpresion;
+        const costoPlancha   = minPlancha * tarifaPlancha;
+        const costoManoObra  = minPlancha * tarifaManoObra;
+        const costoTotal     = costBlank + costoImpresion + costoPlancha + costoManoObra;
+
+        const factorRetail = 1 - (margen / 100);
+        const precioSugerido = factorRetail > 0 ? costoTotal / factorRetail : costoTotal;
+        const gananciaRetail = precioSugerido - costoTotal;
+        const factorWhole    = 1 - (margenWhole / 100);
+        const precioWhole    = factorWhole > 0 ? costoTotal / factorWhole : costoTotal;
+
+        const desgloseHTML = `
+            <div style="background:var(--color-white);padding:12px;border-radius:var(--radius-sm);border:1px solid var(--color-gray-border);margin-bottom:8px;">
+                <strong style="color:#c0392b;font-size:13.5px;">🔴 Sublimación</strong>
+                <div style="display:flex;justify-content:space-between;font-size:13px;margin-top:6px;">
+                    <span>Blank (costo base)</span><span>$${costBlank.toFixed(2)}</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;font-size:13px;margin-top:4px;">
+                    <span>Impresión: ${hojas} hoja${hojas !== 1 ? 's' : ''} × $${tarifaImpresion.toFixed(2)}</span><span>$${costoImpresion.toFixed(2)}</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;font-size:13px;margin-top:4px;">
+                    <span>Plancha: ${minPlancha} min × $${tarifaPlancha.toFixed(2)}/min</span><span>$${costoPlancha.toFixed(2)}</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;font-size:13px;margin-top:4px;">
+                    <span>Mano de obra: ${minPlancha} min × $${tarifaManoObra.toFixed(2)}/min</span><span>$${costoManoObra.toFixed(2)}</span>
+                </div>
+            </div>
+            <div style="display:flex;justify-content:space-between;border-top:2px solid #c0392b;padding-top:12px;margin-top:14px;font-weight:700;color:#c0392b;font-size:15px;">
+                <span>COSTO TOTAL SUBLIMACIÓN:</span><span>$${costoTotal.toFixed(2)}</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:14px;font-weight:600;color:var(--color-terracotta);margin-top:6px;">
+                <span>Retail (${margen}% margen):</span><span>$${precioSugerido.toFixed(2)}</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:500;color:var(--color-success);margin-top:2px;">
+                <span>Ganancia Retail:</span><span>$${gananciaRetail.toFixed(2)}</span>
+            </div>
+            ${margenWhole > 0 ? `
+            <div style="display:flex;justify-content:space-between;font-size:14px;font-weight:600;color:#1976d2;margin-top:8px;border-top:1px dashed #cde;padding-top:8px;">
+                <span>Wholesale (${margenWhole}% margen):</span><span>$${precioWhole.toFixed(2)}</span>
+            </div>` : ''}
+        `;
+
+        this.componentesSeleccionados = [];
+        this.ultimoCalculo = {
+            tipo_produccion: 'sublimacion',
+            tipo_producto: tipoProducto,
+            complejidad: complejidad,
+            modo_producto: modoProducto,
+            // Campos de sublimación
+            sublimacion_costo_blank: costBlank,
+            sublimacion_hojas_impresion: hojas,
+            sublimacion_tiempo_plancha: minPlancha,
+            // Costos calculados
+            costo_maquina: costoPlancha,
+            costo_mano_obra: costoManoObra,
+            costo_total: costoTotal,
+            margen_ganancia: margen / 100,
+            precio_sugerido: precioSugerido,
+            margen_wholesale: margenWhole,
+            precio_wholesale: margenWhole > 0 ? precioWhole : null,
+            // Campos láser en 0 para no romper el schema del backend
+            tiempo_corte: 0, tiempo_grabado: 0, tiempo_pintura: 0, capas: 1,
+            tiempo_ensamblaje: 0, usa_resina: 0, cantidad_resina_ml: 0,
+            costo_resina_por_ml: 0, tiempo_resina_activo_min: 0, tiempo_resina_curado_min: 0,
+            num_piezas: 1, tiempo_pegado: 0, tiempo_secado_ref: 0, costo_pegamento: 0,
+            costo_herrajes_extras: 0, costo_empaque: 0, porcentaje_merma: 0,
+        };
+
+        document.getElementById('costo-desglose-lista').innerHTML = desgloseHTML;
+        if (btnSaveProduct) btnSaveProduct.removeAttribute('disabled');
     },
 
     async openSaveProductModal() {
@@ -1435,6 +1634,10 @@ const CostosComponent = {
                         costo_herrajes_extras: this.ultimoCalculo.costo_herrajes_extras,
                         costo_empaque: this.ultimoCalculo.costo_empaque,
                         porcentaje_merma: this.ultimoCalculo.porcentaje_merma,
+                        tipo_produccion: this.ultimoCalculo.tipo_produccion || 'laser',
+                        sublimacion_costo_blank: this.ultimoCalculo.sublimacion_costo_blank || 0,
+                        sublimacion_hojas_impresion: this.ultimoCalculo.sublimacion_hojas_impresion || 0,
+                        sublimacion_tiempo_plancha: this.ultimoCalculo.sublimacion_tiempo_plancha || 0,
                     });
 
                     // Reemplazar foto si se seleccionó una nueva
@@ -1494,6 +1697,10 @@ const CostosComponent = {
                     costo_herrajes_extras: this.ultimoCalculo.costo_herrajes_extras,
                     costo_empaque: this.ultimoCalculo.costo_empaque,
                     porcentaje_merma: this.ultimoCalculo.porcentaje_merma,
+                    tipo_produccion: this.ultimoCalculo.tipo_produccion || 'laser',
+                    sublimacion_costo_blank: this.ultimoCalculo.sublimacion_costo_blank || 0,
+                    sublimacion_hojas_impresion: this.ultimoCalculo.sublimacion_hojas_impresion || 0,
+                    sublimacion_tiempo_plancha: this.ultimoCalculo.sublimacion_tiempo_plancha || 0,
                 };
 
                 try {

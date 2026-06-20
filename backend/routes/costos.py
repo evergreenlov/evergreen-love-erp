@@ -21,6 +21,10 @@ class ComponenteSchema(BaseModel):
 class ConfiguracionSchema(BaseModel):
     tarifa_hora_laser: float
     tarifa_hora_labor: float
+    # Tarifas Sublimación
+    sublimacion_costo_impresion_a4: float = 0.75
+    sublimacion_costo_minuto_plancha: float = 0.10
+    sublimacion_mano_obra_minuto: float = 0.25
 
 class ProductoSchema(BaseModel):
     sku: str
@@ -67,6 +71,11 @@ class ProductoSchema(BaseModel):
     costo_herrajes_extras: Optional[float] = 0.0
     costo_empaque: Optional[float] = 0.0
     porcentaje_merma: Optional[float] = 0.0
+    # Sublimación
+    tipo_produccion: Optional[str] = 'laser'
+    sublimacion_costo_blank: Optional[float] = 0.0
+    sublimacion_hojas_impresion: Optional[float] = 0.0
+    sublimacion_tiempo_plancha: Optional[float] = 0.0
 
 class ProductoUpdateSchema(BaseModel):
     nombre: str
@@ -115,6 +124,11 @@ class ProductoUpdateSchema(BaseModel):
     costo_herrajes_extras: Optional[float] = None
     costo_empaque: Optional[float] = None
     porcentaje_merma: Optional[float] = None
+    # Sublimación
+    tipo_produccion: Optional[str] = None
+    sublimacion_costo_blank: Optional[float] = None
+    sublimacion_hojas_impresion: Optional[float] = None
+    sublimacion_tiempo_plancha: Optional[float] = None
 
 # --- ENDPOINTS CONFIGURACIÓN GLOBAL ---
 
@@ -140,12 +154,18 @@ def update_configuracion(cfg: ConfiguracionSchema, current_user: dict = Depends(
         conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute("""
-            INSERT INTO configuracion (id, tarifa_hora_laser, tarifa_hora_labor)
-            VALUES (1, ?, ?)
+            INSERT INTO configuracion (id, tarifa_hora_laser, tarifa_hora_labor,
+                sublimacion_costo_impresion_a4, sublimacion_costo_minuto_plancha, sublimacion_mano_obra_minuto)
+            VALUES (1, ?, ?, ?, ?, ?)
             ON CONFLICT(id) DO UPDATE SET
-                tarifa_hora_laser = excluded.tarifa_hora_laser,
-                tarifa_hora_labor  = excluded.tarifa_hora_labor
-        """, (cfg.tarifa_hora_laser, cfg.tarifa_hora_labor))
+                tarifa_hora_laser                = excluded.tarifa_hora_laser,
+                tarifa_hora_labor                = excluded.tarifa_hora_labor,
+                sublimacion_costo_impresion_a4   = excluded.sublimacion_costo_impresion_a4,
+                sublimacion_costo_minuto_plancha = excluded.sublimacion_costo_minuto_plancha,
+                sublimacion_mano_obra_minuto     = excluded.sublimacion_mano_obra_minuto
+        """, (cfg.tarifa_hora_laser, cfg.tarifa_hora_labor,
+              cfg.sublimacion_costo_impresion_a4, cfg.sublimacion_costo_minuto_plancha,
+              cfg.sublimacion_mano_obra_minuto))
         conn.commit()
         conn.close()
         return {"status": "success", "message": "Tarifas actualizadas correctamente"}
@@ -293,8 +313,9 @@ def create_producto(producto: ProductoSchema, current_user: dict = Depends(get_c
                 usa_resina, cantidad_resina_ml, costo_resina_por_ml,
                 tiempo_resina_activo_min, tiempo_resina_curado_min,
                 modo_producto, num_piezas, tiempo_pegado, tiempo_secado_ref,
-                costo_pegamento, costo_herrajes_extras, costo_empaque, porcentaje_merma
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                costo_pegamento, costo_herrajes_extras, costo_empaque, porcentaje_merma,
+                tipo_produccion, sublimacion_costo_blank, sublimacion_hojas_impresion, sublimacion_tiempo_plancha
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             producto.sku, producto.nombre, producto.diseno_id,
             producto.ancho, producto.alto,
@@ -311,7 +332,11 @@ def create_producto(producto: ProductoSchema, current_user: dict = Depends(get_c
             producto.modo_producto or 'plano', producto.num_piezas or 1,
             producto.tiempo_pegado or 0.0, producto.tiempo_secado_ref or 0.0,
             producto.costo_pegamento or 0.0, producto.costo_herrajes_extras or 0.0,
-            producto.costo_empaque or 0.0, producto.porcentaje_merma or 0.0
+            producto.costo_empaque or 0.0, producto.porcentaje_merma or 0.0,
+            producto.tipo_produccion or 'laser',
+            producto.sublimacion_costo_blank or 0.0,
+            producto.sublimacion_hojas_impresion or 0.0,
+            producto.sublimacion_tiempo_plancha or 0.0,
         ))
         
         producto_id = cursor.lastrowid
@@ -437,6 +462,10 @@ def update_producto(producto_id: int, item: ProductoUpdateSchema, current_user: 
         costo_herrajes_extras = item.costo_herrajes_extras if item.costo_herrajes_extras is not None else (existing.get('costo_herrajes_extras') or 0.0)
         costo_empaque = item.costo_empaque if item.costo_empaque is not None else (existing.get('costo_empaque') or 0.0)
         porcentaje_merma = item.porcentaje_merma if item.porcentaje_merma is not None else (existing.get('porcentaje_merma') or 0.0)
+        tipo_produccion = item.tipo_produccion if item.tipo_produccion is not None else (existing.get('tipo_produccion') or 'laser')
+        sublimacion_costo_blank = item.sublimacion_costo_blank if item.sublimacion_costo_blank is not None else (existing.get('sublimacion_costo_blank') or 0.0)
+        sublimacion_hojas_impresion = item.sublimacion_hojas_impresion if item.sublimacion_hojas_impresion is not None else (existing.get('sublimacion_hojas_impresion') or 0.0)
+        sublimacion_tiempo_plancha = item.sublimacion_tiempo_plancha if item.sublimacion_tiempo_plancha is not None else (existing.get('sublimacion_tiempo_plancha') or 0.0)
 
         cursor.execute(
             """
@@ -452,7 +481,9 @@ def update_producto(producto_id: int, item: ProductoUpdateSchema, current_user: 
                 usa_resina = ?, cantidad_resina_ml = ?, costo_resina_por_ml = ?,
                 tiempo_resina_activo_min = ?, tiempo_resina_curado_min = ?,
                 modo_producto = ?, num_piezas = ?, tiempo_pegado = ?, tiempo_secado_ref = ?,
-                costo_pegamento = ?, costo_herrajes_extras = ?, costo_empaque = ?, porcentaje_merma = ?
+                costo_pegamento = ?, costo_herrajes_extras = ?, costo_empaque = ?, porcentaje_merma = ?,
+                tipo_produccion = ?, sublimacion_costo_blank = ?,
+                sublimacion_hojas_impresion = ?, sublimacion_tiempo_plancha = ?
             WHERE id = ?
             """,
             (item.nombre, item.sku, item.precio_final, shopify_descripcion,
@@ -466,6 +497,7 @@ def update_producto(producto_id: int, item: ProductoUpdateSchema, current_user: 
              tiempo_resina_activo_min, tiempo_resina_curado_min,
              modo_producto, num_piezas, tiempo_pegado, tiempo_secado_ref,
              costo_pegamento, costo_herrajes_extras, costo_empaque, porcentaje_merma,
+             tipo_produccion, sublimacion_costo_blank, sublimacion_hojas_impresion, sublimacion_tiempo_plancha,
              producto_id)
         )
         

@@ -655,6 +655,18 @@ def init_db(force_reset=False):
     VALUES (1, 15.0, 18.0)
     """)
 
+    # Migraciones tarifas sublimación en configuracion
+    for _col, _defn in [
+        ("sublimacion_costo_impresion_a4",   "REAL NOT NULL DEFAULT 0.75"),
+        ("sublimacion_costo_minuto_plancha",  "REAL NOT NULL DEFAULT 0.10"),
+        ("sublimacion_mano_obra_minuto",      "REAL NOT NULL DEFAULT 0.25"),
+    ]:
+        try:
+            cursor.execute(f"ALTER TABLE configuracion ADD COLUMN {_col} {_defn}")
+            print(f"Columna '{_col}' añadida a configuracion.")
+        except Exception:
+            pass
+
     # Migraciones Motor de Costeo Inteligente
     try:
         cursor.execute("ALTER TABLE productos ADD COLUMN tipo_producto TEXT")
@@ -740,6 +752,19 @@ def init_db(force_reset=False):
         try:
             cursor.execute(f"ALTER TABLE productos ADD COLUMN {col} {defn}")
             print(f"Columna '{col}' añadida a productos.")
+        except Exception:
+            pass
+
+    # Migraciones Sublimación en productos
+    for _col, _defn in [
+        ("tipo_produccion",             "TEXT DEFAULT 'laser'"),
+        ("sublimacion_costo_blank",     "REAL DEFAULT 0.0"),
+        ("sublimacion_hojas_impresion", "REAL DEFAULT 0.0"),
+        ("sublimacion_tiempo_plancha",  "REAL DEFAULT 0.0"),
+    ]:
+        try:
+            cursor.execute(f"ALTER TABLE productos ADD COLUMN {_col} {_defn}")
+            print(f"Columna '{_col}' añadida a productos.")
         except Exception:
             pass
 
