@@ -1105,6 +1105,8 @@
 
         <!-- TAB: MI CATÁLOGO -->
         <div class="b2b-tab-content active" id="tab-catalogo">
+            <!-- Barra de filtros por categoría -->
+            <div id="b2b-filter-bar" style="display:flex; gap:8px; flex-wrap:wrap; padding:14px 0 10px; border-bottom:1.5px solid rgba(237,230,216,0.7); margin-bottom:14px;"></div>
             <div class="products-grid" id="products-grid">
                 <div style="grid-column:1/-1;text-align:center;padding:60px 0;color:#c8bba8;">
                     <div class="spinner"></div>
@@ -1648,6 +1650,58 @@
 
     /* ── CATALOG ──────────────────────────────── */
     let _allCatalogItems = [];
+    let _b2bActiveFilter = 'all';
+
+    const _tipoLabelsB2B = {
+        llavero:         'Llaveros',
+        garita:          'Garitas',
+        shadow_box:      'Shadow Box',
+        ornamento:       'Ornamentos',
+        portada_libreta: 'Libretas',
+        lapicero:        'Lapiceros',
+        barco:           'Barcos',
+        base_soporte:    'Bases / Soportes',
+        personalizado:   'Personalizados',
+        otro:            'Otros',
+    };
+
+    function renderFilterBarB2B(items) {
+        const bar = document.getElementById('b2b-filter-bar');
+        if (!bar) return;
+
+        const tipos = [...new Set(items.map(i => i.tipo_producto).filter(Boolean))];
+        const tabs = [
+            { value: 'all', label: 'Todos' },
+            ...tipos.map(t => ({ value: t, label: _tipoLabelsB2B[t] || t })),
+        ];
+
+        bar.innerHTML = tabs.map(({ value, label }) => {
+            const active = _b2bActiveFilter === value;
+            return `<button
+                onclick="filterB2BCatalog('${value}')"
+                data-b2b-filter="${value}"
+                style="padding:6px 14px; border-radius:20px; font-size:12.5px; font-weight:${active ? '600' : '500'};
+                       cursor:pointer; transition:all 0.18s; outline:none;
+                       background:${active ? 'var(--color-moss-green)' : 'transparent'};
+                       color:${active ? '#fff' : '#7a6e5f'};
+                       border:1.5px solid ${active ? 'var(--color-moss-green)' : '#d9d0c2'};
+                       box-shadow:${active ? '0 2px 8px rgba(95,120,48,0.18)' : 'none'};">
+                ${label}
+            </button>`;
+        }).join('');
+    }
+
+    function filterB2BCatalog(tipo) {
+        _b2bActiveFilter = tipo;
+        renderFilterBarB2B(_allCatalogItems);
+
+        const cards = document.querySelectorAll('#products-grid .product-card');
+        cards.forEach(card => {
+            const cardTipo = card.dataset.tipo || '';
+            const show = tipo === 'all' || cardTipo === tipo;
+            card.style.display = show ? '' : 'none';
+        });
+    }
 
     function _getRelacionadosB2B(item, max = 4) {
         const tags = (item.shopify_tags || '').toLowerCase().split(',').map(t => t.trim()).filter(Boolean);
@@ -1681,7 +1735,9 @@
         const data = await res.json();
         const items = data.data || [];
         _allCatalogItems = items;
+        _b2bActiveFilter = 'all';
         console.log('[B2B catalog sample]', _allCatalogItems?.[0]);
+        renderFilterBarB2B(items);
 
         if (items.length === 0) {
             grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:60px;color:#c8bba8;font-style:italic;">
@@ -1696,6 +1752,7 @@
         items.forEach(item => {
             const card = document.createElement('div');
             card.className = 'product-card';
+            card.dataset.tipo = item.tipo_producto || '';
 
             const isPersonalizado = item.personalizado === 1;
 
@@ -2482,8 +2539,12 @@
 
             // Descripción
             const descTxt = item.shopify_descripcion || '';
-            desc.textContent = descTxt || 'Producto artesanal Evergreen Love.';
             document.getElementById('qv-desc-label').style.display = descTxt ? '' : 'none';
+            if (descTxt) {
+                desc.innerHTML = `<span style="display:block; border-left:3px solid var(--color-moss-green); padding-left:12px; color:#4a4438; font-size:13.5px; line-height:1.75; font-style:italic;">${descTxt}</span>`;
+            } else {
+                desc.innerHTML = '';
+            }
 
             // Medidas
             const tieneAncho = item.ancho && parseFloat(item.ancho) > 0;

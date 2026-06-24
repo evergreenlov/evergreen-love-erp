@@ -8,6 +8,19 @@ const CatalogoComponent = {
     productos: [],
     currentFilter: 'all',
 
+    _tipoLabels: {
+        llavero:         'Llaveros',
+        garita:          'Garitas',
+        shadow_box:      'Shadow Box',
+        ornamento:       'Ornamentos',
+        portada_libreta: 'Libretas',
+        lapicero:        'Lapiceros',
+        barco:           'Barcos',
+        base_soporte:    'Bases / Soportes',
+        personalizado:   'Personalizados',
+        otro:            'Otros',
+    },
+
     async render(containerId) {
         const container = document.getElementById(containerId);
         const isAdmin = !!document.querySelector('.sidebar');
@@ -32,15 +45,8 @@ const CatalogoComponent = {
                     </div>
                 </div>
 
-                <!-- Sub-pestañas / Filtros -->
-                <div style="display: flex; gap: 16px; margin-bottom: 20px; border-bottom: 1.5px solid #eae5dc; padding-bottom: 8px;">
-                    <button class="sub-tab-btn" id="btn-filter-all" style="padding: 6px 12px; border: none; background: none; font-weight: ${this.currentFilter === 'all' ? '600' : '500'}; font-size: 13.5px; color: ${this.currentFilter === 'all' ? 'var(--color-moss-green)' : '#8c8270'}; border-bottom: ${this.currentFilter === 'all' ? '2.5px solid var(--color-moss-green)' : 'none'}; cursor: pointer; outline:none; transition: all 0.2s;" onclick="CatalogoComponent.setFilter('all')">
-                        Todos los Productos
-                    </button>
-                    <button class="sub-tab-btn" id="btn-filter-custom" style="padding: 6px 12px; border: none; background: none; font-weight: ${this.currentFilter === 'custom' ? '600' : '500'}; font-size: 13.5px; color: ${this.currentFilter === 'custom' ? 'var(--color-moss-green)' : '#8c8270'}; border-bottom: ${this.currentFilter === 'custom' ? '2.5px solid var(--color-moss-green)' : 'none'}; cursor: pointer; outline:none; transition: all 0.2s;" onclick="CatalogoComponent.setFilter('custom')">
-                        Productos Actualizables / Personalizables
-                    </button>
-                </div>
+                <!-- Sub-pestañas / Filtros — se construyen dinámicamente en renderFilterTabs() -->
+                <div id="catalogo-filter-bar" style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:20px; border-bottom:1.5px solid #eae5dc; padding-bottom:10px;"></div>
 
                 <div id="catalogo-cards" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 260px)); gap: 24px;"></div>
             </div>
@@ -82,6 +88,7 @@ const CatalogoComponent = {
         }
 
         await this.loadProductos();
+        this.renderFilterTabs();
         this.renderCards();
     },
 
@@ -169,29 +176,42 @@ const CatalogoComponent = {
             cardsDiv.innerHTML = `<p style="color: var(--color-danger);">No se pudieron cargar los productos.</p>`;
         }
     },
+    renderFilterTabs() {
+        const bar = document.getElementById('catalogo-filter-bar');
+        if (!bar) return;
+
+        // Obtener tipos únicos con al menos un producto
+        const tipos = [...new Set(
+            this.productos
+                .map(p => p.tipo_producto)
+                .filter(Boolean)
+        )];
+
+        const tabs = [
+            { value: 'all',    label: 'Todos' },
+            { value: 'custom', label: '✨ Personalizables' },
+            ...tipos.map(t => ({ value: t, label: this._tipoLabels[t] || t })),
+        ];
+
+        bar.innerHTML = tabs.map(({ value, label }) => {
+            const active = this.currentFilter === value;
+            return `<button
+                class="sub-tab-btn"
+                data-filter="${value}"
+                onclick="CatalogoComponent.setFilter('${value}')"
+                style="padding:6px 14px; border:none; border-radius:20px; font-size:13px; font-weight:${active ? '600' : '500'}; cursor:pointer; outline:none; transition:all 0.18s;
+                       background:${active ? 'var(--color-moss-green)' : 'transparent'};
+                       color:${active ? '#fff' : '#8c8270'};
+                       box-shadow:${active ? '0 2px 8px rgba(95,120,48,0.18)' : 'none'};
+                       border:1.5px solid ${active ? 'var(--color-moss-green)' : '#ddd'};">
+                ${label}
+            </button>`;
+        }).join('');
+    },
+
     setFilter(filter) {
         this.currentFilter = filter;
-        const btnAll = document.getElementById('btn-filter-all');
-        const btnCustom = document.getElementById('btn-filter-custom');
-        
-        if (filter === 'all') {
-            btnAll.style.fontWeight = '600';
-            btnAll.style.color = 'var(--color-moss-green)';
-            btnAll.style.borderBottom = '2.5px solid var(--color-moss-green)';
-            
-            btnCustom.style.fontWeight = '500';
-            btnCustom.style.color = '#8c8270';
-            btnCustom.style.borderBottom = 'none';
-        } else {
-            btnCustom.style.fontWeight = '600';
-            btnCustom.style.color = 'var(--color-moss-green)';
-            btnCustom.style.borderBottom = '2.5px solid var(--color-moss-green)';
-            
-            btnAll.style.fontWeight = '500';
-            btnAll.style.color = '#8c8270';
-            btnAll.style.borderBottom = 'none';
-        }
-        
+        this.renderFilterTabs();
         this.renderCards();
     },
     personalizarProducto(productoId) {
@@ -220,9 +240,11 @@ const CatalogoComponent = {
     renderCards() {
         const cardsDiv = document.getElementById('catalogo-cards');
         let filteredProds = this.productos;
-        
+
         if (this.currentFilter === 'custom') {
             filteredProds = this.productos.filter(p => Number(p.personalizado) === 1);
+        } else if (this.currentFilter !== 'all') {
+            filteredProds = this.productos.filter(p => p.tipo_producto === this.currentFilter);
         }
 
         if (!filteredProds.length) {
@@ -663,7 +685,12 @@ const CatalogoComponent = {
         document.getElementById('pub-qv-sku').textContent = p.sku ? 'SKU: ' + p.sku : '';
         const precio = p.precio_final || p.precio_sugerido || 0;
         document.getElementById('pub-qv-price').textContent = '$' + precio.toFixed(2);
-        document.getElementById('pub-qv-desc').textContent = p.shopify_descripcion || '';
+        const descEl = document.getElementById('pub-qv-desc');
+        if (p.shopify_descripcion) {
+            descEl.innerHTML = `<span style="display:block; border-left:3px solid var(--color-moss-green); padding-left:12px; color:#4a4438; font-size:13.5px; line-height:1.7; font-style:italic;">${p.shopify_descripcion}</span>`;
+        } else {
+            descEl.innerHTML = '';
+        }
 
         // Medidas
         const medEl = document.getElementById('pub-qv-medidas');
