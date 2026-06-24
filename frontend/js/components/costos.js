@@ -189,6 +189,8 @@ const CostosComponent = {
                                             <option value="barco">Barco / Miniatura</option>
                                             <option value="base_soporte">Base / Soporte</option>
                                             <option value="canva">Canvas</option>
+                                            <option value="macrame">Macramé</option>
+                                            <option value="madera">Madera</option>
                                             <option value="personalizado">Personalizado</option>
                                             <option value="otro">Otro</option>
                                         </select>

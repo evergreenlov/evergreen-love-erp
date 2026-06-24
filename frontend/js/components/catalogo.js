@@ -177,34 +177,28 @@ const CatalogoComponent = {
             cardsDiv.innerHTML = `<p style="color: var(--color-danger);">No se pudieron cargar los productos.</p>`;
         }
     },
+    _TABS: [
+        { value: 'all',          label: 'Todos' },
+        { value: 'canva',        label: 'Canvas' },
+        { value: 'macrame',      label: 'Macramé' },
+        { value: 'madera',       label: 'Madera' },
+        { value: 'personalizado', label: 'Personalizados' },
+    ],
+
     renderFilterTabs() {
         const bar = document.getElementById('catalogo-filter-bar');
         if (!bar) return;
-
-        // Obtener tipos únicos con al menos un producto
-        const tipos = [...new Set(
-            this.productos
-                .map(p => p.tipo_producto)
-                .filter(Boolean)
-        )];
-
-        const tabs = [
-            { value: 'all',    label: 'Todos' },
-            { value: 'custom', label: '✨ Personalizables' },
-            ...tipos.map(t => ({ value: t, label: this._tipoLabels[t] || t })),
-        ];
-
-        bar.innerHTML = tabs.map(({ value, label }) => {
+        bar.innerHTML = this._TABS.map(({ value, label }) => {
             const active = this.currentFilter === value;
             return `<button
                 class="sub-tab-btn"
                 data-filter="${value}"
                 onclick="CatalogoComponent.setFilter('${value}')"
-                style="padding:6px 14px; border:none; border-radius:20px; font-size:13px; font-weight:${active ? '600' : '500'}; cursor:pointer; outline:none; transition:all 0.18s;
+                style="padding:6px 16px; border-radius:20px; font-size:13px; font-weight:${active ? '600' : '500'}; cursor:pointer; outline:none; transition:all 0.18s;
                        background:${active ? 'var(--color-moss-green)' : 'transparent'};
                        color:${active ? '#fff' : '#8c8270'};
-                       box-shadow:${active ? '0 2px 8px rgba(95,120,48,0.18)' : 'none'};
-                       border:1.5px solid ${active ? 'var(--color-moss-green)' : '#ddd'};">
+                       border:1.5px solid ${active ? 'var(--color-moss-green)' : '#ddd'};
+                       box-shadow:${active ? '0 2px 8px rgba(95,120,48,0.2)' : 'none'};">
                 ${label}
             </button>`;
         }).join('');
@@ -242,8 +236,8 @@ const CatalogoComponent = {
         const cardsDiv = document.getElementById('catalogo-cards');
         let filteredProds = this.productos;
 
-        if (this.currentFilter === 'custom') {
-            filteredProds = this.productos.filter(p => Number(p.personalizado) === 1);
+        if (this.currentFilter === 'personalizado') {
+            filteredProds = this.productos.filter(p => Number(p.personalizado) === 1 || p.tipo_producto === 'personalizado');
         } else if (this.currentFilter !== 'all') {
             filteredProds = this.productos.filter(p => p.tipo_producto === this.currentFilter);
         }

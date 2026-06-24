@@ -1666,27 +1666,28 @@
         otro:            'Otros',
     };
 
-    function renderFilterBarB2B(items) {
+    const _B2B_TABS = [
+        { value: 'all',           label: 'Todos' },
+        { value: 'canva',         label: 'Canvas' },
+        { value: 'macrame',       label: 'Macramé' },
+        { value: 'madera',        label: 'Madera' },
+        { value: 'personalizado', label: 'Personalizados' },
+    ];
+
+    function renderFilterBarB2B() {
         const bar = document.getElementById('b2b-filter-bar');
         if (!bar) return;
-
-        const tipos = [...new Set(items.map(i => i.tipo_producto).filter(Boolean))];
-        const tabs = [
-            { value: 'all', label: 'Todos' },
-            ...tipos.map(t => ({ value: t, label: _tipoLabelsB2B[t] || t })),
-        ];
-
-        bar.innerHTML = tabs.map(({ value, label }) => {
+        bar.innerHTML = _B2B_TABS.map(({ value, label }) => {
             const active = _b2bActiveFilter === value;
             return `<button
                 onclick="filterB2BCatalog('${value}')"
                 data-b2b-filter="${value}"
-                style="padding:6px 14px; border-radius:20px; font-size:12.5px; font-weight:${active ? '600' : '500'};
+                style="padding:6px 16px; border-radius:20px; font-size:12.5px; font-weight:${active ? '600' : '500'};
                        cursor:pointer; transition:all 0.18s; outline:none;
                        background:${active ? 'var(--color-moss-green)' : 'transparent'};
                        color:${active ? '#fff' : '#7a6e5f'};
                        border:1.5px solid ${active ? 'var(--color-moss-green)' : '#d9d0c2'};
-                       box-shadow:${active ? '0 2px 8px rgba(95,120,48,0.18)' : 'none'};">
+                       box-shadow:${active ? '0 2px 8px rgba(95,120,48,0.2)' : 'none'};">
                 ${label}
             </button>`;
         }).join('');
@@ -1694,12 +1695,19 @@
 
     function filterB2BCatalog(tipo) {
         _b2bActiveFilter = tipo;
-        renderFilterBarB2B(_allCatalogItems);
-
+        renderFilterBarB2B();
         const cards = document.querySelectorAll('#products-grid .product-card');
         cards.forEach(card => {
-            const cardTipo = card.dataset.tipo || '';
-            const show = tipo === 'all' || cardTipo === tipo;
+            const cardTipo     = card.dataset.tipo || '';
+            const esPersonaliz = card.dataset.personalizado === '1';
+            let show;
+            if (tipo === 'all') {
+                show = true;
+            } else if (tipo === 'personalizado') {
+                show = esPersonaliz || cardTipo === 'personalizado';
+            } else {
+                show = cardTipo === tipo;
+            }
             card.style.display = show ? '' : 'none';
         });
     }
@@ -1738,7 +1746,7 @@
         _allCatalogItems = items;
         _b2bActiveFilter = 'all';
         console.log('[B2B catalog sample]', _allCatalogItems?.[0]);
-        renderFilterBarB2B(items);
+        renderFilterBarB2B();
 
         if (items.length === 0) {
             grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:60px;color:#c8bba8;font-style:italic;">
@@ -1754,6 +1762,7 @@
             const card = document.createElement('div');
             card.className = 'product-card';
             card.dataset.tipo = item.tipo_producto || '';
+            card.dataset.personalizado = item.personalizado === 1 ? '1' : '0';
 
             const isPersonalizado = item.personalizado === 1;
 
