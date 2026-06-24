@@ -267,16 +267,10 @@ const CostosComponent = {
                                     </div>
                                 </div>
 
-                                <!-- Tiempos láser -->
-                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top:14px;">
-                                    <div style="display: flex; flex-direction: column; gap: 4px;">
-                                        <label style="font-weight: 500; font-size: 13px;">Tiempo Corte Láser (min)</label>
-                                        <input type="number" id="laser-corte" value="1.5" step="0.1" min="0" style="padding: 10px; border-radius: var(--radius-sm); border: 1px solid var(--color-gray-border); font-family: var(--font-primary);">
-                                    </div>
-                                    <div style="display: flex; flex-direction: column; gap: 4px;">
-                                        <label style="font-weight: 500; font-size: 13px;">Tiempo Grabado Láser (min)</label>
-                                        <input type="number" id="laser-grabado" value="1.0" step="0.1" min="0" style="padding: 10px; border-radius: var(--radius-sm); border: 1px solid var(--color-gray-border); font-family: var(--font-primary);">
-                                    </div>
+                                <!-- Tiempo láser unificado -->
+                                <div style="display: flex; flex-direction: column; gap: 4px; margin-top:14px;">
+                                    <label style="font-weight: 500; font-size: 13px;">Tiempo de Láser (min) <span style="color:#aaa;font-size:11px;">corte + grabado total</span></label>
+                                    <input type="number" id="laser-tiempo" value="2.5" step="0.1" min="0" style="padding: 10px; border-radius: var(--radius-sm); border: 1px solid var(--color-gray-border); font-family: var(--font-primary);">
                                 </div>
 
                                 </div><!-- fin seccion-laser-campos -->
@@ -385,10 +379,14 @@ const CostosComponent = {
                     <!-- Panel derecho: tarifas + desglose -->
                     <div style="display: flex; flex-direction: column; gap: 20px;">
 
-                    <!-- Panel Tarifas Globales -->
-                    <div class="card" style="border: 1px solid #c8d9a0; background: #f8faf3;">
-                        <h3 class="card-title" style="font-size: 14px; margin-bottom: 10px;">⚙️ Tarifas Globales de Producción</h3>
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+                    <!-- Panel Tarifas Globales (acordeón) -->
+                    <div class="card" style="border: 1px solid #c8d9a0; background: #f8faf3; padding: 0; overflow: hidden;">
+                        <button id="btn-toggle-tarifas" type="button" style="width:100%; background:none; border:none; cursor:pointer; padding:12px 16px; display:flex; align-items:center; justify-content:space-between; font-family:var(--font-primary); font-size:13px; font-weight:600; color:var(--color-olive-brown);">
+                            <span>⚙️ Ajustar Tarifas Globales</span>
+                            <span id="icono-tarifas" style="font-size:11px; color:#999;">▼</span>
+                        </button>
+                        <div id="panel-tarifas-cuerpo" style="display:none; padding:0 16px 14px 16px; border-top:1px solid #c8d9a0;">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top:12px; margin-bottom: 10px;">
                             <div style="display: flex; flex-direction: column; gap: 4px;">
                                 <label style="font-weight: 500; font-size: 12px; color: #555;">Láser ($/hora)</label>
                                 <input type="number" id="tarifa-laser" value="${this.tarifas.tarifa_hora_laser.toFixed(2)}" step="0.50" min="0.01" style="padding: 8px; border-radius: var(--radius-sm); border: 1px solid #c8d9a0; font-family: var(--font-primary); font-size: 13px;">
@@ -418,6 +416,7 @@ const CostosComponent = {
                         <button id="btn-guardar-tarifas" class="btn btn-secondary" style="width:100%; font-size: 12px; padding: 6px; color: var(--color-moss-green); border-color: var(--color-moss-green);">
                             <i data-lucide="save" style="width:13px;height:13px;"></i> Guardar Tarifas
                         </button>
+                        </div><!-- fin panel-tarifas-cuerpo -->
                     </div>
 
                     <!-- Resultados del Costeo Desglosado -->
@@ -557,8 +556,11 @@ const CostosComponent = {
         // Rellenar dimensiones, tiempos y campos del motor de costeo
         if (p.ancho) document.getElementById('prod-ancho').value = p.ancho;
         if (p.alto)  document.getElementById('prod-alto').value  = p.alto;
-        if (p.tiempo_corte   !== undefined) document.getElementById('laser-corte').value    = p.tiempo_corte;
-        if (p.tiempo_grabado !== undefined) document.getElementById('laser-grabado').value   = p.tiempo_grabado;
+        if (p.tiempo_corte !== undefined || p.tiempo_grabado !== undefined) {
+            const tc = parseFloat(p.tiempo_corte)  || 0;
+            const tg = parseFloat(p.tiempo_grabado) || 0;
+            document.getElementById('laser-tiempo').value = (tc + tg).toFixed(1);
+        }
         if (p.margen_ganancia !== undefined) document.getElementById('margen-ganancia').value = (p.margen_ganancia * 100).toFixed(0);
         // Nuevos campos motor de costeo
         if (p.tipo_producto) { const sel = document.getElementById('tipo-producto'); if (sel) sel.value = p.tipo_producto; }
@@ -707,6 +709,18 @@ const CostosComponent = {
             btnSaveProduct.addEventListener('click', () => this.openSaveProductModal());
         }
 
+        // Acordeón Tarifas Globales
+        const btnToggleTarifas = document.getElementById('btn-toggle-tarifas');
+        if (btnToggleTarifas) {
+            btnToggleTarifas.addEventListener('click', () => {
+                const cuerpo = document.getElementById('panel-tarifas-cuerpo');
+                const icono  = document.getElementById('icono-tarifas');
+                const abierto = cuerpo.style.display !== 'none';
+                cuerpo.style.display = abierto ? 'none' : 'block';
+                if (icono) icono.textContent = abierto ? '▼' : '▲';
+            });
+        }
+
         // Guardar tarifas globales
         const btnGuardarTarifas = document.getElementById('btn-guardar-tarifas');
         if (btnGuardarTarifas) {
@@ -803,8 +817,8 @@ const CostosComponent = {
 
                 const anchoProd = parseFloat(document.getElementById('prod-ancho').value) || 0;
                 const altoProd = parseFloat(document.getElementById('prod-alto').value) || 0;
-                const tiempoCorte = parseFloat(document.getElementById('laser-corte').value) || 0;
-                const tiempoGrabado = parseFloat(document.getElementById('laser-grabado').value) || 0;
+                const tiempoCorte = parseFloat(document.getElementById('laser-tiempo').value) || 0;
+                const tiempoGrabado = 0;
                 const tiempoPinturaCapa = parseFloat(document.getElementById('tiempo-pintura').value) || 0;
                 const capas = parseInt(document.getElementById('capas-pintura').value) || 1;
                 const tiempoEnsamblaje = parseFloat(document.getElementById('tiempo-ensamblaje').value) || 0;
