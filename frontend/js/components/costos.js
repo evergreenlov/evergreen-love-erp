@@ -690,7 +690,7 @@ const CostosComponent = {
                 if (resinaFields) resinaFields.style.display = 'none';
             }
         }
-    }
+    },
 
     setupListeners() {
         const checkboxes = document.querySelectorAll('.extra-checkbox');
@@ -903,11 +903,22 @@ const CostosComponent = {
                     }
                 });
 
-                if (accesoriosHTML) {
+                // Bloque unificado de extras (accesorios + 3D) — siempre visible si hay algo
+                const costoExtras3DTemp = costoPegamento + costoHerrajesExtras + costoEmpaque;
+                const totalExtrasVisible = costoAccesoriosTotal + costoExtras3DTemp;
+                if (totalExtrasVisible > 0 || accesoriosHTML) {
+                    const itemsExtrasHTML = [];
+                    if (costoPegamento > 0)      itemsExtrasHTML.push(`<div style="display:flex;justify-content:space-between;font-size:13px;margin-top:4px;"><span>Pegamento</span><span>$${costoPegamento.toFixed(2)}</span></div>`);
+                    if (costoHerrajesExtras > 0) itemsExtrasHTML.push(`<div style="display:flex;justify-content:space-between;font-size:13px;margin-top:4px;"><span>Herrajes / imanes extras</span><span>$${costoHerrajesExtras.toFixed(2)}</span></div>`);
+                    if (costoEmpaque > 0)        itemsExtrasHTML.push(`<div style="display:flex;justify-content:space-between;font-size:13px;margin-top:4px;"><span>Empaque</span><span>$${costoEmpaque.toFixed(2)}</span></div>`);
                     desgloseHTML += `
                         <div style="background-color: var(--color-white); padding: 12px; border-radius: var(--radius-sm); border: 1px solid var(--color-gray-border); margin-bottom: 8px;">
-                            <strong style="color: var(--color-moss-green); font-size: 13.5px;">Componentes y Accesorios Extras:</strong>
+                            <strong style="color: var(--color-moss-green); font-size: 13.5px;">Componentes / Extras:</strong>
                             ${accesoriosHTML}
+                            ${itemsExtrasHTML.join('')}
+                            <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:700;border-top:1px dashed #ddd;padding-top:6px;margin-top:6px;">
+                                <span>Total Extras</span><span>$${totalExtrasVisible.toFixed(2)}</span>
+                            </div>
                         </div>
                     `;
                 }
@@ -932,7 +943,7 @@ const CostosComponent = {
                     <div style="background-color: var(--color-white); padding: 12px; border-radius: var(--radius-sm); border: 1px solid var(--color-gray-border); margin-bottom: 8px;">
                         <strong style="color: var(--color-moss-green); font-size: 13.5px;">Láser ($${tarifaLaser.toFixed(2)}/hr):</strong>
                         <div style="display: flex; justify-content: space-between; font-size: 13px; margin-top: 4px;">
-                            <span>Corte: ${tiempoCorte} min · Grabado: ${tiempoGrabado} min</span>
+                            <span>Tiempo Láser: ${tiempoCorte} min</span>
                             <span>$${costoLaser.toFixed(2)}</span>
                         </div>
                     </div>
@@ -974,23 +985,6 @@ const CostosComponent = {
                             <span>$${costoPegado.toFixed(2)}</span>
                         </div>
                         ${tiempoSecadoRef > 0 ? `<div style="display:flex;justify-content:space-between;font-size:12px;color:#aaa;margin-top:3px;"><span>⏱ Secado estimado: ${tiempoSecadoRef} min (sin costo)</span><span>—</span></div>` : ''}
-                    </div>
-                    `;
-                }
-
-                // Desglose — Extras 3D directos
-                if (costoExtras3D > 0) {
-                    const itemsExtras = [];
-                    if (costoPegamento > 0)     itemsExtras.push(`Pegamento: $${costoPegamento.toFixed(2)}`);
-                    if (costoHerrajesExtras > 0) itemsExtras.push(`Herrajes/imanes extras: $${costoHerrajesExtras.toFixed(2)}`);
-                    if (costoEmpaque > 0)        itemsExtras.push(`Empaque: $${costoEmpaque.toFixed(2)}`);
-                    desgloseHTML += `
-                    <div style="background-color: var(--color-white); padding: 12px; border-radius: var(--radius-sm); border: 1px solid var(--color-gray-border); margin-bottom: 8px;">
-                        <strong style="color: var(--color-moss-green); font-size: 13.5px;">Extras 3D:</strong>
-                        <div style="font-size: 13px; margin-top: 4px; display:flex; flex-direction:column; gap:3px;">
-                            ${itemsExtras.map(i => `<div style="display:flex;justify-content:space-between;"><span>${i.split(': ')[0]}</span><span>${i.split(': ')[1]}</span></div>`).join('')}
-                            <div style="display:flex;justify-content:space-between;font-weight:600;border-top:1px solid #eee;padding-top:3px;margin-top:3px;"><span>Subtotal extras</span><span>$${costoExtras3D.toFixed(2)}</span></div>
-                        </div>
                     </div>
                     `;
                 }
