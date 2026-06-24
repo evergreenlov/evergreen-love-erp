@@ -9,6 +9,7 @@ const CatalogoComponent = {
     currentFilter: 'all',
 
     _tipoLabels: {
+        canva:           'Canvas',
         llavero:         'Llaveros',
         garita:          'Garitas',
         shadow_box:      'Shadow Box',
