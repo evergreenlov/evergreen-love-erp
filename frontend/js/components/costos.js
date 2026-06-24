@@ -1309,7 +1309,7 @@ const CostosComponent = {
         const defSku      = editingProd ? _esc(editingProd.sku) : '';
         const defNombre   = editingProd ? _esc(editingProd.nombre) : '';
         const defDesc     = editingProd ? _esc(editingProd.shopify_descripcion || '') : '';
-        const defPrecio   = editingProd ? editingProd.precio_final.toFixed(2) : sugerido.toFixed(2);
+        const defPrecio = (sugerido !== undefined && sugerido !== null) ? sugerido.toFixed(2) : (editingProd ? editingProd.precio_final.toFixed(2) : '0.00');
         const tipoProductoCalc = document.getElementById('tipo-producto')?.value || '';
         const defPersonal = editingProd
             ? editingProd.personalizado
