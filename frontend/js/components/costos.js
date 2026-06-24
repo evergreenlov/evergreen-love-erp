@@ -151,8 +151,23 @@ const CostosComponent = {
                                     </label>
                                 </div>
 
+                                <!-- Toggle Simple / Avanzado -->
+                                <div style="display:flex; align-items:center; justify-content:space-between; background:var(--color-gray-light); border:1px solid var(--color-gray-border); border-radius:var(--radius-sm); padding:8px 14px;">
+                                    <span style="font-size:12.5px; font-weight:600; color:var(--color-olive-brown);">Formulario</span>
+                                    <div style="display:flex; gap:0; border:1px solid var(--color-gray-border); border-radius:20px; overflow:hidden; font-size:12px; font-weight:600;">
+                                        <label id="lbl-modo-simple" style="padding:5px 14px; cursor:pointer; background:var(--color-moss-green); color:#fff; display:flex; align-items:center; gap:5px; transition:background 0.15s;">
+                                            <input type="radio" name="modo-formulario" id="modo-formulario-simple" value="simple" checked style="display:none;">
+                                            ⚡ Simple
+                                        </label>
+                                        <label id="lbl-modo-avanzado" style="padding:5px 14px; cursor:pointer; background:#fff; color:#888; display:flex; align-items:center; gap:5px; transition:background 0.15s;">
+                                            <input type="radio" name="modo-formulario" id="modo-formulario-avanzado" value="avanzado" style="display:none;">
+                                            🔧 Avanzado
+                                        </label>
+                                    </div>
+                                </div>
+
                                 <!-- Modo de producto + Tipo + Complejidad -->
-                                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px;">
+                                <div id="grid-modo-tipo-complejidad" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
                                     <div style="display: flex; flex-direction: column; gap: 4px;">
                                         <label style="font-weight: 500; font-size: 13px;">Modo de Producto</label>
                                         <select id="modo-producto" style="padding: 10px; border-radius: var(--radius-sm); border: 1px solid var(--color-gray-border); font-family: var(--font-primary);"
@@ -177,7 +192,7 @@ const CostosComponent = {
                                             <option value="otro">Otro</option>
                                         </select>
                                     </div>
-                                    <div style="display: flex; flex-direction: column; gap: 4px;">
+                                    <div id="campo-avanzado-complejidad" style="display:none; flex-direction: column; gap: 4px;">
                                         <label style="font-weight: 500; font-size: 13px;" title="Multiplica el costo de labor: Simple ×1.0 · Media ×1.3 · Compleja ×1.6">Complejidad <span style="color:#aaa;font-size:11px;">(afecta labor)</span></label>
                                         <select id="complejidad-producto" style="padding: 10px; border-radius: var(--radius-sm); border: 1px solid var(--color-gray-border); font-family: var(--font-primary);">
                                             <option value="simple">Simple (×1.0)</option>
@@ -290,8 +305,8 @@ const CostosComponent = {
                                     </div>
                                 </div>
 
-                                <!-- Tiempos de labor -->
-                                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
+                                <!-- Tiempos de labor (ocultos en modo Simple) -->
+                                <div id="campos-avanzados-labor" style="display: none; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
                                     <div style="display: flex; flex-direction: column; gap: 4px;">
                                         <label style="font-weight: 500; font-size: 13px;">Tiempo Pintura/Capa (min)</label>
                                         <input type="number" id="tiempo-pintura" value="0" step="0.5" min="0" style="padding: 10px; border-radius: var(--radius-sm); border: 1px solid var(--color-gray-border); font-family: var(--font-primary);">
@@ -306,8 +321,8 @@ const CostosComponent = {
                                     </div>
                                 </div>
 
-                                <!-- Resina -->
-                                <div style="border:1px solid #e8d5c4;border-radius:8px;padding:12px;background:#fffaf7;">
+                                <!-- Resina (oculta en modo Simple) -->
+                                <div id="campo-avanzado-resina" style="display:none; border:1px solid #e8d5c4;border-radius:8px;padding:12px;background:#fffaf7;">
                                     <label style="display:flex;align-items:center;gap:8px;font-weight:600;font-size:13px;cursor:pointer;margin-bottom:10px;">
                                         <input type="checkbox" id="usa-resina" style="width:15px;height:15px;accent-color:var(--color-moss-green);"
                                             onchange="document.getElementById('resina-fields').style.display=this.checked?'grid':'none'">
@@ -636,10 +651,56 @@ const CostosComponent = {
         if (btnSave) btnSave.removeAttribute('disabled');
     },
 
+    _aplicarModoFormulario(modo) {
+        const esSimple = modo === 'simple';
+
+        // Toggle visual del switch
+        const lblSimple   = document.getElementById('lbl-modo-simple');
+        const lblAvanzado = document.getElementById('lbl-modo-avanzado');
+        if (lblSimple)   { lblSimple.style.background   = esSimple ? 'var(--color-moss-green)' : '#fff'; lblSimple.style.color   = esSimple ? '#fff' : '#888'; }
+        if (lblAvanzado) { lblAvanzado.style.background = esSimple ? '#fff' : 'var(--color-moss-green)'; lblAvanzado.style.color = esSimple ? '#888' : '#fff'; }
+
+        // Mostrar / ocultar campos avanzados
+        const grid      = document.getElementById('grid-modo-tipo-complejidad');
+        const complejEl = document.getElementById('campo-avanzado-complejidad');
+        const laborEl   = document.getElementById('campos-avanzados-labor');
+        const resinaEl  = document.getElementById('campo-avanzado-resina');
+
+        if (grid)      grid.style.gridTemplateColumns = esSimple ? '1fr 1fr' : '1fr 1fr 1fr';
+        if (complejEl) complejEl.style.display        = esSimple ? 'none' : 'flex';
+        if (laborEl)   laborEl.style.display          = esSimple ? 'none' : 'grid';
+        if (resinaEl)  resinaEl.style.display         = esSimple ? 'none' : 'block';
+
+        // En modo Simple: forzar valores por defecto en campos ocultos
+        if (esSimple) {
+            const compSel = document.getElementById('complejidad-producto');
+            if (compSel) compSel.value = 'simple';
+            const tPintura = document.getElementById('tiempo-pintura');
+            if (tPintura) tPintura.value = '0';
+            const capas = document.getElementById('capas-pintura');
+            if (capas) capas.value = '1';
+            const tEnsam = document.getElementById('tiempo-ensamblaje');
+            if (tEnsam) tEnsam.value = '0';
+            const resina = document.getElementById('usa-resina');
+            if (resina && resina.checked) {
+                resina.checked = false;
+                const resinaFields = document.getElementById('resina-fields');
+                if (resinaFields) resinaFields.style.display = 'none';
+            }
+        }
+    }
+
     setupListeners() {
         const checkboxes = document.querySelectorAll('.extra-checkbox');
         const btnCalcular = document.getElementById('btn-calcular-costo');
         const btnSaveProduct = document.getElementById('btn-save-as-product');
+
+        // Toggle Simple / Avanzado
+        document.querySelectorAll('input[name="modo-formulario"]').forEach(radio => {
+            radio.addEventListener('change', (e) => this._aplicarModoFormulario(e.target.value));
+        });
+        // Iniciar en Simple
+        this._aplicarModoFormulario('simple');
         // IA desactivada temporalmente — los elementos ya no se renderizan en el HTML
 
         if (btnSaveProduct) {
