@@ -275,7 +275,8 @@ def list_productos(current_user: dict = Depends(get_current_admin)):
             cursor.execute("""
                 SELECT cp.id, cp.material_id, cp.cantidad_usada, cp.costo_calculado,
                        m.nombre as material_nombre, m.tipo as material_tipo,
-                       m.costo_hoja_unidad, m.tamano_ancho, m.tamano_alto
+                       m.costo_hoja_unidad, m.ivu, m.tamano_ancho, m.tamano_alto,
+                       ROUND(m.costo_hoja_unidad * (1 + COALESCE(m.ivu, 11.5) / 100.0), 4) AS costo_hoja_unidad_con_ivu
                 FROM componentes_producto cp
                 JOIN materiales m ON cp.material_id = m.id
                 WHERE cp.producto_id = ?

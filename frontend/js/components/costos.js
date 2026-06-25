@@ -74,11 +74,25 @@ const CostosComponent = {
                 productRows = `<tr><td colspan="6" style="text-align: center; color: #8c8270; padding: 24px;">No has costeado ni guardado productos aún.</td></tr>`;
             } else {
                 this.productos.forEach(prod => {
+                    // Detectar si el costo de algún material cambió desde el último cálculo
+                    let costoMaterialVivo = 0;
+                    let costoMaterialSnapshot = 0;
+                    (prod.componentes || []).forEach(c => {
+                        const vivoConIvu = c.costo_hoja_unidad_con_ivu ?? (c.costo_hoja_unidad * (1 + (c.ivu ?? 11.5) / 100));
+                        costoMaterialVivo     += (vivoConIvu ?? 0) * (c.cantidad_usada ?? 1);
+                        costoMaterialSnapshot += (c.costo_calculado ?? 0);
+                    });
+                    const diffMaterial = Math.abs(costoMaterialVivo - costoMaterialSnapshot);
+                    const costoStale = diffMaterial > 0.01;
+                    const staleIcon = costoStale
+                        ? `<span title="El precio de uno o más materiales cambió. Abre y recalcula para actualizar." style="color:#e67e22;font-size:13px;margin-left:4px;cursor:help;">⚠️</span>`
+                        : '';
+
                     productRows += `
                         <tr>
                             <td><strong>${prod.sku}</strong></td>
                             <td>${prod.nombre}</td>
-                            <td>$${prod.costo_total.toFixed(2)}</td>
+                            <td>$${prod.costo_total.toFixed(2)}${staleIcon}</td>
                             <td>$${prod.precio_final.toFixed(2)}</td>
                             <td>${((prod.precio_final - prod.costo_total) / prod.precio_final * 100).toFixed(0)}%</td>
                             <td style="text-align: right; white-space: nowrap;">

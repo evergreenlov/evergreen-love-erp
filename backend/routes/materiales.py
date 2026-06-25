@@ -260,14 +260,15 @@ async def import_materiales_csv(file: UploadFile = File(...), current_user: dict
                 cantidad = float(row.get('cantidad', 0.0) or 0.0)
                 cantidad_minima = float(row.get('cantidad_minima_alerta', 2.0) or 2.0)
                 costo = float(row.get('costo_hoja_unidad', 0.0) or 0.0)
+                ivu   = float(row.get('ivu', 11.5) or 11.5)
                 proveedor = row.get('proveedor', '').strip() or None
                 fecha_compra = row.get('fecha_compra', '').strip() or None
                 lote = row.get('lote', '').strip() or None
-                
+
                 cursor.execute("""
-                    INSERT INTO materiales (nombre, tipo, espesor, tamano_ancho, tamano_alto, cantidad, cantidad_minima_alerta, costo_hoja_unidad, proveedor, fecha_compra, lote)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """, (nombre, tipo, espesor, tamano_ancho, tamano_alto, cantidad, cantidad_minima, costo, proveedor, fecha_compra, lote))
+                    INSERT INTO materiales (nombre, tipo, espesor, tamano_ancho, tamano_alto, cantidad, cantidad_minima_alerta, costo_hoja_unidad, ivu, proveedor, fecha_compra, lote)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (nombre, tipo, espesor, tamano_ancho, tamano_alto, cantidad, cantidad_minima, costo, ivu, proveedor, fecha_compra, lote))
                 imported_count += 1
                 
             except ValueError as ve:
