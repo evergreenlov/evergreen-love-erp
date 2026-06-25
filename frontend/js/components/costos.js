@@ -40,8 +40,8 @@ const CostosComponent = {
             } else {
                 maderasAcrilicos.forEach(mat => {
                     materialBaseOptions += `
-                        <option value="${mat.costo_hoja_unidad}" data-id="${mat.id}" data-w="${mat.tamano_ancho}" data-h="${mat.tamano_alto}">
-                            ${mat.nombre} (${mat.espesor} in) - $${mat.costo_hoja_unidad.toFixed(2)} [${mat.tamano_ancho}"x${mat.tamano_alto}"]
+                        <option value="${mat.costo_hoja_unidad_con_ivu ?? mat.costo_hoja_unidad}" data-id="${mat.id}" data-w="${mat.tamano_ancho}" data-h="${mat.tamano_alto}">
+                            ${mat.nombre} (${mat.espesor} in) - $${(mat.costo_hoja_unidad_con_ivu ?? mat.costo_hoja_unidad).toFixed(2)} c/IVU [${mat.tamano_ancho}"x${mat.tamano_alto}"]
                         </option>
                     `;
                 });
@@ -56,8 +56,8 @@ const CostosComponent = {
                     extrasHTML += `
                         <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; background: var(--color-white); padding: 10px; border-radius: var(--radius-sm); border: 1px solid var(--color-gray-border); margin-bottom: 6px;">
                             <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13.5px; font-weight: 500;">
-                                <input type="checkbox" class="extra-checkbox" data-id="${ext.id}" data-nombre="${ext.nombre}" data-costo="${ext.costo_hoja_unidad}" data-tipo="${ext.tipo}">
-                                ${ext.nombre} ($${ext.costo_hoja_unidad.toFixed(2)}/ud)
+                                <input type="checkbox" class="extra-checkbox" data-id="${ext.id}" data-nombre="${ext.nombre}" data-costo="${ext.costo_hoja_unidad_con_ivu ?? ext.costo_hoja_unidad}" data-tipo="${ext.tipo}">
+                                ${ext.nombre} ($${(ext.costo_hoja_unidad_con_ivu ?? ext.costo_hoja_unidad).toFixed(2)}/ud)
                             </label>
                             <div style="display: flex; align-items: center; gap: 4px;">
                                 <span style="font-size: 12px; color: #8c8270;">Cant:</span>
