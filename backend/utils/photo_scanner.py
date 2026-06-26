@@ -94,8 +94,8 @@ def scan_and_index_photos():
                 orden_id = row['id']
                 cursor.execute("""
                     SELECT id FROM fotos_asociadas
-                    WHERE orden_id = ? AND nombre_archivo = ?
-                """, (orden_id, filename))
+                    WHERE orden_id = ? AND tipo_foto = ?
+                """, (orden_id, tipo_foto))
                 if not cursor.fetchone():
                     cursor.execute("""
                         INSERT INTO fotos_asociadas (orden_id, tipo_foto, ruta_archivo, nombre_archivo)
@@ -115,8 +115,8 @@ def scan_and_index_photos():
                 producto_id = row['id']
                 cursor.execute("""
                     SELECT id FROM fotos_asociadas
-                    WHERE producto_id = ? AND nombre_archivo = ?
-                """, (producto_id, filename))
+                    WHERE producto_id = ? AND tipo_foto = ? AND orden_id IS NULL
+                """, (producto_id, tipo_foto))
                 if not cursor.fetchone():
                     cursor.execute("""
                         INSERT INTO fotos_asociadas (producto_id, tipo_foto, ruta_archivo, nombre_archivo)

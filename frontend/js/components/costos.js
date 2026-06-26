@@ -205,6 +205,7 @@ const CostosComponent = {
                                             <option value="canva">Canvas</option>
                                             <option value="macrame">Macramé</option>
                                             <option value="madera">Madera</option>
+                                            <option value="catalogo">Catálogo</option>
                                             <option value="personalizado">Personalizado</option>
                                             <option value="otro">Otro</option>
                                         </select>
@@ -1749,9 +1750,9 @@ const CostosComponent = {
                         margen_ganancia: this.ultimoCalculo.margen_ganancia,
                         precio_sugerido: this.ultimoCalculo.precio_sugerido,
                         componentes: componentesBackend,
-                        tipo_producto: this.ultimoCalculo.tipo_producto,
+                        tipo_producto: document.getElementById('tipo-producto')?.value || this.ultimoCalculo.tipo_producto || 'otro',
                         capas: this.ultimoCalculo.capas,
-                        complejidad: this.ultimoCalculo.complejidad,
+                        complejidad: document.getElementById('complejidad-producto')?.value || this.ultimoCalculo.complejidad || 'simple',
                         tiempo_pintura: this.ultimoCalculo.tiempo_pintura,
                         tiempo_ensamblaje: this.ultimoCalculo.tiempo_ensamblaje,
                         usa_resina: this.ultimoCalculo.usa_resina,
@@ -1762,7 +1763,7 @@ const CostosComponent = {
                         precio_wholesale_12: wholesale12Val,
                         precio_wholesale_24: wholesale24Val,
                         precio_wholesale_50: wholesale50Val,
-                        modo_producto: this.ultimoCalculo.modo_producto,
+                        modo_producto: document.getElementById('modo-producto')?.value || this.ultimoCalculo.modo_producto || 'plano',
                         num_piezas: this.ultimoCalculo.num_piezas,
                         tiempo_pegado: this.ultimoCalculo.tiempo_pegado,
                         tiempo_secado_ref: this.ultimoCalculo.tiempo_secado_ref,
@@ -1812,9 +1813,9 @@ const CostosComponent = {
                     shopify_tags: shTags,
                     shopify_alt_text: `Fotografía de producto terminado de ${nombre}`,
                     componentes: componentesBackend,
-                    tipo_producto: this.ultimoCalculo.tipo_producto,
+                    tipo_producto: document.getElementById('tipo-producto')?.value || this.ultimoCalculo.tipo_producto || 'otro',
                     capas: this.ultimoCalculo.capas,
-                    complejidad: this.ultimoCalculo.complejidad,
+                    complejidad: document.getElementById('complejidad-producto')?.value || this.ultimoCalculo.complejidad || 'simple',
                     tiempo_pintura: this.ultimoCalculo.tiempo_pintura,
                     tiempo_ensamblaje: this.ultimoCalculo.tiempo_ensamblaje,
                     usa_resina: this.ultimoCalculo.usa_resina,
@@ -1825,7 +1826,7 @@ const CostosComponent = {
                     precio_wholesale_12: wholesale12Val,
                     precio_wholesale_24: wholesale24Val,
                     precio_wholesale_50: wholesale50Val,
-                    modo_producto: this.ultimoCalculo.modo_producto,
+                    modo_producto: document.getElementById('modo-producto')?.value || this.ultimoCalculo.modo_producto || 'plano',
                     num_piezas: this.ultimoCalculo.num_piezas,
                     tiempo_pegado: this.ultimoCalculo.tiempo_pegado,
                     tiempo_secado_ref: this.ultimoCalculo.tiempo_secado_ref,
