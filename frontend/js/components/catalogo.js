@@ -18,6 +18,9 @@ const CatalogoComponent = {
         lapicero:        'Lapiceros',
         barco:           'Barcos',
         base_soporte:    'Bases / Soportes',
+        macrame:         'Macramé',
+        madera:          'Madera',
+        catalogo:        'Catálogo',
         personalizado:   'Personalizados',
         otro:            'Otros',
     },
@@ -182,6 +185,7 @@ const CatalogoComponent = {
         { value: 'canva',        label: 'Canvas' },
         { value: 'macrame',      label: 'Macramé' },
         { value: 'madera',       label: 'Madera' },
+        { value: 'catalogo',     label: 'Catálogo' },
         { value: 'personalizado', label: 'Personalizados' },
     ],
 
