@@ -218,7 +218,7 @@ def list_productos_publico():
         cursor.execute("""
             SELECT p.id, p.sku, p.nombre, p.precio_final, p.personalizado,
                    p.shopify_titulo, p.shopify_descripcion, p.shopify_tags,
-                   p.ancho, p.alto,
+                   p.ancho, p.alto, p.tipo_producto,
                    p.precio_wholesale_12, p.precio_wholesale_24, p.precio_wholesale_50,
                    (SELECT f.nombre_archivo FROM fotos_asociadas f
                     WHERE f.producto_id = p.id AND f.tipo_foto = 'referencia'
