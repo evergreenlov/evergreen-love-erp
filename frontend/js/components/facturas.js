@@ -147,6 +147,15 @@ function encodePdfAscii(value) {
     return new TextEncoder().encode(value);
 }
 
+function cleanInvoiceNotes(notes) {
+    if (!notes) return "";
+    return notes
+        .replace(/\[IVU DETALLES - [^\]]+\]/g, "")
+        .replace(/Notas adicionales:\s*$/, "")
+        .replace(/Notas:\s*$/, "")
+        .trim();
+}
+
 async function buildSimpleInvoicePdf({ invoiceMeta, selectedCustomer, rows, subtotal, stateTax, municipalTax, ivu, total, montoPagado, stateTaxRate, municipalTaxRate, municipalTaxEnabled, logoSrc }) {
     const pageWidth = 612;
     const pageHeight = 792;
@@ -223,7 +232,7 @@ async function buildSimpleInvoicePdf({ invoiceMeta, selectedCustomer, rows, subt
             textAt(margin, y, 12, selectedCustomer?.name || "Sin cliente", true);
             y -= 14;
             
-            const contactInfo = [selectedCustomer?.email, selectedCustomer?.phone, selectedCustomer?.notas].filter(Boolean).join(" | ");
+            const contactInfo = [selectedCustomer?.email, selectedCustomer?.phone].filter(Boolean).join(" | ");
             wrapPdfText(contactInfo, 84).forEach((lineText) => {
                 textAt(margin, y, 9, lineText);
                 y -= 12;
@@ -319,11 +328,14 @@ async function buildSimpleInvoicePdf({ invoiceMeta, selectedCustomer, rows, subt
         y -= 10;
     });
     if (invoiceMeta.notes) {
-        y -= 6;
-        wrapPdfText("Notas: " + invoiceMeta.notes, 96).forEach((lineText) => {
-            textAt(margin, y, 8, lineText);
-            y -= 10;
-        });
+        const cleanedNotes = cleanInvoiceNotes(invoiceMeta.notes);
+        if (cleanedNotes) {
+            y -= 6;
+            wrapPdfText("Notas: " + cleanedNotes, 96).forEach((lineText) => {
+                textAt(margin, y, 8, lineText);
+                y -= 10;
+            });
+        }
     }
     finishPage();
 
