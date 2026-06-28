@@ -1335,9 +1335,13 @@ const CostosComponent = {
         const defShTitulo = editingProd ? _esc(editingProd.shopify_titulo || '') : '';
         const defShTags   = editingProd ? _esc(editingProd.shopify_tags || '') : '';
         const defB2bPrecio   = editingProd && editingProd.b2b_precio ? editingProd.b2b_precio.toFixed(2) : '';
-        const defWholesale12 = editingProd && editingProd.precio_wholesale_12 ? editingProd.precio_wholesale_12.toFixed(2) : '';
-        const defWholesale24 = editingProd && editingProd.precio_wholesale_24 ? editingProd.precio_wholesale_24.toFixed(2) : '';
-        const defWholesale50 = editingProd && editingProd.precio_wholesale_50 ? editingProd.precio_wholesale_50.toFixed(2) : '';
+        const calcWholesale12 = (parseFloat(defPrecio) * 0.70).toFixed(2);
+        const calcWholesale24 = (parseFloat(defPrecio) * 0.60).toFixed(2);
+        const calcWholesale50 = (parseFloat(defPrecio) * 0.50).toFixed(2);
+
+        const defWholesale12 = editingProd && editingProd.precio_wholesale_12 !== null && editingProd.precio_wholesale_12 !== undefined ? editingProd.precio_wholesale_12.toFixed(2) : calcWholesale12;
+        const defWholesale24 = editingProd && editingProd.precio_wholesale_24 !== null && editingProd.precio_wholesale_24 !== undefined ? editingProd.precio_wholesale_24.toFixed(2) : calcWholesale24;
+        const defWholesale50 = editingProd && editingProd.precio_wholesale_50 !== null && editingProd.precio_wholesale_50 !== undefined ? editingProd.precio_wholesale_50.toFixed(2) : calcWholesale50;
 
         modal.innerHTML = `
             <div class="modal-card card" style="max-width: 500px; width: 90%; margin: 60px auto; position: relative;">
@@ -1524,6 +1528,19 @@ const CostosComponent = {
                 inputShTags.value = tagsFiltrados.join(", ");
             }
         });
+
+        const inputPrecioFinal = document.getElementById('prod-precio-final');
+        if (inputPrecioFinal) {
+            inputPrecioFinal.addEventListener('input', (e) => {
+                const val = parseFloat(e.target.value) || 0;
+                const w12 = document.getElementById('prod-wholesale-12');
+                const w24 = document.getElementById('prod-wholesale-24');
+                const w50 = document.getElementById('prod-wholesale-50');
+                if (w12) w12.value = (val * 0.70).toFixed(2);
+                if (w24) w24.value = (val * 0.60).toFixed(2);
+                if (w50) w50.value = (val * 0.50).toFixed(2);
+            });
+        }
 
         document.getElementById('btn-close-prod-modal').addEventListener('click', () => {
             modal.style.display = 'none';
