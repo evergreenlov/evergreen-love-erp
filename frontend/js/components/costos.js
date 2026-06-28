@@ -1344,7 +1344,49 @@ const CostosComponent = {
         const defWholesale50 = editingProd && editingProd.precio_wholesale_50 !== null && editingProd.precio_wholesale_50 !== undefined ? editingProd.precio_wholesale_50.toFixed(2) : calcWholesale50;
 
         modal.innerHTML = `
-            <div class="modal-card card" style="max-width: 500px; width: 90%; margin: 60px auto; position: relative;">
+        modal.innerHTML = `
+            <style>
+                #product-save-form input[type="text"],
+                #product-save-form input[type="number"],
+                #product-save-form select,
+                #product-save-form textarea {
+                    width: 100%;
+                    padding: 8px 12px;
+                    border: 1.5px solid #e2dcd3;
+                    border-radius: 8px;
+                    font-family: var(--font-primary);
+                    font-size: 13px;
+                    background-color: #faf9f6;
+                    color: #4a4238;
+                    box-sizing: border-box;
+                    transition: all 0.2s ease;
+                    outline: none;
+                }
+                #product-save-form input[type="text"]:focus,
+                #product-save-form input[type="number"]:focus,
+                #product-save-form select:focus,
+                #product-save-form textarea:focus {
+                    border-color: var(--color-moss-green);
+                    background-color: #ffffff;
+                    box-shadow: 0 0 0 3px rgba(95, 120, 48, 0.12);
+                }
+                #product-save-form select {
+                    appearance: none;
+                    -webkit-appearance: none;
+                    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%235f7830' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'></polyline></svg>");
+                    background-repeat: no-repeat;
+                    background-position: right 10px center;
+                    background-size: 14px;
+                    padding-right: 32px;
+                    cursor: pointer;
+                }
+                #product-save-form input[type="file"] {
+                    font-family: var(--font-primary);
+                    font-size: 12px;
+                    cursor: pointer;
+                }
+            </style>
+            <div class="modal-card card" style="max-width: 560px; width: 90%; margin: 50px auto; position: relative; border-radius: 16px; box-shadow: 0 15px 40px rgba(0,0,0,0.15);">
                 <h3 class="card-title" style="color: ${isEditing ? '#f9a825' : 'inherit'}">
                     ${isEditing ? '✏️ Guardar Cambios del Producto' : 'Guardar en Catálogo'}
                 </h3>
@@ -1357,22 +1399,22 @@ const CostosComponent = {
                                 <span>SKU Único</span>
                                 <button type="button" id="btn-auto-sku" style="background:none; border:none; color:var(--color-moss-green); font-size:11px; cursor:pointer; padding:0; display:flex; align-items:center; gap:3px;"><i data-lucide="refresh-cw" style="width:12px;height:12px;"></i> Auto</button>
                             </label>
-                            <input type="text" id="prod-sku" required value="${defSku}" placeholder="Ej. SKU-GAR-LLAV-01" style="padding: 10px; border-radius: var(--radius-sm); border: 1px solid var(--color-gray-border); font-family: var(--font-primary);">
+                            <input type="text" id="prod-sku" required value="${defSku}" placeholder="Ej. SKU-GAR-LLAV-01">
                         </div>
                         <div style="display: flex; flex-direction: column; gap: 4px;">
                             <label style="font-weight: 500; font-size: 13px;">Nombre Comercial</label>
-                            <input type="text" id="prod-nombre" required value="${defNombre}" placeholder="Ej. Llavero de Garita Walnut" style="padding: 10px; border-radius: var(--radius-sm); border: 1px solid var(--color-gray-border); font-family: var(--font-primary);">
+                            <input type="text" id="prod-nombre" required value="${defNombre}" placeholder="Ej. Llavero de Garita Walnut">
                         </div>
                     </div>
 
                     <div style="display: flex; flex-direction: column; gap: 4px;">
                         <label style="font-weight: 500; font-size: 13px;">Descripción / Tamaño</label>
-                        <input type="text" id="prod-descripcion" value="${defDesc}" placeholder='Ej. Tamaño: 3.5" x 2.2" | Madera Walnut de 1/8"' style="padding: 10px; border-radius: var(--radius-sm); border: 1px solid var(--color-gray-border); font-family: var(--font-primary);">
+                        <input type="text" id="prod-descripcion" value="${defDesc}" placeholder='Ej. Tamaño: 3.5" x 2.2" | Madera Walnut de 1/8"'>
                     </div>
 
                     <div style="display: flex; flex-direction: column; gap: 4px;">
                         <label style="font-weight: 500; font-size: 13px;">${isEditing ? 'Reemplazar Foto Principal (Opcional)' : 'Foto del Producto (Opcional)'}</label>
-                        <input type="file" id="prod-foto" accept="image/*" style="font-family: var(--font-primary); font-size: 12px; padding: 6px 0; border: none; background: transparent; cursor: pointer;">
+                        <input type="file" id="prod-foto" accept="image/*">
                     </div>
 
                     ${isEditing ? `
@@ -1414,11 +1456,11 @@ const CostosComponent = {
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
                         <div style="display: flex; flex-direction: column; gap: 4px;">
                             <label style="font-weight: 500; font-size: 13px;">Precio Venta Final ($)</label>
-                            <input type="number" id="prod-precio-final" step="0.01" value="${defPrecio}" style="padding: 10px; border-radius: var(--radius-sm); border: 1px solid var(--color-gray-border); font-family: var(--font-primary);">
+                            <input type="number" id="prod-precio-final" step="0.01" value="${defPrecio}">
                         </div>
                         <div style="display: flex; flex-direction: column; gap: 4px;">
                             <label style="font-weight: 500; font-size: 13px;">Tipo de Venta</label>
-                            <select id="prod-personalizado" style="padding: 10px; border-radius: var(--radius-sm); border: 1px solid var(--color-gray-border); font-family: var(--font-primary);">
+                            <select id="prod-personalizado">
                                 <option value="0" ${defPersonal === 0 ? 'selected' : ''}>Estándar (Venta Directa)</option>
                                 <option value="1" ${defPersonal === 1 ? 'selected' : ''}>Personalizado (Precio a Cotizar)</option>
                             </select>
@@ -1444,13 +1486,13 @@ const CostosComponent = {
                         <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 12px; font-size: 12px; margin-bottom:10px;">
                             <div style="display: flex; flex-direction: column; gap: 3px;">
                                 <label style="font-weight: 500;">Asignar a Cliente (precio especial)</label>
-                                <select id="prod-b2b-cliente-id" style="padding: 6px 10px; border-radius: var(--radius-sm); border: 1px solid var(--color-gray-border); font-size: 12px; cursor:pointer; background-color: var(--color-white);">
+                                <select id="prod-b2b-cliente-id" style="background-color: var(--color-white);">
                                     ${b2bOptions}
                                 </select>
                             </div>
                             <div style="display: flex; flex-direction: column; gap: 3px;">
                                 <label style="font-weight: 500;">Precio Especial ($) <span style="color:#aaa;font-weight:400;">override</span></label>
-                                <input type="number" step="0.01" id="prod-b2b-precio" placeholder="0.00" value="${defB2bPrecio}" style="padding: 6px 10px; border-radius: var(--radius-sm); border: 1px solid var(--color-gray-border); font-size: 12px;">
+                                <input type="number" step="0.01" id="prod-b2b-precio" placeholder="0.00" value="${defB2bPrecio}">
                             </div>
                         </div>
                         <div style="border-top:1px solid #e0d8cc;padding-top:10px;">
@@ -1459,17 +1501,17 @@ const CostosComponent = {
                                 <div style="display: flex; flex-direction: column; gap: 3px;">
                                     <label style="font-weight: 500; color:#2d6a9f;">Precio B2B 12+ ($)</label>
                                     <input type="number" step="0.01" id="prod-wholesale-12" placeholder="0.00" value="${defWholesale12}"
-                                        style="padding: 6px 10px; border-radius: var(--radius-sm); border: 1px solid #b8d4f0; font-size: 12px; background:#f5f9ff;">
+                                        style="background:#f0f6fc; border-color:#bcd4ec;">
                                 </div>
                                 <div style="display: flex; flex-direction: column; gap: 3px;">
                                     <label style="font-weight: 500; color:#1a5276;">Precio B2B 24+ ($)</label>
                                     <input type="number" step="0.01" id="prod-wholesale-24" placeholder="0.00" value="${defWholesale24}"
-                                        style="padding: 6px 10px; border-radius: var(--radius-sm); border: 1px solid #a9c5e8; font-size: 12px; background:#eef5fb;">
+                                        style="background:#eef5fb; border-color:#a8c4e8;">
                                 </div>
                                 <div style="display: flex; flex-direction: column; gap: 3px;">
                                     <label style="font-weight: 500; color:#154360;">Precio Distribuidor 50+ ($)</label>
                                     <input type="number" step="0.01" id="prod-wholesale-50" placeholder="0.00" value="${defWholesale50}"
-                                        style="padding: 6px 10px; border-radius: var(--radius-sm); border: 1px solid #85b4d4; font-size: 12px; background:#e8f2f9;">
+                                        style="background:#e8f2f9; border-color:#84b4d4;">
                                 </div>
                             </div>
                         </div>
@@ -1482,11 +1524,11 @@ const CostosComponent = {
                         <div style="display: flex; flex-direction: column; gap: 8px; font-size: 12px;">
                             <div style="display: flex; flex-direction: column; gap: 3px;">
                                 <label style="font-weight: 500;">Título Shopify Sugerido</label>
-                                <input type="text" id="sh-titulo" value="${defShTitulo}" placeholder="Ej. Llavero de Madera - Garita del Viejo San Juan" style="padding: 6px 10px; border-radius: var(--radius-sm); border: 1px solid var(--color-gray-border); font-size: 12px;">
+                                <input type="text" id="sh-titulo" value="${defShTitulo}" placeholder="Ej. Llavero de Madera - Garita del Viejo San Juan">
                             </div>
                             <div style="display: flex; flex-direction: column; gap: 3px;">
                                 <label style="font-weight: 500;">Tags Shopify</label>
-                                <input type="text" id="sh-tags" value="${defShTags}" placeholder="llavero, madera, garita, artesanal" style="padding: 6px 10px; border-radius: var(--radius-sm); border: 1px solid var(--color-gray-border); font-size: 12px;">
+                                <input type="text" id="sh-tags" value="${defShTags}" placeholder="llavero, madera, garita, artesanal">
                             </div>
                         </div>
                     </div>
