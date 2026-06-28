@@ -1344,7 +1344,6 @@ const CostosComponent = {
         const defWholesale50 = editingProd && editingProd.precio_wholesale_50 !== null && editingProd.precio_wholesale_50 !== undefined ? editingProd.precio_wholesale_50.toFixed(2) : calcWholesale50;
 
         modal.innerHTML = `
-        modal.innerHTML = `
             <style>
                 #product-save-form input[type="text"],
                 #product-save-form input[type="number"],
