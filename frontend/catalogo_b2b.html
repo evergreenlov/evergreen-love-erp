@@ -1675,7 +1675,6 @@
         { value: 'macrame',       label: 'Macramé' },
         { value: 'madera',        label: 'Madera' },
         { value: 'catalogo',      label: 'Catálogo' },
-        { value: 'personalizado', label: 'Personalizados' },
     ];
 
     function renderFilterBarB2B() {
@@ -1747,6 +1746,7 @@
         }
         const data = await res.json();
         const items = data.data || [];
+        items.forEach(item => { item.personalizado = 0; });
         _allCatalogItems = items;
         _b2bActiveFilter = 'all';
         console.log('[B2B catalog sample]', _allCatalogItems?.[0]);
