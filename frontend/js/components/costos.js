@@ -2493,7 +2493,7 @@ const CostosComponent = {
         const wrap = document.getElementById('galeria-panel-wrap');
         if (!wrap) return;
 
-        const TIPOS = ['producto', 'ejemplo_cliente', 'material', 'detalle', 'uso_real'];
+        const TIPOS = ['producto', 'frontal', 'lateral', 'detalle', 'empaque', 'ejemplo_cliente', 'material', 'uso_real'];
 
         const showStatus = (msg, isError = false) => {
             const el = document.getElementById('galeria-panel-status');
@@ -2517,10 +2517,10 @@ const CostosComponent = {
             wrap.innerHTML = `
                 <div class="card" style="padding:20px;border:2px solid #b8d0f0;margin-top:0;">
                     <h3 style="margin:0 0 4px;font-size:15px;color:#1565c0;display:flex;align-items:center;gap:8px;">
-                        🖼️ Galería del Producto
+                        🖼️ Galería del Producto <span style="font-size:11px;background:#e3f2fd;color:#1565c0;border-radius:4px;padding:2px 7px;font-weight:600;">CATÁLOGO PÚBLICO</span>
                     </h3>
                     <p style="font-size:12px;color:#8c8270;margin:0 0 14px;">
-                        Hasta 10 imágenes. La imagen principal aparece primero en el catálogo.
+                        Estas fotos aparecen en el catálogo para los clientes. Sube hasta 10 imágenes (frontal, lateral, detalle, etc.). La imagen principal aparece primero.
                     </p>
                     <div id="galeria-panel-status" style="display:none;font-size:12.5px;margin-bottom:10px;"></div>
 
