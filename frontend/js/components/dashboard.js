@@ -184,37 +184,54 @@ const DashboardComponent = {
                 ${alertasHTML}
             </div>
 
-            <!-- Accesos Rápidos: catálogos (siempre visibles en móvil) -->
-            <div class="card" style="padding:16px;">
-                <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#bbb;margin-bottom:12px;display:flex;align-items:center;gap:6px;">
-                    <i data-lucide="link" style="width:13px;height:13px;"></i> Compartir Catálogos
+            <!-- Accesos Rápidos: catálogos -->
+            <div class="card" style="padding:20px 20px 16px;background:linear-gradient(135deg,#f8faf3 0%,#f5f0e8 100%);border:1.5px solid #d8e8b8;">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <div style="width:28px;height:28px;border-radius:8px;background:var(--color-moss-green);display:flex;align-items:center;justify-content:center;">
+                            <i data-lucide="share-2" style="width:14px;height:14px;color:#fff;"></i>
+                        </div>
+                        <span style="font-size:14px;font-weight:700;color:#333;font-family:var(--font-primary);">Compartir Catálogos</span>
+                    </div>
+                    <span style="font-size:10px;color:#aaa;font-style:italic;">toca para copiar enlace</span>
                 </div>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-                    <button onclick="(() => { const u = window.location.origin + '/catalogo_publico.html'; navigator.clipboard?.writeText(u).then(() => alert('¡Enlace copiado! ' + u)).catch(() => alert(u)); })()"
-                        style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 10px;background:#f8faf3;border:1.5px solid #c8d9a0;border-radius:10px;cursor:pointer;font-family:var(--font-primary);">
-                        <i data-lucide="shopping-bag" style="width:20px;height:20px;color:var(--color-moss-green);"></i>
-                        <span style="font-size:12px;font-weight:700;color:var(--color-moss-green);">Catálogo Público</span>
-                        <span style="font-size:10px;color:#8c8270;">Copiar enlace</span>
-                    </button>
-                    <button onclick="window.location.hash='catalogo'"
-                        style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 10px;background:#f8faf3;border:1.5px solid #c8d9a0;border-radius:10px;cursor:pointer;font-family:var(--font-primary);">
-                        <i data-lucide="external-link" style="width:20px;height:20px;color:var(--color-moss-green);"></i>
-                        <span style="font-size:12px;font-weight:700;color:var(--color-moss-green);">Abrir Catálogo</span>
-                        <span style="font-size:10px;color:#8c8270;">Ver y gestionar</span>
-                    </button>
-                    <button onclick="window.location.hash='clientes'"
-                        style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 10px;background:#f0f4ff;border:1.5px solid #b0c4f0;border-radius:10px;cursor:pointer;font-family:var(--font-primary);">
-                        <i data-lucide="users" style="width:20px;height:20px;color:#4a6fa5;"></i>
-                        <span style="font-size:12px;font-weight:700;color:#4a6fa5;">Clientes B2B</span>
-                        <span style="font-size:10px;color:#8c8270;">Enviar acceso con PIN</span>
-                    </button>
-                    <button onclick="(() => { const u = window.location.origin + '/catalogo_b2b.html'; navigator.clipboard?.writeText(u).then(() => alert('¡Enlace copiado! ' + u)).catch(() => alert(u)); })()"
-                        style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 10px;background:#f0f4ff;border:1.5px solid #b0c4f0;border-radius:10px;cursor:pointer;font-family:var(--font-primary);">
-                        <i data-lucide="copy" style="width:20px;height:20px;color:#4a6fa5;"></i>
-                        <span style="font-size:12px;font-weight:700;color:#4a6fa5;">Catálogo B2B</span>
-                        <span style="font-size:10px;color:#8c8270;">Copiar enlace</span>
-                    </button>
+
+                <!-- Fila 1: Catálogo Público -->
+                <div style="background:#fff;border-radius:12px;border:1px solid #e0eccc;padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;gap:12px;cursor:pointer;"
+                    onclick="(() => { const u = window.location.origin + '/catalogo_publico.html'; navigator.clipboard?.writeText(u).then(() => { const t = document.getElementById('dash-copy-toast'); t.textContent='✓ Enlace copiado'; t.style.display='block'; setTimeout(()=>t.style.display='none',2500); }).catch(() => alert(u)); })()">
+                    <div style="width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,#6f9a2e,#8ab83a);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <i data-lucide="shopping-bag" style="width:18px;height:18px;color:#fff;"></i>
+                    </div>
+                    <div style="flex:1;min-width:0;">
+                        <div style="font-size:13px;font-weight:700;color:#2d3a1f;">Catálogo Público</div>
+                        <div style="font-size:11px;color:#8c8270;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${window.location.origin}/catalogo_publico.html</div>
+                    </div>
+                    <div style="display:flex;gap:6px;flex-shrink:0;">
+                        <span style="font-size:10px;font-weight:600;background:#e8f5d0;color:#4a7a0f;padding:3px 8px;border-radius:20px;">Copiar</span>
+                        <a href="${window.location.origin}/catalogo_publico.html" target="_blank" onclick="event.stopPropagation()"
+                            style="font-size:10px;font-weight:600;background:#f5f5f5;color:#555;padding:3px 8px;border-radius:20px;text-decoration:none;">Abrir</a>
+                    </div>
                 </div>
+
+                <!-- Fila 2: Catálogo B2B -->
+                <div style="background:#fff;border-radius:12px;border:1px solid #dce6f8;padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;gap:12px;cursor:pointer;"
+                    onclick="(() => { const u = window.location.origin + '/catalogo_b2b.html'; navigator.clipboard?.writeText(u).then(() => { const t = document.getElementById('dash-copy-toast'); t.textContent='✓ Enlace copiado'; t.style.display='block'; setTimeout(()=>t.style.display='none',2500); }).catch(() => alert(u)); })()">
+                    <div style="width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,#3a62a0,#4a7fc1);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <i data-lucide="briefcase" style="width:18px;height:18px;color:#fff;"></i>
+                    </div>
+                    <div style="flex:1;min-width:0;">
+                        <div style="font-size:13px;font-weight:700;color:#1e2d4a;">Catálogo B2B</div>
+                        <div style="font-size:11px;color:#8c8270;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${window.location.origin}/catalogo_b2b.html</div>
+                    </div>
+                    <div style="display:flex;gap:6px;flex-shrink:0;">
+                        <span style="font-size:10px;font-weight:600;background:#dce6f8;color:#3a62a0;padding:3px 8px;border-radius:20px;">Copiar</span>
+                        <button onclick="event.stopPropagation();window.location.hash='clientes'"
+                            style="font-size:10px;font-weight:600;background:#f5f5f5;color:#555;padding:3px 8px;border-radius:20px;border:none;cursor:pointer;">Clientes</button>
+                    </div>
+                </div>
+
+                <!-- Toast de confirmación -->
+                <div id="dash-copy-toast" style="display:none;background:#2d3a1f;color:#fff;font-size:12px;font-weight:600;padding:8px 16px;border-radius:20px;text-align:center;margin-top:6px;">✓ Enlace copiado</div>
             </div>
 
             <!-- Listas recientes: 3 columnas -->
