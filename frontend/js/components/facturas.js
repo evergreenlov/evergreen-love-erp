@@ -167,7 +167,7 @@ async function buildSimpleInvoicePdf({ invoiceMeta, selectedCustomer, rows, subt
     const loadedRows = await Promise.all(rows.map(async (item) => {
         let image = null;
         if (item.foto_ruta) {
-            image = await loadLogoForPdf(item.foto_ruta, 48); // thumbnail max 48px
+            image = await loadLogoForPdf(item.foto_ruta, 56);
         }
         return { ...item, image };
     }));
@@ -257,21 +257,22 @@ async function buildSimpleInvoicePdf({ invoiceMeta, selectedCustomer, rows, subt
 
     loadedRows.forEach((item, index) => {
         const name = (index + 1) + ". " + (item.nombre_producto || item.producto_nombre || "Producto");
-        const rowHeight = 36; // Larger row height to fit the image
+        const rowHeight = item.image ? 52 : 36;
         ensureSpace(rowHeight + 8);
         
         let textXOffset = margin;
         if (item.image) {
-            const imgSize = 24;
-            const imgY = y - 18; // Center the image vertically in the 36-point row height
+            const imgSize = 42;
+            const imgY = y - imgSize + 6;
             imageAt(`ProdImage${index}`, margin, imgY, imgSize, imgSize);
-            textXOffset += 32;
+            textXOffset += imgSize + 10;
         }
-        
-        textAt(textXOffset, y - 4, 9, name, true); // Align text with image center
-        textAt(365, y - 4, 9, String(item.cantidad));
-        textRight(470, y - 4, 9, MONEY.format(item.precio_unitario || 0));
-        textRight(pageWidth - margin, y - 4, 9, MONEY.format(item.total || 0), true);
+
+        const textMidY = y - (rowHeight / 2) + 2;
+        textAt(textXOffset, textMidY, 9, name, true);
+        textAt(365, textMidY, 9, String(item.cantidad));
+        textRight(470, textMidY, 9, MONEY.format(item.precio_unitario || 0));
+        textRight(pageWidth - margin, textMidY, 9, MONEY.format(item.total || 0), true);
         y -= rowHeight;
     });
 
