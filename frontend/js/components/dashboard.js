@@ -184,6 +184,39 @@ const DashboardComponent = {
                 ${alertasHTML}
             </div>
 
+            <!-- Accesos Rápidos: catálogos (siempre visibles en móvil) -->
+            <div class="card" style="padding:16px;">
+                <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#bbb;margin-bottom:12px;display:flex;align-items:center;gap:6px;">
+                    <i data-lucide="link" style="width:13px;height:13px;"></i> Compartir Catálogos
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                    <button onclick="(() => { const u = window.location.origin + '/catalogo_publico.html'; navigator.clipboard?.writeText(u).then(() => alert('¡Enlace copiado! ' + u)).catch(() => alert(u)); })()"
+                        style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 10px;background:#f8faf3;border:1.5px solid #c8d9a0;border-radius:10px;cursor:pointer;font-family:var(--font-primary);">
+                        <i data-lucide="shopping-bag" style="width:20px;height:20px;color:var(--color-moss-green);"></i>
+                        <span style="font-size:12px;font-weight:700;color:var(--color-moss-green);">Catálogo Público</span>
+                        <span style="font-size:10px;color:#8c8270;">Copiar enlace</span>
+                    </button>
+                    <button onclick="window.location.hash='catalogo'"
+                        style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 10px;background:#f8faf3;border:1.5px solid #c8d9a0;border-radius:10px;cursor:pointer;font-family:var(--font-primary);">
+                        <i data-lucide="external-link" style="width:20px;height:20px;color:var(--color-moss-green);"></i>
+                        <span style="font-size:12px;font-weight:700;color:var(--color-moss-green);">Abrir Catálogo</span>
+                        <span style="font-size:10px;color:#8c8270;">Ver y gestionar</span>
+                    </button>
+                    <button onclick="window.location.hash='clientes'"
+                        style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 10px;background:#f0f4ff;border:1.5px solid #b0c4f0;border-radius:10px;cursor:pointer;font-family:var(--font-primary);">
+                        <i data-lucide="users" style="width:20px;height:20px;color:#4a6fa5;"></i>
+                        <span style="font-size:12px;font-weight:700;color:#4a6fa5;">Clientes B2B</span>
+                        <span style="font-size:10px;color:#8c8270;">Enviar acceso con PIN</span>
+                    </button>
+                    <button onclick="(() => { const u = window.location.origin + '/catalogo_b2b.html'; navigator.clipboard?.writeText(u).then(() => alert('¡Enlace copiado! ' + u)).catch(() => alert(u)); })()"
+                        style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 10px;background:#f0f4ff;border:1.5px solid #b0c4f0;border-radius:10px;cursor:pointer;font-family:var(--font-primary);">
+                        <i data-lucide="copy" style="width:20px;height:20px;color:#4a6fa5;"></i>
+                        <span style="font-size:12px;font-weight:700;color:#4a6fa5;">Catálogo B2B</span>
+                        <span style="font-size:10px;color:#8c8270;">Copiar enlace</span>
+                    </button>
+                </div>
+            </div>
+
             <!-- Listas recientes: 3 columnas -->
             <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;">
 
