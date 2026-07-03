@@ -122,11 +122,14 @@ def obtener_factura(factura_id: int, current_user: dict = Depends(get_current_ad
             
         factura = dict(factura_row)
         
-        # Obtener partidas con su foto de referencia
+        # Obtener partidas con su foto — galería nueva tiene prioridad sobre fotos_asociadas
         cursor.execute("""
-            SELECT i.*, 
-                   (SELECT f.nombre_archivo FROM fotos_asociadas f 
-                    WHERE f.producto_id = i.producto_id AND f.tipo_foto = 'referencia' 
+            SELECT i.*,
+                   (SELECT pi.ruta_imagen FROM producto_imagenes pi
+                    WHERE pi.producto_id = i.producto_id
+                    ORDER BY pi.es_principal DESC, pi.orden ASC, pi.id ASC LIMIT 1) as foto_galeria,
+                   (SELECT f.nombre_archivo FROM fotos_asociadas f
+                    WHERE f.producto_id = i.producto_id AND f.tipo_foto = 'referencia'
                     ORDER BY f.id DESC LIMIT 1) as foto_nombre
             FROM items_factura i
             WHERE i.factura_id = ?
@@ -134,7 +137,12 @@ def obtener_factura(factura_id: int, current_user: dict = Depends(get_current_ad
         items = []
         for row in cursor.fetchall():
             d = dict(row)
-            d['foto_ruta'] = f"/fotos_import/{d['foto_nombre']}" if d.get('foto_nombre') else None
+            if d.get('foto_galeria'):
+                d['foto_ruta'] = d['foto_galeria']
+            elif d.get('foto_nombre'):
+                d['foto_ruta'] = f"/fotos_import/{d['foto_nombre']}"
+            else:
+                d['foto_ruta'] = None
             items.append(d)
         factura["items"] = items
         
