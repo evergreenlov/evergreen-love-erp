@@ -123,34 +123,43 @@ const DashboardComponent = {
 
         // ── Lista: últimas cotizaciones ───────────────────────────────────
         const cotizRows = (listas.ultimas_cotizaciones || []).map(c => `
-            <tr style="border-bottom:1px solid #f7f3ee;" onmouseover="this.style.background='#fafaf8'" onmouseout="this.style.background=''">
-                <td style="padding:8px 10px;font-size:12px;color:#aaa;">#${c.id}</td>
-                <td style="padding:8px 10px;font-size:13px;font-weight:600;">${c.nombre_cliente}</td>
-                <td style="padding:8px 10px;">${this._estadoBadgeCotiz(c.estado)}</td>
-                <td style="padding:8px 10px;font-size:11px;color:#999;">${(c.fecha_creacion || '').slice(0,10)}</td>
-            </tr>`).join('') || `<tr><td colspan="4" style="text-align:center;padding:20px;color:#bbb;font-size:13px;">Sin cotizaciones</td></tr>`;
+            <div style="padding:10px 14px;border-bottom:1px solid #f7f3ee;display:flex;align-items:center;justify-content:space-between;gap:8px;cursor:pointer;"
+                onmouseover="this.style.background='#fafaf8'" onmouseout="this.style.background=''"
+                onclick="window.location.hash='cotizaciones'">
+                <div style="min-width:0;flex:1;">
+                    <div style="font-size:13px;font-weight:600;color:#222;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${c.nombre_cliente}</div>
+                    <div style="font-size:11px;color:#aaa;margin-top:1px;">#${c.id} · ${(c.fecha_creacion || '').slice(0,10)}</div>
+                </div>
+                <div style="flex-shrink:0;">${this._estadoBadgeCotiz(c.estado)}</div>
+            </div>`).join('') || `<div style="text-align:center;padding:24px;color:#bbb;font-size:13px;">Sin cotizaciones</div>`;
 
         // ── Lista: últimas órdenes ────────────────────────────────────────
         const ordenRows = (listas.ultimas_ordenes || []).map(o => `
-            <tr style="border-bottom:1px solid #f7f3ee;" onmouseover="this.style.background='#fafaf8'" onmouseout="this.style.background=''">
-                <td style="padding:8px 10px;font-size:12px;color:#aaa;white-space:nowrap;">${o.codigo_orden}</td>
-                <td style="padding:8px 10px;font-size:12px;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${o.cliente}">${o.cliente_corto}</td>
-                <td style="padding:8px 10px;">${this._estadoBadgeOrden(o.estado)}</td>
-                <td style="padding:8px 10px;font-size:11px;color:#999;">${(o.fecha_creacion || '').slice(0,10)}</td>
-            </tr>`).join('') || `<tr><td colspan="4" style="text-align:center;padding:20px;color:#bbb;font-size:13px;">Sin órdenes</td></tr>`;
+            <div style="padding:10px 14px;border-bottom:1px solid #f7f3ee;display:flex;align-items:center;justify-content:space-between;gap:8px;cursor:pointer;"
+                onmouseover="this.style.background='#fafaf8'" onmouseout="this.style.background=''"
+                onclick="window.location.hash='produccion'">
+                <div style="min-width:0;flex:1;">
+                    <div style="font-size:13px;font-weight:600;color:#222;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${o.cliente_corto}</div>
+                    <div style="font-size:11px;color:#aaa;margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${o.codigo_orden}">${o.codigo_orden}</div>
+                </div>
+                <div style="flex-shrink:0;">${this._estadoBadgeOrden(o.estado)}</div>
+            </div>`).join('') || `<div style="text-align:center;padding:24px;color:#bbb;font-size:13px;">Sin órdenes</div>`;
 
         // ── Lista: facturas pendientes ─────────────────────────────────────
         const factRows = (listas.facturas_pendientes || []).map(f => {
             const venc = f.fecha_vencimiento || '';
             const vencida = venc && venc < new Date().toISOString().slice(0,10);
             return `
-            <tr style="border-bottom:1px solid #f7f3ee;" onmouseover="this.style.background='#fafaf8'" onmouseout="this.style.background=''">
-                <td style="padding:8px 10px;font-size:12px;color:#aaa;">${f.numero_factura || '—'}</td>
-                <td style="padding:8px 10px;font-size:12px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${f.cliente_nombre}">${f.cliente_nombre}</td>
-                <td style="padding:8px 10px;font-size:13px;font-weight:700;color:#c62828;">${this._fmtMoney(f.total)}</td>
-                <td style="padding:8px 10px;font-size:11px;${vencida ? 'color:#c62828;font-weight:700;' : 'color:#999;'}">${venc ? venc.slice(0,10) : '—'}</td>
-            </tr>`;
-        }).join('') || `<tr><td colspan="4" style="text-align:center;padding:20px;color:#bbb;font-size:13px;">Sin facturas pendientes</td></tr>`;
+            <div style="padding:10px 14px;border-bottom:1px solid #f7f3ee;display:flex;align-items:center;justify-content:space-between;gap:8px;cursor:pointer;"
+                onmouseover="this.style.background='#fafaf8'" onmouseout="this.style.background=''"
+                onclick="window.location.hash='facturas'">
+                <div style="min-width:0;flex:1;">
+                    <div style="font-size:13px;font-weight:600;color:#222;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${f.cliente_nombre}</div>
+                    <div style="font-size:11px;color:#aaa;margin-top:1px;">${f.numero_factura || '—'} · vence <span style="${vencida ? 'color:#c62828;font-weight:700;' : ''}">${venc ? venc.slice(0,10) : '—'}</span></div>
+                </div>
+                <div style="flex-shrink:0;font-size:14px;font-weight:800;color:#c62828;">${this._fmtMoney(f.total)}</div>
+            </div>`;
+        }).join('') || `<div style="text-align:center;padding:24px;color:#bbb;font-size:13px;">Sin facturas pendientes</div>`;
 
         // ── Render ────────────────────────────────────────────────────────
         container.innerHTML = `
@@ -239,38 +248,32 @@ const DashboardComponent = {
 
                 <!-- Últimas cotizaciones -->
                 <div class="card" style="padding:0;overflow:hidden;">
-                    <div style="padding:14px 16px 10px;display:flex;align-items:center;justify-content:space-between;">
+                    <div style="padding:14px 16px 10px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #f2ede8;">
                         <span style="font-size:13px;font-weight:700;color:#333;">Últimas Cotizaciones</span>
                         <button onclick="window.location.hash='cotizaciones'"
                             class="btn btn-secondary" style="padding:3px 10px;font-size:11px;">Ver todas</button>
                     </div>
-                    <table style="width:100%;border-collapse:collapse;">
-                        <tbody>${cotizRows}</tbody>
-                    </table>
+                    <div>${cotizRows}</div>
                 </div>
 
                 <!-- Últimas órdenes -->
                 <div class="card" style="padding:0;overflow:hidden;">
-                    <div style="padding:14px 16px 10px;display:flex;align-items:center;justify-content:space-between;">
+                    <div style="padding:14px 16px 10px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #f2ede8;">
                         <span style="font-size:13px;font-weight:700;color:#333;">Últimas Órdenes</span>
                         <button onclick="window.location.hash='produccion'"
                             class="btn btn-secondary" style="padding:3px 10px;font-size:11px;">Ver todas</button>
                     </div>
-                    <table style="width:100%;border-collapse:collapse;">
-                        <tbody>${ordenRows}</tbody>
-                    </table>
+                    <div>${ordenRows}</div>
                 </div>
 
                 <!-- Facturas pendientes -->
                 <div class="card" style="padding:0;overflow:hidden;">
-                    <div style="padding:14px 16px 10px;display:flex;align-items:center;justify-content:space-between;">
+                    <div style="padding:14px 16px 10px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #f2ede8;">
                         <span style="font-size:13px;font-weight:700;color:#333;">Facturas Pendientes</span>
                         <button onclick="window.location.hash='facturas'"
                             class="btn btn-secondary" style="padding:3px 10px;font-size:11px;">Ver todas</button>
                     </div>
-                    <table style="width:100%;border-collapse:collapse;">
-                        <tbody>${factRows}</tbody>
-                    </table>
+                    <div>${factRows}</div>
                 </div>
 
             </div>
