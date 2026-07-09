@@ -36,12 +36,25 @@ function getClienteDisplayData(clienteNombre, notas, defaultEmail = '', defaultP
 // Helper functions for PDF Generation
 function cleanPdfText(value) {
     return String(value ?? "")
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .replace(/[^\x20-\x7E]/g, " ")
         .replace(/\\/g, "\\\\")
         .replace(/\(/g, "\\(")
-        .replace(/\)/g, "\\)");
+        .replace(/\)/g, "\\)")
+        .split("")
+        .map(ch => {
+            const code = ch.charCodeAt(0);
+            if (code >= 0x20 && code <= 0x7E) return ch;       // ASCII imprimible \u2014 sin cambio
+            if (code >= 0xA0 && code <= 0xFF) {
+                // Latin-1 (\u00e1 \u00e9 \u00ed \u00f3 \u00fa \u00f1 \u00c1 \u00c9 \u00cd \u00d3 \u00da \u00d1 \u00fc etc.)
+                // PDF permite escape octal \nnn para estos bytes
+                return "\\" + code.toString(8).padStart(3, "0");
+            }
+            // Otros Unicode: intentar extraer la letra base sin acento
+            const base = ch.normalize("NFD")[0];
+            const bc = base.charCodeAt(0);
+            if (bc >= 0x20 && bc <= 0x7E) return base;
+            return " ";
+        })
+        .join("");
 }
 
 function wrapPdfText(value, maxLength = 72) {
@@ -167,7 +180,7 @@ async function buildSimpleInvoicePdf({ invoiceMeta, selectedCustomer, rows, subt
     const loadedRows = await Promise.all(rows.map(async (item) => {
         let image = null;
         if (item.foto_ruta) {
-            image = await loadLogoForPdf(item.foto_ruta, 80);
+            image = await loadLogoForPdf(item.foto_ruta, 240);
         }
         return { ...item, image };
     }));
@@ -245,7 +258,7 @@ async function buildSimpleInvoicePdf({ invoiceMeta, selectedCustomer, rows, subt
         y -= 14;
         textAt(margin, y, 8, "Producto", true);
         textAt(354, y, 8, "Cant.", true);
-        textAt(420, y, 8, "Precio", true);
+        textAt(400, y, 8, "Precio Unit.", true);
         textRight(pageWidth - margin, y, 8, "Total", true);
         y -= 9;
         line(margin, y, pageWidth - margin, y);
@@ -264,13 +277,17 @@ async function buildSimpleInvoicePdf({ invoiceMeta, selectedCustomer, rows, subt
 
         let textXOffset = margin;
         if (hasImage) {
-            // Use actual proportional dimensions from the loaded canvas
-            const imgW = item.image.width;
-            const imgH = item.image.height;
-            // Place image vertically centered in the row
-            const imgY = y - Math.round(rowHeight / 2) - Math.round(imgH / 2);
-            imageAt(`ProdImage${index}`, margin, imgY, imgW, imgH);
-            textXOffset += imgW + 10;
+            // Canvas es de alta resolución (240px). Display fijo de máx 48pt en el PDF
+            // para que la imagen sea nítida sin ocupar demasiado espacio.
+            const MAX_DISPLAY = 48;
+            const srcW = item.image.width;
+            const srcH = item.image.height;
+            const dispScale = Math.min(MAX_DISPLAY / srcW, MAX_DISPLAY / srcH);
+            const dispW = Math.round(srcW * dispScale);
+            const dispH = Math.round(srcH * dispScale);
+            const imgY = y - Math.round(rowHeight / 2) - Math.round(dispH / 2);
+            imageAt(`ProdImage${index}`, margin, imgY, dispW, dispH);
+            textXOffset += dispW + 10;
         }
 
         const nameY  = y - Math.round(rowHeight * 0.35);
@@ -1650,16 +1667,23 @@ const FacturasComponent = {
                         };
                         
                         const rows = (facturaDetalle.items || []).map(item => {
+                            const nombreStr = item.nombre_producto || item.producto_nombre || '';
                             const specs = [];
-                            if (item.ancho && item.alto) specs.push(`${item.ancho}" × ${item.alto}"`);
+                            // Solo añadir dimensiones si no están ya visibles en el nombre
+                            if (item.ancho && item.alto) {
+                                const anchoStr = String(item.ancho);
+                                if (!nombreStr.includes(anchoStr)) {
+                                    specs.push(`${item.ancho}" \xd7 ${item.alto}"`);
+                                }
+                            }
                             if (item.material_principal) specs.push(item.material_principal);
                             return {
-                                nombre_producto: item.nombre_producto || item.producto_nombre || "Producto",
+                                nombre_producto: nombreStr || "Producto",
                                 cantidad: item.cantidad,
                                 precio_unitario: item.precio_unitario,
                                 total: item.total,
                                 foto_ruta: item.foto_ruta,
-                                specs: specs.join('  ·  ')
+                                specs: specs.join('  \xb7  ')
                             };
                         });
                         
