@@ -122,7 +122,7 @@ def obtener_factura(factura_id: int, current_user: dict = Depends(get_current_ad
             
         factura = dict(factura_row)
         
-        # Obtener partidas con su foto — galería nueva tiene prioridad sobre fotos_asociadas
+        # Obtener partidas con foto, dimensiones y material principal
         cursor.execute("""
             SELECT i.*,
                    (SELECT pi.ruta_imagen FROM producto_imagenes pi
@@ -130,8 +130,14 @@ def obtener_factura(factura_id: int, current_user: dict = Depends(get_current_ad
                     ORDER BY pi.es_principal DESC, pi.orden ASC, pi.id ASC LIMIT 1) as foto_galeria,
                    (SELECT f.nombre_archivo FROM fotos_asociadas f
                     WHERE f.producto_id = i.producto_id AND f.tipo_foto = 'referencia'
-                    ORDER BY f.id DESC LIMIT 1) as foto_nombre
+                    ORDER BY f.id DESC LIMIT 1) as foto_nombre,
+                   p.ancho, p.alto, p.tipo_producto,
+                   (SELECT m.nombre FROM componentes_producto cp
+                    JOIN materiales m ON cp.material_id = m.id
+                    WHERE cp.producto_id = i.producto_id
+                    ORDER BY cp.cantidad_usada DESC LIMIT 1) as material_principal
             FROM items_factura i
+            LEFT JOIN productos p ON i.producto_id = p.id
             WHERE i.factura_id = ?
         """, (factura_id,))
         items = []

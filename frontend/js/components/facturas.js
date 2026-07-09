@@ -167,7 +167,7 @@ async function buildSimpleInvoicePdf({ invoiceMeta, selectedCustomer, rows, subt
     const loadedRows = await Promise.all(rows.map(async (item) => {
         let image = null;
         if (item.foto_ruta) {
-            image = await loadLogoForPdf(item.foto_ruta, 56);
+            image = await loadLogoForPdf(item.foto_ruta, 80);
         }
         return { ...item, image };
     }));
@@ -257,22 +257,33 @@ async function buildSimpleInvoicePdf({ invoiceMeta, selectedCustomer, rows, subt
 
     loadedRows.forEach((item, index) => {
         const name = (index + 1) + ". " + (item.nombre_producto || item.producto_nombre || "Producto");
-        const rowHeight = item.image ? 52 : 36;
+        const hasSpecs = !!(item.specs);
+        const hasImage = !!(item.image);
+        const rowHeight = hasImage ? (hasSpecs ? 58 : 50) : (hasSpecs ? 44 : 34);
         ensureSpace(rowHeight + 8);
-        
+
         let textXOffset = margin;
-        if (item.image) {
-            const imgSize = 42;
-            const imgY = y - imgSize + 6;
-            imageAt(`ProdImage${index}`, margin, imgY, imgSize, imgSize);
-            textXOffset += imgSize + 10;
+        if (hasImage) {
+            // Use actual proportional dimensions from the loaded canvas
+            const imgW = item.image.width;
+            const imgH = item.image.height;
+            // Place image vertically centered in the row
+            const imgY = y - Math.round(rowHeight / 2) - Math.round(imgH / 2);
+            imageAt(`ProdImage${index}`, margin, imgY, imgW, imgH);
+            textXOffset += imgW + 10;
         }
 
-        const textMidY = y - (rowHeight / 2) + 2;
-        textAt(textXOffset, textMidY, 9, name, true);
-        textAt(365, textMidY, 9, String(item.cantidad));
-        textRight(470, textMidY, 9, MONEY.format(item.precio_unitario || 0));
-        textRight(pageWidth - margin, textMidY, 9, MONEY.format(item.total || 0), true);
+        const nameY  = y - Math.round(rowHeight * 0.35);
+        const specsY = nameY - 13;
+        const numY   = y - Math.round(rowHeight / 2) + 4;
+
+        textAt(textXOffset, nameY, 9.5, name, true);
+        if (hasSpecs) {
+            textAt(textXOffset, specsY, 8, item.specs);
+        }
+        textAt(365, numY, 9, String(item.cantidad));
+        textRight(470, numY, 9, MONEY.format(item.precio_unitario || 0));
+        textRight(pageWidth - margin, numY, 9, MONEY.format(item.total || 0), true);
         y -= rowHeight;
     });
 
@@ -1638,13 +1649,19 @@ const FacturasComponent = {
                             notas: parsedCliente.notas
                         };
                         
-                        const rows = (facturaDetalle.items || []).map(item => ({
-                            nombre_producto: item.nombre_producto || item.producto_nombre || "Producto",
-                            cantidad: item.cantidad,
-                            precio_unitario: item.precio_unitario,
-                            total: item.total,
-                            foto_ruta: item.foto_ruta
-                        }));
+                        const rows = (facturaDetalle.items || []).map(item => {
+                            const specs = [];
+                            if (item.ancho && item.alto) specs.push(`${item.ancho}" × ${item.alto}"`);
+                            if (item.material_principal) specs.push(item.material_principal);
+                            return {
+                                nombre_producto: item.nombre_producto || item.producto_nombre || "Producto",
+                                cantidad: item.cantidad,
+                                precio_unitario: item.precio_unitario,
+                                total: item.total,
+                                foto_ruta: item.foto_ruta,
+                                specs: specs.join('  ·  ')
+                            };
+                        });
                         
                         const subtotal = facturaDetalle.subtotal;
                         const stateTax = facturaDetalle.ivu_estatal;
