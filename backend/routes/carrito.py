@@ -153,6 +153,7 @@ def crear_pedido_publico(pedido: PedidoPublicoSchema, background_tasks: Backgrou
         resumen_items = " | ".join([f"{item.nombre_producto} x{item.cantidad}" for item in pedido.items])
 
         ts_pedido = int(time.time() * 1000) % 10000000
+        codigos_orden_pub = []
         for idx, item in enumerate(pedido.items):
             notas_orden = (
                 f"[PEDIDO PÚBLICO] Contacto: {pedido.nombre_contacto} | "
@@ -164,6 +165,7 @@ def crear_pedido_publico(pedido: PedidoPublicoSchema, background_tasks: Backgrou
                 f"Nota: {pedido.notas or 'Sin notas'}"
             )
             codigo_orden = f"EVL-PUB-{ts_pedido}-{idx}-{item.producto_id}"
+            codigos_orden_pub.append(codigo_orden)
             cursor.execute("""
                 INSERT INTO ordenes_produccion (codigo_orden, cliente, producto_id, cantidad, estado, material_descontado)
                 VALUES (?, ?, ?, ?, 'Pendiente', 0)
@@ -255,6 +257,13 @@ def crear_pedido_publico(pedido: PedidoPublicoSchema, background_tasks: Backgrou
                     factura_id, producto_id, nombre_producto, cantidad, precio_unitario, total
                 ) VALUES (?, NULL, 'Envío Postal (USPS)', 1, ?, ?)
             """, (factura_id, pedido.costo_envio, pedido.costo_envio))
+
+        # Vincular factura a las órdenes de producción creadas
+        for cod in codigos_orden_pub:
+            cursor.execute(
+                "UPDATE ordenes_produccion SET factura_id = ? WHERE codigo_orden = ?",
+                (factura_id, cod)
+            )
 
         # 4. Vaciar carrito de la sesión
         cursor.execute("DELETE FROM carrito WHERE session_id = ?", (pedido.session_id,))

@@ -97,8 +97,12 @@ const ProduccionComponent = {
                     <p style="color: #6c757d; font-size: 14.5px; margin-bottom: 20px;">
                         Controla el estado de las órdenes láser. **Al mover una orden al estado 'Cortando' (o superior), el sistema descontará automáticamente del inventario la madera y los herrajes correspondientes.**
                     </p>
-                    <div style="display: flex; gap: 12px; margin-bottom: 10px;">
+                    <div style="display: flex; gap: 12px; margin-bottom: 10px; flex-wrap: wrap; align-items: center;">
                         <button class="btn btn-primary" id="btn-new-orden-kanban"><i data-lucide="plus"></i> Nueva Orden</button>
+                        <button class="btn" id="btn-refresh-kanban" style="background:#f0f4e8;color:var(--color-moss-green);border:1px solid #c8d9a0;font-weight:600;">
+                            <i data-lucide="refresh-cw" style="width:14px;height:14px;"></i> Actualizar
+                        </button>
+                        <span style="font-size:12px;color:#999;margin-left:auto;">Total: ${this.ordenes.length} orden${this.ordenes.length!==1?'es':''}</span>
                     </div>
                 </div>
 
@@ -632,6 +636,11 @@ const ProduccionComponent = {
         const btnNew = document.getElementById('btn-new-orden-kanban');
         if (btnNew) {
             btnNew.addEventListener('click', () => this.openNewOrdenModal());
+        }
+
+        const btnRefresh = document.getElementById('btn-refresh-kanban');
+        if (btnRefresh) {
+            btnRefresh.addEventListener('click', () => this.render('main-content'));
         }
 
         // Ver Detalle

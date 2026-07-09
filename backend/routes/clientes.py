@@ -490,6 +490,12 @@ def crear_pedido_publico(codigo_b2b: str, pedido: PedidoB2BSchema, background_ta
             """, (factura_id, prod_id, item.nombre_producto, item.cantidad,
                   item.precio_unitario, round(item.cantidad * item.precio_unitario, 2)))
 
+        # Vincular factura a las órdenes de producción del pedido
+        cursor.execute(
+            "UPDATE ordenes_produccion SET factura_id = ? WHERE pedido_b2b_id = ?",
+            (factura_id, pedido_b2b_id)
+        )
+
         conn.commit()
         conn.close()
         return {
@@ -622,6 +628,12 @@ def crear_pedido_b2b(cliente_id: int, pedido: PedidoB2BSchema, background_tasks:
                 item.precio_unitario,
                 round(item.cantidad * item.precio_unitario, 2)
             ))
+
+        # Vincular factura a las órdenes de producción del pedido
+        cursor.execute(
+            "UPDATE ordenes_produccion SET factura_id = ? WHERE pedido_b2b_id = ?",
+            (factura_id, pedido_b2b_id)
+        )
 
         conn.commit()
         conn.close()
