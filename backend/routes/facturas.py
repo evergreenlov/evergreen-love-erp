@@ -46,6 +46,7 @@ class FacturaCreate(BaseModel):
     estado: str = "Pendiente"
     items: List[ItemFacturaCreate]
     orden_produccion_id: Optional[int] = None   # vínculo formal con ordenes_produccion
+    orden_ids: Optional[List[int]] = None       # todas las órdenes del pedido agrupado
     codigo_orden: Optional[str] = None          # copia desnormalizada del código para mostrar rápido
     cotizacion_id: Optional[int] = None         # cotización origen (si se creó desde cotización)
 
@@ -195,6 +196,31 @@ def crear_factura(factura: FacturaCreate, current_user: dict = Depends(get_curre
                 conn.close()
                 raise HTTPException(status_code=404, detail="Cliente no encontrado")
 
+        # Guard anti-duplicado: si alguna orden del pedido ya fue facturada, rechazar.
+        ids_a_verificar = list(factura.orden_ids or [])
+        if factura.orden_produccion_id and factura.orden_produccion_id not in ids_a_verificar:
+            ids_a_verificar.append(factura.orden_produccion_id)
+
+        if ids_a_verificar:
+            marcadores = ",".join("?" for _ in ids_a_verificar)
+            cursor.execute(f"""
+                SELECT o.codigo_orden, f.numero_factura
+                FROM ordenes_produccion o
+                LEFT JOIN facturas f ON f.id = o.factura_id
+                WHERE o.id IN ({marcadores}) AND o.factura_id IS NOT NULL
+                LIMIT 1
+            """, ids_a_verificar)
+            ya_facturada = cursor.fetchone()
+            if ya_facturada:
+                conn.close()
+                raise HTTPException(
+                    status_code=409,
+                    detail=(
+                        f"La orden '{ya_facturada['codigo_orden']}' ya tiene la factura "
+                        f"{ya_facturada['numero_factura'] or 'asociada'}. No se creó una factura duplicada."
+                    )
+                )
+
         # Iniciar transacción
         try:
             cursor.execute("""
@@ -231,11 +257,17 @@ def crear_factura(factura: FacturaCreate, current_user: dict = Depends(get_curre
                     factura_id, prod_id, item.nombre_producto, item.cantidad, item.precio_unitario, item.total
                 ))
                 
-            # Vincular la orden de producción con esta factura (misma transacción)
-            if factura.orden_produccion_id:
+            # Vincular TODAS las órdenes del pedido con esta factura (misma transacción).
+            # Si solo se vinculara la primera, las demás quedarían sin factura_id y el
+            # Kanban volvería a ofrecer "Facturar", creando facturas duplicadas.
+            orden_ids = list(factura.orden_ids or [])
+            if factura.orden_produccion_id and factura.orden_produccion_id not in orden_ids:
+                orden_ids.append(factura.orden_produccion_id)
+
+            for oid in orden_ids:
                 cursor.execute(
                     "UPDATE ordenes_produccion SET factura_id = ? WHERE id = ?",
-                    (factura_id, factura.orden_produccion_id)
+                    (factura_id, oid)
                 )
 
             conn.commit()

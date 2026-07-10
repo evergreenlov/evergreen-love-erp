@@ -640,7 +640,7 @@ const ProduccionComponent = {
 
         const btnRefresh = document.getElementById('btn-refresh-kanban');
         if (btnRefresh) {
-            btnRefresh.addEventListener('click', () => this.render('main-content'));
+            btnRefresh.addEventListener('click', () => this.render('produccion-container'));
         }
 
         // Ver Detalle
@@ -722,8 +722,9 @@ const ProduccionComponent = {
 
         if (btn) { btn.disabled = true; btn.textContent = 'Procesando...'; }
         try {
-            if (sampleOrder.factura_id) {
-                alert(`Esta orden ya tiene factura: ${sampleOrder.numero_factura || '#' + sampleOrder.factura_id}`);
+            const yaFacturada = groupedItems.find(o => o.factura_id);
+            if (yaFacturada) {
+                alert(`Esta orden ya tiene factura: ${yaFacturada.numero_factura || '#' + yaFacturada.factura_id}`);
                 if (btn) { btn.disabled = false; btn.textContent = 'Facturar'; }
                 return;
             }
@@ -763,6 +764,7 @@ const ProduccionComponent = {
                 estado: 'Pendiente',
                 items: invoiceItems,
                 orden_produccion_id: sampleOrder.id,
+                orden_ids: groupedItems.map(o => o.id),
                 codigo_orden: baseCode,
             });
             alert(`¡Factura ${res.numero_factura} creada para ${cl.nombre}! Redirigiendo...`);
